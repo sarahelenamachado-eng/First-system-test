@@ -6,9 +6,19 @@
 <title>Governança IA</title>
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-density="normal">
 <header class="top">
-  <div class="brand"><span data-t="Governança">Governança</span> <span class="ai">IA</span></div>
+  <div class="top-row">
+    <div class="brand"><span id="app-title">Governança</span> <span class="ai">IA</span></div>
+    <div class="top-right">
+      <select id="lang" class="lang" onchange="setLang(this.value)" aria-label="Idioma / Language / 语言">
+        <option value="pt">Português</option><option value="en">English</option><option value="zh">中文</option>
+      </select>
+      <div id="ai-badge" class="badge"></div>
+      <img id="logo" class="logo" alt="logo">
+    </div>
+  </div>
+  <div id="redbar" class="redbar"></div>
   <nav id="nav">
     <a href="#painel" data-t="Painel">Painel</a>
     <a href="#entradas" data-t="Entradas">Entradas</a>
@@ -16,22 +26,21 @@
     <a href="#projetos" data-t="Projetos">Projetos</a>
     <a href="#reunioes" data-t="Reuniões">Reuniões</a>
     <a href="#riscos" data-t="Riscos">Riscos</a>
+    <a href="#fluxos" data-t="Fluxos">Fluxos</a>
     <a href="#summaries" data-t="Summaries">Summaries</a>
     <a href="#config" data-t="Config.">Config.</a>
   </nav>
-  <select id="lang" class="lang" onchange="setLang(this.value)" aria-label="Idioma / Language / 语言">
-    <option value="pt">Português</option><option value="en">English</option><option value="zh">中文</option>
-  </select>
-  <div id="ai-badge" class="badge"></div>
 </header>
 <main id="view"><p class="muted">Carregando…</p></main>
 <div id="modal" class="modal hidden"><div class="modal-box"><button class="close" onclick="closeModal()">×</button><div id="modal-body"></div></div></div>
 <div id="toast" class="toast hidden"></div>
+<script src="brand.js"></script>
 <script src="store.js"></script>
 <script src="i18n.js"></script>
 <script src="xlsx.js"></script>
 <script src="ai.js"></script>
 <script src="core.js"></script>
+<script src="flow.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

@@ -362,6 +362,51 @@ critério da organização e siga-os quando aplicáveis.`; },
     }
   },
 
+  // ---------------------------------------------------------------- fluxos (mapa visual)
+  FLOW_TYPES: ["project", "risk", "item", "cause", "impact", "action", "other"],
+  get FLOW_SCHEMA() {
+    return {
+      type: "object", additionalProperties: false, required: ["nodes", "edges"],
+      properties: {
+        nodes: { type: "array", items: { type: "object", additionalProperties: false, required: ["key", "label", "type", "ref"],
+          properties: { key: { type: "string" }, label: { type: "string" }, type: { type: "string", enum: this.FLOW_TYPES },
+            ref: { type: "string", description: "ID de registro existente (PROJ/RISK/GOV) ou vazio" } } } },
+        edges: { type: "array", items: { type: "object", additionalProperties: false, required: ["from", "to", "label"],
+          properties: { from: { type: "string" }, to: { type: "string" }, label: { type: "string" } } } },
+      },
+    };
+  },
+
+  /** Gera um fluxo que correlaciona projetos, riscos e impactos. Sem IA, usa os vínculos registrados. */
+  async generateFlow(db, flow, description) {
+    const base = Core.flowFromData(flow.scope_col, flow.scope_id);
+    if (!this.enabled()) return { ...base, engine: "heuristica" };
+    const brief = (col, r) => (col === "projects"
+      ? { id: r.id, name: r.name, description: r.description, main: r.main, scenarios: r.scenarios, items: r.links?.items, risks: r.links?.risks }
+      : { id: r.id, title: r.title, description: r.description, impacts: r.impacts, scenarios: r.scenarios, items: r.links?.items });
+    const scope = flow.scope_col === "geral"
+      ? { projects: db.projects.map((p) => brief("projects", p)), risks: db.risks.map((r) => brief("risks", r)) }
+      : { [flow.scope_col]: [brief(flow.scope_col, Core.find(flow.scope_col, flow.scope_id) || {})] };
+    const items = db.items.slice(-150).map((i) => ({ id: i.id, title: i.title, impacts: i.impacts, risk_reason: i.risk_reason }));
+    const prompt = "Monte um FLUXO VISUAL que correlacione logicamente projetos, riscos, causas e impactos.\n"
+      + `Descrição do usuário (o que o fluxo deve mostrar):\n${description || "(sem descrição: use os dados)"}\n\n`
+      + `Como o usuário quer que os fluxos sejam montados (regras ensinadas por ele, siga com prioridade):\n${db.settings.flow_guidelines || "(nenhuma)"}\n\n`
+      + `Exemplos de fluxos aprovados pelo usuário:\n${JSON.stringify(db.flow_examples.slice(-3))}\n\n`
+      + `Dados do escopo:\n${JSON.stringify(scope)}\nItens da lista geral:\n${JSON.stringify(items)}\n\n`
+      + `Fluxo atual montado a partir dos vínculos (pode melhorar, reorganizar, juntar ou acrescentar):\n${JSON.stringify({ nodes: base.nodes.map((n) => ({ key: n.id, label: n.label, type: n.type })), edges: base.edges })}\n\n`
+      + "Regras: rótulos curtos (até ~8 palavras); use ref com o ID quando o nó for um registro existente; "
+      + `rótulos de ligação preferidos: ${db.settings.lists.flow_edge_labels.join(", ")}; não invente fatos que não estejam nos dados ou na descrição.`;
+    try {
+      const out = await this.call(prompt, this.FLOW_SCHEMA, "medium");
+      const keys = new Set(out.nodes.map((n) => n.key));
+      const nodes = out.nodes.map((n) => ({ id: n.key, label: n.label, type: n.type, ref: n.ref || "" }));
+      const edges = out.edges.filter((e) => keys.has(e.from) && keys.has(e.to)).map((e, i) => ({ id: "E" + (i + 1), ...e }));
+      return { ...Core.layoutFlow(nodes, edges), engine: this.model };
+    } catch (e) {
+      return { ...base, engine: "heuristica", error: e.message };
+    }
+  },
+
   // ---------------------------------------------------------------- summaries
   async narrative(summary) {
     const k = summary.kpis;

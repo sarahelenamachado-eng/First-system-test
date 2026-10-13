@@ -28,57 +28,55 @@ O que você digita (títulos, descrições, atas) fica como foi escrito.
 
 ## Módulos
 
-### 1. Inputs management (aba *Inputs management 2*)
-Fluxo em 3 etapas para cada entrada vinda da **Diretora, Reunião, Departamento ou HQ**:
+### 1. Entradas (Inputs management)
+Fluxo em 3 etapas para cada entrada vinda da **Diretora, Reunião, Departamento ou HQ**: entrada da informação →
+assessment (relação com itens já levantados + classificação de escopo, prioridade, urgência, impactos e gaps) →
+definição (risco a monitorar/investigar, info a reportar, novo projeto, ação dentro de um projeto, ação geral).
+A IA sugere, você confirma ou corrige, e a decisão fica guardada para a IA aprender.
 
-1. **Entrada da informação** — layout com background/contexto, de onde a demanda veio, reunião, área principal,
-   áreas impactadas e áreas que impactam, responsável e prazo. Registrada como `INPxxx`.
-2. **Assessment** — a IA verifica relação com itens já levantados:
-   *relação direta* → inclui no item on going; *relação só em impacto* → cria item novo e vincula.
-   Classificação: escopo (o que é / o que fazer), prioridade, urgência com justificativa do risco,
-   impactos (Custo, Eficiência, Operação, Compliance, People) e gaps.
-3. **Definição** (uma ou mais): risco a monitorar / investigar, info a ser reportada, criação de novo projeto,
-   ação dentro de um projeto, ação geral.
-
-O usuário confirma ou corrige a sugestão. A decisão final é guardada e usada como exemplo nas próximas sugestões
-("a IA aprende com base nos critérios do usuário").
-
-Ao confirmar, a demanda entra na **Lista geral de governança** (`GOVxxx`) e é ligada aos módulos:
-- Risco → cria `RISKxxx` e a pasta `RISKS/RISK001 INFOS AND GENERAL OVERVIEW`
-- Novo projeto → cria `PROJxxx` e a pasta `PROJECTS/PROJ001 INFOS AND GENERAL OVERVIEW`
-- Ação dentro de projeto → entra no portfólio de ações do projeto, com o gap (por que não foi prevista antes)
-
-### 2. Lista geral
-Filtros, histórico de atualizações, vínculos entre itens/projetos/riscos/reuniões e download em planilha
-(CSV, abre no Excel) com responsáveis, data emitida e classificação.
+### 2. Lista geral de governança
+Filtros, histórico, vínculos entre itens/projetos/riscos/reuniões e download em planilha (CSV).
 
 ### 3. Projetos
-As **master schedules ficam na pasta local** `PROJECTS/<PROJ> INFOS AND GENERAL OVERVIEW/master_schedule`.
-Copie os arquivos direto para a pasta e clique em *Sincronizar pasta*, ou faça upload pela tela.
-*Organizar com IA* lê `.xlsx`, `.csv` ou `.pdf` e devolve visão geral, fases, atrasos, próximas entregas,
-pontos críticos e ações sugeridas. Portfólio de ações com estrutura fixa.
+Abas de cada projeto:
+- **Visão geral** — dados, objetivo, status, *projeto principal* (★) e reuniões do projeto.
+- **Itens do projeto** — itens com objetivo e descrição do progresso. Ao marcar como *Finalizado*, o projeto mostra
+  automaticamente "concluído em XX%" (itens finalizados ÷ total).
+- **Atividades (planilha)** — importe a planilha no layout `Scope | Target | Item | nº | Subitem | Last Progress`
+  (células mescladas são entendidas). Cada linha vira uma atividade onde você registra % e novas atualizações.
+  As colunas são reconhecidas sozinhas e podem ser ajustadas; reimportar mantém o progresso já registrado.
+- **Itens adicionais do projeto** — entradas classificadas como "Ação dentro de um projeto" entram aqui automaticamente.
+- **Impactos e riscos** — o que acontece *se o projeto for realizado* e *se não for*.
+- **Arquivos / master schedule** — arquivos na pasta local do projeto, com organização pela IA.
+- **Fluxo** — mapa visual do projeto.
 
 ### 4. Reuniões
-Espaço para atas e anotações. A IA resume, registra decisões e extrai demandas, que podem ser enviadas
-com um clique para o Inputs management (já vinculadas à reunião). Reuniões ligadas a um projeto reagendam
-o próximo acompanhamento (cadência padrão de 15 dias).
+- Projetos principais geram sozinhos a **necessidade de reunião de acompanhamento** (cadência configurável).
+- **Solicitar reunião** — registre reuniões pedidas por alguém.
+- Em **Aguardando confirmação**, marque *Foi realizada* ou *Não foi realizada* (com nova data para projetos).
+- Atas e anotações, com extração de decisões e demandas que vão para as Entradas.
 
 ### 5. Riscos
-Pasta por risco para documentos; *Compilar e analisar com IA* lê os documentos e sugere probabilidade,
-impacto, causas, consequências, mitigações e pontos de reporte (para o usuário confirmar).
+Abas: visão geral (com seleção dos **principais impactos** do risco), **inputs do risco** (com opção de enviar ao
+Inputs management), **impactos e riscos** (*se o risco se concretizar* / *se for tratado*), documentos com análise da IA e fluxo.
 
-### 6. Summaries diário e semanal
-Layout sugerido (ajustável quando você enviar o seu):
-1. Destaques (texto da IA) · 2. Indicadores · 3. Novas demandas por origem · 4. Itens críticos ·
-5. Prazos vencidos e próximos 7 dias · 6. Projetos · 7. Riscos · 8. Reuniões e decisões ·
-9. Infos a reportar · 10. Alertas · 11. Linha do tempo.
-Cada summary é salvo também como HTML na pasta `SUMMARIES` (pode ser impresso em PDF).
+### 6. Fluxos
+Para cada projeto e risco (ou geral), um mapa que conecta causas, itens, projetos, riscos e impactos.
+Gere pelos dados registrados ou com a IA a partir da sua descrição, arraste, edite, conecte e exporte (SVG).
+Para **ensinar a IA**: escreva regras de como montar os fluxos e salve fluxos bons como exemplo.
+
+### 7. Summaries diário e semanal
+Destaques, indicadores, demandas por origem, itens críticos, prazos, projetos (% concluído), riscos,
+reuniões e decisões, infos a reportar, alertas e linha do tempo. Também salvos em HTML na pasta `SUMMARIES`.
+
+### 8. Configurações
+Aparência (nome, cor, tamanho do texto, densidade, faixa vermelha, logo), módulos visíveis, idioma, listas
+(origens, tipos de entrada, categorias de impacto, áreas, rótulos dos fluxos), regras de alertas e reuniões,
+IA e aprendizado, pasta de trabalho e backup/restauração.
 
 ### Alertas automáticos
-- Projeto com mais de *XX* dias sem monitoramento/atualização (configurável, padrão 15)
-- Reunião de acompanhamento de projeto vencida
-- Item interligado a 3+ itens sem projeto → sugerir projeto com overview maior
-- Tema recorrente (3+ entradas no mesmo item), prazos vencidos, riscos parados, entradas aguardando classificação
+Projeto sem atualização há X dias, reunião a confirmar, item ligado a 3+ itens sem projeto, tema recorrente,
+prazos vencidos, riscos parados e entradas aguardando classificação.
 
 ## Estrutura
 
@@ -87,6 +85,8 @@ index.html        # abra este arquivo (gerado: contém todo o CSS/JS embutido, f
 src/              # código-fonte — edite aqui e rode `node tools/build.mjs` para gerar o index.html
   index.html
   i18n.js         # traduções (pt / en / zh)
+  brand.js        # logo padrão
+  flow.js         # editor visual de fluxos
   store.js        # acesso à pasta escolhida (File System Access API) e configurações do navegador
   xlsx.js         # leitura de .xlsx/.csv sem bibliotecas externas
   ai.js           # integração com Claude + heurísticas offline + aprendizado por feedback

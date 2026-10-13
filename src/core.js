@@ -1,6 +1,6 @@
 /* Núcleo: base de dados (db.json na pasta escolhida), regras de governança e um "roteador" local
  * com as mesmas rotas que a interface usa (api("inputs/INP001/commit", "POST", {...})). */
-const PREFIX = { inputs: "INP", items: "GOV", projects: "PROJ", risks: "RISK", meetings: "MEET", actions: "ACT" };
+const PREFIX = { inputs: "INP", items: "GOV", projects: "PROJ", risks: "RISK", meetings: "MEET", actions: "ACT", flows: "FLOW" };
 const COLLECTIONS = Object.keys(PREFIX);
 const DB_FILE = "db.json";
 
@@ -17,15 +17,48 @@ function emptyDb() {
   const db = Object.fromEntries(COLLECTIONS.map((c) => [c, []]));
   return Object.assign(db, {
     seq: Object.fromEntries(COLLECTIONS.map((c) => [c, 0])),
-    events: [], feedback: [], summaries: [],
-    settings: {
-      alert_days_without_update: 15,
-      project_meeting_cadence_days: 15,
-      links_for_project_alert: 3,
-      areas: ["Operação", "Manutenção", "RH", "Financeiro", "Jurídico", "Compras", "SSMA", "TI", "Comercial", "Engenharia"],
-    },
+    events: [], feedback: [], summaries: [], flow_examples: [],
+    settings: defaultSettings(),
   });
 }
+
+function defaultSettings() {
+  return {
+    alert_days_without_update: 15,
+    project_meeting_cadence_days: 15,
+    links_for_project_alert: 3,
+    meeting_lead_days: 3,
+    areas: ["Operação", "Manutenção", "RH", "Financeiro", "Jurídico", "Compras", "SSMA", "TI", "Comercial", "Engenharia"],
+    lists: {
+      sources: ["Diretora", "Reunião", "Departamento", "HQ", "Outro"],
+      input_kinds: ["Pedido pontual", "Direcionamento / estratégia (reclamação, opinião)", "Nova solicitação do HQ", "Decisão conjunta entre departamentos", "Atualização de item existente", "Outro"],
+      impact_types: ["Custo", "Eficiência", "Operação", "Compliance", "People"],
+      flow_edge_labels: ["origina", "afeta", "impacta", "mitiga", "depende de", "se realizado", "se não realizado", "se concretizar", "se tratado"],
+    },
+    appearance: { title: "", accent: "#C00000", font_scale: 1, density: "normal", logo: "", show_bar: true },
+    hidden_modules: [],
+    schedule_mapping: null,
+    flow_guidelines: "",
+  };
+}
+
+/* Campos da planilha de atividades do projeto (layout Scope | Target | Item | nº | Subitem | Last Progress)
+ * e sinônimos usados para reconhecer cada coluna automaticamente. */
+const ACTIVITY_FIELDS = {
+  scope: ["scope", "escopo", "范围"],
+  target: ["target", "objetivo", "meta", "目标"],
+  item: ["item", "tema", "事项"],
+  n: ["nº", "no.", "n°", "#", "num", "seq", "编号", "序号"],
+  subitem: ["subitem", "sub-item", "sub item", "atividade", "activity", "task", "tarefa", "子项", "任务"],
+  last_progress: ["last progress", "progress update", "último progresso", "ultimo progresso", "andamento", "status update", "最新进展", "进展"],
+  owner: ["responsável", "responsavel", "owner", "resp", "负责人"],
+  start: ["início", "inicio", "start", "开始"],
+  finish: ["término", "termino", "fim", "finish", "end", "prazo", "due", "deadline", "完成", "截止"],
+  progress: ["%", "percent", "progresso %", "concluído", "concluido", "完成率"],
+};
+const SUB_LISTS = { projects: ["pitems", "activities", "scenarios"], risks: ["inputs_log", "scenarios"] };
+const SUB_PREFIX = { pitems: "IT", activities: "AT", scenarios: "SC", inputs_log: "RI" };
+const SUB_LABEL = { pitems: "Itens do projeto", activities: "Atividades", scenarios: "Impactos e riscos", inputs_log: "Inputs do risco" };
 
 const Core = {
   db: null,
@@ -38,10 +71,31 @@ const Core = {
       try { db = JSON.parse(await f.text()); } catch { throw new Error(t("db.json corrompido na pasta escolhida")); }
       for (const [k, v] of Object.entries(base)) if (db[k] === undefined) db[k] = v;
       for (const c of COLLECTIONS) db.seq[c] ??= 0;
-      db.settings = { ...base.settings, ...db.settings };
     }
+    this.normalize(db);
     this.db = db;
+    AI.IMPACT_TYPES = db.settings.lists.impact_types;
     if (!f) await this.save();
+  },
+  /** Completa campos novos em bases criadas por versões anteriores. */
+  normalize(db) {
+    const d = defaultSettings();
+    db.settings = { ...d, ...db.settings, lists: { ...d.lists, ...(db.settings?.lists || {}) }, appearance: { ...d.appearance, ...(db.settings?.appearance || {}) } };
+    for (const p of db.projects) { p.main ??= false; p.pitems ??= []; p.activities ??= []; p.scenarios ??= []; p.actions ??= []; p.schedules ??= []; p.sub_seq ??= 0; }
+    for (const r of db.risks) { r.impacts ??= []; r.inputs_log ??= []; r.scenarios ??= []; r.sub_seq ??= 0; }
+    for (const m of db.meetings) { m.status ??= "Realizada"; }
+    db.flows ??= [];
+    db.flow_examples ??= [];
+  },
+  /** % de conclusão do projeto = itens do projeto finalizados / total. */
+  projectPct(p) {
+    const list = p.pitems || [];
+    return list.length ? Math.round((list.filter((i) => i.status === "Finalizado").length / list.length) * 100) : null;
+  },
+  /** Progresso médio das atividades da planilha. */
+  activitiesPct(p) {
+    const list = p.activities || [];
+    return list.length ? Math.round(list.reduce((s, a) => s + (+a.progress || 0), 0) / list.length) : null;
   },
   _saving: Promise.resolve(),
   save() {
@@ -80,6 +134,7 @@ const Core = {
       rec.status ??= "Em andamento";
       rec.actions ??= [];
       rec.schedules ??= [];
+      rec.pitems ??= []; rec.activities ??= []; rec.scenarios ??= []; rec.main ??= false; rec.sub_seq = 0;
       rec.last_monitored = todayISO();
       rec.next_meeting ??= addDays(todayISO(), +db.settings.project_meeting_cadence_days || 15);
       rec.folder = this.folderFor("projects", rec.id);
@@ -88,12 +143,14 @@ const Core = {
     } else if (col === "risks") {
       rec.status ??= "Aberto";
       rec.mode ??= "Monitorar";
+      rec.impacts ??= []; rec.inputs_log ??= []; rec.scenarios ??= []; rec.sub_seq = 0;
       rec.folder = this.folderFor("risks", rec.id);
       await Store.write(rec.folder + "/LEIA-ME.txt", `${rec.id} INFOS AND GENERAL OVERVIEW\n${rec.title || ""}\n\n`
         + "Coloque aqui todas as informações e documentos a cerca do problema.\n"
         + "A plataforma compila estes arquivos para análise e reporte.\n");
     } else if (col === "meetings") {
       rec.date ||= todayISO();
+      rec.status ||= "Realizada";
     } else if (col === "items") {
       rec.status ??= "Aberto";
     }
@@ -197,6 +254,10 @@ const Core = {
     for (const r of db.risks) {
       if (r.status !== "Fechado" && daysSince(r.updated_at) >= limit) add("media", r.id, "Risco {id} sem atualização há {d} dias.", { id: r.id, d: daysSince(r.updated_at) });
     }
+    for (const m of db.meetings) {
+      if (["Pendente", "Solicitada"].includes(m.status) && m.date && m.date <= today)
+        add(m.status === "Pendente" ? "alta" : "media", m.id, "Reunião {id} ({title}) de {date}: confirme se foi realizada.", { id: m.id, title: m.title, date: m.date });
+    }
     const pending = db.inputs.filter((i) => i.status !== "Registrado").length;
     if (pending) add("baixa", "inputs", "{n} entradas aguardando classificação.", { n: pending });
     return out;
@@ -238,10 +299,11 @@ const Core = {
       inputs_by_source: bySource,
       critical_items: open.filter((i) => i.priority === "Alta").slice(0, 25).map(brief),
       due_items: open.filter((i) => i.due_date && i.due_date <= horizon).map(brief).sort((a, b) => a.due_date.localeCompare(b.due_date)),
-      projects: activeP.map((p) => ({ id: p.id, name: p.name, status: p.status, next_meeting: p.next_meeting,
+      projects: activeP.map((p) => ({ id: p.id, name: p.name, status: p.status, next_meeting: p.next_meeting, main: p.main,
+        pct: this.projectPct(p), activities_pct: this.activitiesPct(p),
         open_actions: (p.actions || []).filter((a) => a.status !== "Concluída").length, last_monitored: p.last_monitored })),
       risks: openR.map((r) => ({ id: r.id, title: r.title, mode: r.mode, probability: r.probability, impact: r.impact, status: r.status })),
-      meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title, date: m.date, decisions: m.decisions || [], items: m.links?.items || [] })),
+      meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title, date: m.date, status: m.status, decisions: m.decisions || [], items: m.links?.items || [] })),
       report_items: open.filter((i) => i.report).map(brief),
       activity: events.slice(-200).map((ev) => ({ ts: ev.ts, msg: ev.msg, text: ev.text })),
       alerts: this.alerts(),
@@ -303,19 +365,151 @@ const Core = {
       ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
     const msgOf = (a) => (a.msg ? t(a.msg[0], a.msg[1]) : a.text);
     return `<!doctype html><html lang="${I18N.htmlLang()}"><meta charset="utf-8"><title>${esc(t(s.type))} ${esc(s.period.start)}</title>
-<style>body{font:14px system-ui;margin:32px;color:#1f2937}h1{margin:0}h2{border-bottom:2px solid #1e3a8a;padding-bottom:4px;margin-top:28px}
-table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding:4px 8px;text-align:left}.k{display:inline-block;margin:6px 12px 6px 0;padding:8px 12px;background:#eef2ff;border-radius:8px}</style>
+<style>body{font:14px system-ui;margin:32px;color:#1a1a1a;background:#fafafa}h1{margin:0;color:${esc(Core.db.settings.appearance.accent)}}
+h2{color:#1a1a1a;border-left:5px solid ${esc(Core.db.settings.appearance.accent)};padding-left:8px;margin-top:28px}
+table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid #d9d9d9;padding:4px 8px;text-align:left}th{background:#f0f0f0}
+.k{display:inline-block;margin:6px 12px 6px 0;padding:8px 12px;background:#fff;border:1px solid #e1e1e1;border-top:3px solid ${esc(Core.db.settings.appearance.accent)};border-radius:6px}</style>
 <h1>${esc(t(s.type))}</h1><p>${esc(t("Período"))}: ${esc(s.period.start)} – ${esc(s.period.end)} · ${esc(t("gerado"))} ${esc(s.generated_at)}</p>
 <h2>1. ${esc(t("Destaques"))}</h2><div style="white-space:pre-wrap">${esc(text)}</div>
 <h2>2. ${esc(t("Indicadores"))}</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${esc(t(n))}</span>`).join("")}
 <h2>3. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
 <h2>4. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
 <h2>5. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
-<h2>6. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "Ações abertas", "Próx. reunião"])}${rows(s.projects, ["id", "name", "status", "open_actions", "next_meeting"])}</table>
+<h2>6. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Próx. reunião"])}${rows(s.projects.map((p) => ({ ...p, pct: p.pct == null ? "—" : p.pct + "%" })), ["id", "name", "status", "pct", "open_actions", "next_meeting"])}</table>
 <h2>7. ${esc(t("Riscos"))}</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
-<h2>8. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}</p>`).join("") || "<p>—</p>"}
+<h2>8. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)} · ${esc(t(m.status || "Realizada"))})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}</p>`).join("") || "<p>—</p>"}
 <h2>9. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
 <h2>10. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
+  },
+
+  // ------------------------------------------------------------ reuniões automáticas de projetos principais
+  /** Projetos principais geram, na aba Reuniões, a necessidade de reunião de acompanhamento (a confirmar). */
+  autoMeetings() {
+    const db = this.db, lead = +db.settings.meeting_lead_days || 0, limit = addDays(todayISO(), lead);
+    let created = false;
+    for (const p of db.projects) {
+      if (!p.main || ["Concluído", "Cancelado"].includes(p.status) || !p.next_meeting || p.next_meeting > limit) continue;
+      if (db.meetings.some((m) => m.project_id === p.id && ["Pendente", "Solicitada"].includes(m.status))) continue;
+      const m = { id: this.nextId("meetings"), title: I18N.fill("Acompanhamento: {name}", { name: p.name }), title_msg: ["Acompanhamento: {name}", { name: p.name }],
+        date: p.next_meeting, project_id: p.id, status: "Pendente", auto: true, kind: "Acompanhamento de projeto",
+        created_at: nowISO(), updated_at: nowISO(), links: {}, history: [] };
+      db.meetings.push(m);
+      this.link("meetings", m.id, "projects", p.id);
+      this.log("meetings.auto", m.id, "Reunião {id} gerada automaticamente para o projeto principal {proj} ({date})", { id: m.id, proj: p.id, date: m.date });
+      created = true;
+    }
+    return created;
+  },
+
+  // ------------------------------------------------------------ atividades a partir da planilha
+  /** Sugere qual coluna corresponde a cada campo, a partir da linha de cabeçalho. */
+  guessMapping(header) {
+    const norm = (x) => AI.norm(x).trim();
+    const H = header.map(norm), map = {};
+    const saved = this.db.settings.schedule_mapping;
+    for (const [field, syn] of Object.entries(ACTIVITY_FIELDS)) {
+      let idx = -1;
+      if (saved?.[field]) idx = H.indexOf(norm(saved[field]));
+      if (idx < 0) idx = H.findIndex((h) => h && syn.some((s) => h === norm(s)));
+      if (idx < 0) idx = H.findIndex((h) => h && syn.some((s) => norm(s).length > 2 && h.includes(norm(s))));
+      if (idx >= 0 && !Object.values(map).includes(idx)) map[field] = idx;
+    }
+    // coluna de numeração sem título logo antes do Subitem (como no layout padrão)
+    if (map.n === undefined && map.subitem > 0 && !H[map.subitem - 1]) map.n = map.subitem - 1;
+    return map;
+  },
+  findHeaderRow(rows) {
+    let best = 0, score = -1;
+    rows.slice(0, 15).forEach((r, i) => {
+      const m = this.guessMapping(r);
+      const sc = Object.keys(m).length;
+      if (sc > score) { score = sc; best = i; }
+    });
+    return best;
+  },
+  importActivities(p, rows, headerRow, mapping) {
+    const header = rows[headerRow] || [];
+    const get = (r, f) => (mapping[f] === undefined || mapping[f] === "" || mapping[f] === null ? "" : String(r[+mapping[f]] ?? "").trim());
+    const key = (a) => [a.scope, a.item, a.n, a.subitem].map((x) => AI.norm(x)).join("|");
+    const existing = new Map(p.activities.map((a) => [key(a), a]));
+    const out = [];
+    let added = 0, updated = 0;
+    for (const r of rows.slice(headerRow + 1)) {
+      const a = Object.fromEntries(Object.keys(ACTIVITY_FIELDS).map((f) => [f, get(r, f)]));
+      if (!a.subitem && !a.item && !a.n && !a.last_progress) continue;
+      const pct = a.progress ? parseFloat(a.progress.replace("%", "").replace(",", ".")) : NaN;
+      const old = existing.get(key(a));
+      if (old) {
+        Object.assign(old, { scope: a.scope, target: a.target, item: a.item, n: a.n, subitem: a.subitem, last_progress: a.last_progress || old.last_progress,
+          owner: a.owner || old.owner, start: a.start || old.start, finish: a.finish || old.finish });
+        if (!isNaN(pct)) old.progress = pct <= 1 && !a.progress.includes("%") ? Math.round(pct * 100) : Math.round(pct);
+        out.push(old); existing.delete(key(a)); updated++;
+      } else {
+        out.push({ ...a, id: this.subId(p, "activities"), progress: isNaN(pct) ? 0 : (pct <= 1 && !a.progress.includes("%") ? Math.round(pct * 100) : Math.round(pct)), notes: "", created_at: nowISO() });
+        added++;
+      }
+    }
+    // atividades que não estão mais na planilha são mantidas (podem ter progresso registrado)
+    p.activities = [...out, ...existing.values()];
+    this.db.settings.schedule_mapping = Object.fromEntries(Object.entries(mapping).filter(([, v]) => v !== "" && v !== null && v !== undefined).map(([f, i]) => [f, header[+i] ?? ""]));
+    return { added, updated, kept: existing.size };
+  },
+  subId(rec, list) { rec.sub_seq = (rec.sub_seq || 0) + 1; return `${SUB_PREFIX[list]}${String(rec.sub_seq).padStart(3, "0")}`; },
+
+  // ------------------------------------------------------------ fluxos (mapa visual)
+  /** Monta um fluxo a partir dos vínculos e impactos já registrados. */
+  flowFromData(scopeCol, scopeId) {
+    const db = this.db, nodes = new Map(), edges = [];
+    const node = (key, label, type, ref) => { if (!nodes.has(key)) nodes.set(key, { id: key, label, type, ref: ref || "" }); return key; };
+    const edge = (from, to, label) => { if (from !== to && !edges.some((e) => e.from === from && e.to === to)) edges.push({ id: "E" + (edges.length + 1), from, to, label }); };
+    const addImpacts = (rec, key, col) => {
+      for (const s of rec.scenarios || []) {
+        const k = node(`${rec.id}-${s.id}`, `${s.category ? s.category + ": " : ""}${s.description || ""}`.slice(0, 80), s.kind === "Risco" ? "risk" : "impact");
+        edge(key, k, s.scenario || (col === "projects" ? "se não realizado" : "se concretizar"));
+      }
+      for (const imp of rec.impacts || []) edge(key, node(`impact-${imp}`, imp, "impact"), "impacta");
+    };
+    const addProject = (p) => {
+      const pk = node(p.id, `${p.id} · ${p.name}`, "project", p.id);
+      for (const iid of p.links?.items || []) { const it = this.find("items", iid); if (it) edge(node(it.id, `${it.id} · ${it.title}`, "item", it.id), pk, "origina"); }
+      // riscos ligados ao projeto, diretamente ou pelos mesmos itens, com os impactos de cada risco
+      const riskIds = new Set([...(p.links?.risks || []), ...(p.links?.items || []).flatMap((iid) => this.find("items", iid)?.links?.risks || [])]);
+      for (const rid of riskIds) {
+        const r = this.find("risks", rid);
+        if (!r) continue;
+        const rk = node(r.id, `${r.id} · ${r.title}`, "risk", r.id);
+        edge(rk, pk, "afeta");
+        addImpacts(r, rk, "risks");
+      }
+      addImpacts(p, pk, "projects");
+      return pk;
+    };
+    const addRisk = (r) => {
+      const rk = node(r.id, `${r.id} · ${r.title}`, "risk", r.id);
+      for (const iid of r.links?.items || []) { const it = this.find("items", iid); if (it) edge(node(it.id, `${it.id} · ${it.title}`, "cause", it.id), rk, "origina"); }
+      for (const iid of r.links?.items || []) for (const pid of this.find("items", iid)?.links?.projects || []) { const p = this.find("projects", pid); if (p) edge(rk, node(p.id, `${p.id} · ${p.name}`, "project", p.id), "afeta"); }
+      addImpacts(r, rk, "risks");
+      return rk;
+    };
+    if (scopeCol === "projects") { const p = this.find("projects", scopeId); if (p) addProject(p); }
+    else if (scopeCol === "risks") { const r = this.find("risks", scopeId); if (r) addRisk(r); }
+    else {
+      db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).forEach(addProject);
+      db.risks.filter((r) => r.status !== "Fechado").forEach(addRisk);
+    }
+    return this.layoutFlow([...nodes.values()], edges);
+  },
+  /** Organiza os nós em colunas: causas/itens → projetos/riscos → impactos. */
+  layoutFlow(nodes, edges) {
+    const COL = { cause: 0, item: 0, input: 0, action: 1, project: 1, risk: 1, other: 1, impact: 2 };
+    const count = {};
+    for (const n of nodes) {
+      const c = COL[n.type] ?? 1;
+      count[c] = (count[c] || 0) + 1;
+      n.x = 40 + c * 320;
+      n.y = 40 + (count[c] - 1) * 90;
+    }
+    return { nodes, edges };
   },
 
   // ------------------------------------------------------------ roteador local
@@ -331,13 +525,30 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
     const [head, rid, action] = parts;
 
     if (head === "state" && method === "GET") {
-      let dirty = false;
+      let dirty = this.autoMeetings();
       for (const p of db.projects) dirty = (await this.syncSchedules(p)) || dirty;
-      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings"].map((k) => [k, db[k]])), events: db.events.slice(-60),
+      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples"].map((k) => [k, db[k]])), events: db.events.slice(-60),
         alerts: this.alerts(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
         summaries: db.summaries.slice(-30), today: todayISO() };
     }
-    if (head === "settings" && method === "PATCH") { Object.assign(db.settings, body); return db.settings; }
+    if (head === "settings" && method === "PATCH") {
+      for (const [k, v] of Object.entries(body)) {
+        if ((k === "lists" || k === "appearance") && v && typeof v === "object") db.settings[k] = { ...db.settings[k], ...v };
+        else db.settings[k] = v;
+      }
+      AI.IMPACT_TYPES = db.settings.lists.impact_types;
+      return db.settings;
+    }
+    if (head === "backup" && method === "POST") {
+      // restaura um db.json exportado (substitui a base atual; a anterior é guardada em BACKUPS/)
+      const incoming = body.db;
+      if (!incoming || !Array.isArray(incoming.items) || !incoming.seq) throw new ApiError(t("Arquivo de backup inválido"));
+      await Store.write(`BACKUPS/db_${nowISO().replace(/[:T]/g, "-")}.json`, JSON.stringify(db, null, 2));
+      this.normalize(incoming);
+      this.db = incoming;
+      AI.IMPACT_TYPES = incoming.settings.lists.impact_types;
+      return { ok: true };
+    }
 
     if (head === "summary" && method === "POST") {
       const kind = body.type || "daily";
@@ -364,9 +575,12 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       const proj = col === "meetings" && rec.project_id ? this.find("projects", rec.project_id) : null;
       if (proj) {
         this.link("meetings", rec.id, "projects", proj.id);
-        proj.next_meeting = addDays(rec.date, +db.settings.project_meeting_cadence_days || 15);
-        proj.last_monitored = todayISO();
+        if (rec.status === "Realizada") {
+          proj.next_meeting = addDays(rec.date, +db.settings.project_meeting_cadence_days || 15);
+          proj.last_monitored = todayISO();
+        }
       }
+      if (col === "flows" && rec.scope_col && rec.scope_col !== "geral") this.link("flows", rec.id, rec.scope_col, rec.scope_id);
       return rec;
     }
 
@@ -376,15 +590,15 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
     if (method === "GET" && rec && !action) return rec;
     if (method === "PATCH" && rec && !action) {
       const data = { ...body };
-      for (const k of ["id", "created_at", "links", "folder"]) delete data[k];
-      const note = data._note;
-      delete data._note;
+      for (const k of ["id", "created_at", "links", "folder", "pitems", "activities", "scenarios", "inputs_log", "actions", "schedules"]) delete data[k];
+      const note = data._note, silent = data._silent;
+      delete data._note; delete data._silent;
       Object.assign(rec, data);
       if (note) (rec.history ??= []).push({ date: nowISO(), text: note });  // texto do usuário: não traduzido
       if (col === "projects") rec.last_monitored = todayISO();
       this.touch(rec);
       if (note) this.log(`${col}.updated`, rid, "{id} atualizado: {note}", { id: rid, note });
-      else this.log(`${col}.updated`, rid, "{id} atualizado", { id: rid });
+      else if (!silent) this.log(`${col}.updated`, rid, "{id} atualizado", { id: rid });
       return rec;
     }
     if (method === "DELETE" && rec) {
@@ -455,6 +669,77 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       rec.analysis = await AI.analyzeRisk(db, rec, await this.filesText(rec.folder));
       this.touch(rec);
       this.log("risks.analyzed", rid, "Risco {id} analisado", { id: rid });
+      return rec;
+    }
+    if (action === "sub" && SUB_LISTS[col]?.includes(body.list)) {
+      const list = (rec[body.list] ??= []);
+      let entry = null;
+      if (body.remove) {
+        rec[body.list] = list.filter((x) => x.id !== body.remove);
+      } else if (body.entry?.id) {
+        entry = list.find((x) => x.id === body.entry.id);
+        if (!entry) throw new ApiError(t("{id} não encontrado", { id: body.entry.id }));
+        const wasDone = entry.status === "Finalizado";
+        Object.assign(entry, body.entry, { updated_at: nowISO() });
+        if (body.list === "pitems" && entry.status === "Finalizado" && !wasDone) {
+          entry.done_at = todayISO();
+          this.log("projects.item_done", rid, "Item {sub} de {id} finalizado — projeto {pct}% concluído", { sub: entry.id, id: rid, pct: this.projectPct(rec) });
+        }
+      } else {
+        entry = { ...body.entry, id: this.subId(rec, body.list), created_at: nowISO() };
+        list.push(entry);
+        if (body.list === "inputs_log" && body.to_inputs) {
+          const inp = await this.createRecord("inputs", { source: entry.source || "Outro", source_detail: "Atualização de item existente", title: `${rec.id}: ${entry.text.slice(0, 80)}`,
+            description: entry.text, origin: entry.author || "", risk_id: rec.id });
+          inp.status = "Novo";
+          this.link("inputs", inp.id, "risks", rec.id);
+          entry.input_id = inp.id;
+        }
+      }
+      if (col === "projects") rec.last_monitored = todayISO();
+      this.touch(rec);
+      if (!(body.list === "pitems" && entry?.status === "Finalizado")) this.log(`${col}.sub`, rid, "{id}: {list} atualizado", { id: rid, list: [SUB_LABEL[body.list]] });
+      return rec;
+    }
+    if (col === "projects" && action === "import") {
+      if (body.file) await Store.writeUnique(`${rec.folder}/master_schedule`, body.file.name, body.file);
+      const res = this.importActivities(rec, body.rows || [], +body.header_row || 0, body.mapping || {});
+      await this.syncSchedules(rec);
+      rec.last_monitored = todayISO();
+      this.touch(rec);
+      this.log("projects.import", rid, "Planilha importada em {id}: {added} novas atividades, {updated} atualizadas", { id: rid, ...res });
+      return { project: rec, result: res };
+    }
+    if (col === "meetings" && action === "status") {
+      const proj = rec.project_id ? this.find("projects", rec.project_id) : null;
+      rec.status = body.status;
+      if (body.note) (rec.history ??= []).push({ date: nowISO(), text: body.note });
+      if (body.status === "Realizada") {
+        rec.held_at = body.date || rec.date || todayISO();
+        if (proj) { proj.next_meeting = addDays(rec.held_at, +db.settings.project_meeting_cadence_days || 15); proj.last_monitored = todayISO(); }
+        this.log("meetings.done", rid, "Reunião {id} confirmada como realizada", { id: rid });
+      } else if (body.status === "Não realizada") {
+        if (proj) proj.next_meeting = body.new_date || addDays(todayISO(), 7);
+        this.log("meetings.not_done", rid, "Reunião {id} não realizada", { id: rid });
+      }
+      this.touch(rec);
+      return rec;
+    }
+    if (col === "flows" && action === "generate") {
+      let g;
+      if (body.mode === "ai") g = await AI.generateFlow(db, rec, body.description ?? rec.description ?? "");
+      else g = this.flowFromData(rec.scope_col, rec.scope_id);
+      if (body.description !== undefined) rec.description = body.description;
+      rec.nodes = g.nodes; rec.edges = g.edges; rec.engine = g.engine || "dados";
+      this.touch(rec);
+      this.log("flows.generated", rid, "Fluxo {id} gerado", { id: rid });
+      return rec;
+    }
+    if (col === "flows" && action === "learn") {
+      db.flow_examples.push({ date: nowISO(), title: rec.title, scope: `${rec.scope_col}:${rec.scope_id || ""}`, description: rec.description || "",
+        nodes: (rec.nodes || []).map((n) => ({ key: n.id, label: n.label, type: n.type })), edges: (rec.edges || []).map((e) => ({ from: e.from, to: e.to, label: e.label })) });
+      db.flow_examples = db.flow_examples.slice(-10);
+      this.log("flows.learned", rid, "Fluxo {id} salvo como exemplo para a IA", { id: rid });
       return rec;
     }
     if (col === "meetings" && action === "extract") {

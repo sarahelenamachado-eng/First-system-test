@@ -6,80 +6,156 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Governança IA</title>
 <style>
+/* Visual no padrão das apresentações GWM: fundo claro/cinza, títulos vermelhos, texto preto,
+ * faixa vermelha em degradê e logo no canto superior direito. Sem modo escuro. */
 :root {
-  --bg: #f4f6fa; --panel: #ffffff; --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
-  --brand: #1e3a8a; --brand-2: #3b5bdb; --soft: #eef2ff;
-  --high: #b91c1c; --high-bg: #fee2e2; --mid: #b45309; --mid-bg: #fef3c7; --low: #166534; --low-bg: #dcfce7;
+  color-scheme: light;
+  --brand: #C00000;
+  --font-scale: 1;
+  --bg: #f1f1f2; --bg-2: #e7e8ea; --panel: #ffffff; --ink: #1a1a1a; --muted: #6a6d72; --line: #dedfe2;
+  --soft: #fbeeee;
+  --high: #b00000; --high-bg: #fde4e4; --mid: #8a5a00; --mid-bg: #fff1d6; --low: #1f6b34; --low-bg: #e3f3e6;
+  --pad: 16px; --gap: 14px;
 }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #0f172a; --panel: #111827; --ink: #e5e7eb; --muted: #9ca3af; --line: #273244;
-    --brand: #93c5fd; --brand-2: #60a5fa; --soft: #1e293b;
-    --high: #fca5a5; --high-bg: #451a1a; --mid: #fcd34d; --mid-bg: #422006; --low: #86efac; --low-bg: #052e16; }
-}
+body[data-density="compacta"] { --pad: 10px; --gap: 10px; }
+body[data-density="confortável"] { --pad: 22px; --gap: 18px; }
 * { box-sizing: border-box; }
-body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
-.top { display: flex; align-items: center; gap: 20px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
-.brand { font-weight: 700; font-size: 18px; color: var(--brand); }
-.brand .ai { background: var(--brand); color: var(--panel); border-radius: 4px; padding: 0 5px; margin-left: 2px; }
-nav { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
-nav a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
-nav a.active, nav a:hover { background: var(--soft); color: var(--brand); }
-.badge { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: var(--soft); color: var(--muted); }
+html { font-size: calc(14px * var(--font-scale)); }
+body {
+  margin: 0; font: 1rem/1.45 "Segoe UI", system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; color: var(--ink);
+  background: radial-gradient(1200px 600px at 85% -10%, #ffffff 0%, rgba(255,255,255,0) 60%), linear-gradient(160deg, #f7f7f8 0%, var(--bg) 45%, var(--bg-2) 100%) fixed;
+  min-height: 100vh;
+}
+a { color: var(--brand); }
+
+/* ---------- topo */
+.top { background: rgba(255,255,255,.96); position: sticky; top: 0; z-index: 5; box-shadow: 0 1px 0 var(--line); }
+.top-row { display: flex; align-items: center; gap: 16px; padding: 10px 22px 6px; }
+.brand { font-weight: 800; font-size: 1.45rem; color: var(--brand); letter-spacing: .2px; flex: 1; }
+.brand .ai { background: var(--brand); color: #fff; border-radius: 4px; padding: 0 6px; margin-left: 2px; font-size: 1.05rem; vertical-align: 2px; }
+.top-right { display: flex; align-items: center; gap: 12px; }
+.logo { height: 34px; max-width: 220px; object-fit: contain; }
+.redbar { height: 8px; margin: 0 22px; border-radius: 1px; background: linear-gradient(90deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 70%, #fff) 45%, rgba(255,255,255,0) 100%); }
+nav { display: flex; gap: 2px; flex-wrap: wrap; padding: 6px 18px 8px; }
+nav a { color: var(--ink); text-decoration: none; padding: 6px 12px; border-radius: 4px; font-weight: 600; }
+nav a:hover { color: var(--brand); background: var(--soft); }
+nav a.active { color: var(--brand); box-shadow: inset 0 -3px 0 var(--brand); border-radius: 0; }
+.badge { font-size: .8rem; padding: 3px 9px; border-radius: 999px; background: #eee; color: var(--muted); white-space: nowrap; }
 .badge.on { background: var(--low-bg); color: var(--low); }
-main { max-width: 1280px; margin: 0 auto; padding: 20px 16px 60px; }
-h1 { font-size: 22px; margin: 4px 0 16px; }
-h2 { font-size: 16px; margin: 0 0 10px; }
-h3 { font-size: 14px; margin: 14px 0 6px; }
-.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
-.kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: 14px; }
-.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-.kpi b { display: block; font-size: 24px; color: var(--brand); font-variant-numeric: tabular-nums; }
-.kpi span { color: var(--muted); font-size: 12px; }
+.badge:empty { display: none; }
+.lang { width: auto; padding: 4px 8px; font-size: .9rem; }
+
+/* ---------- conteúdo */
+main { max-width: 1360px; margin: 0 auto; padding: 22px 18px 60px; }
+h1 { font-size: 1.75rem; margin: 4px 0 16px; color: var(--brand); font-weight: 800; }
+h2 { font-size: 1.1rem; margin: 0 0 10px; color: var(--ink); font-weight: 700; padding-left: 9px; border-left: 4px solid var(--brand); }
+h3 { font-size: 1rem; margin: 16px 0 6px; color: var(--ink); }
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title-row h1 { margin-bottom: 4px; }
+.pct-big { min-width: 260px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.grid { display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: var(--pad); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.welcome { max-width: 680px; margin: 40px auto; border-top: 4px solid var(--brand); }
+.kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: var(--gap); }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--brand); border-radius: 6px; padding: 12px; text-decoration: none; color: inherit; display: block; }
+.kpi b { display: block; font-size: 1.8rem; color: var(--brand); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.kpi span { color: var(--muted); font-size: .85rem; }
+a.kpi:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font-size: 12px; color: var(--muted); font-weight: 600; }
+th { font-size: .8rem; color: #444; font-weight: 700; background: #f5f5f6; text-transform: none; }
 tr.click { cursor: pointer; } tr.click:hover { background: var(--soft); }
-label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; font-weight: 600; }
-input, select, textarea { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font: inherit; }
+tr.done td { color: var(--muted); }
+tr.overdue td:first-child { box-shadow: inset 3px 0 0 var(--high); }
+.acts td { font-size: .92rem; }
+.acts tr.group-start td { border-top: 2px solid #c9c9cc; }
+.acts td.grp { font-weight: 700; color: #333; background: #fafafa; }
+.acts td.lp { white-space: pre-wrap; min-width: 220px; color: #333; }
+.nowrap { white-space: nowrap; }
+label { display: block; font-size: .8rem; color: #444; margin: 10px 0 4px; font-weight: 700; }
+input, select, textarea { width: 100%; padding: 7px 8px; border: 1px solid #cfd1d5; border-radius: 4px; background: #fff; color: var(--ink); font: inherit; }
+input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb, var(--brand) 35%, transparent); border-color: var(--brand); }
+input.late { border-color: var(--high); color: var(--high); }
 textarea { min-height: 80px; resize: vertical; }
-.row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-button, .btn { display: inline-block; border: 1px solid var(--brand-2); background: var(--brand-2); color: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer; font: inherit; text-decoration: none; }
-button.ghost, .btn.ghost { background: transparent; color: var(--brand-2); }
-button.small { padding: 3px 8px; font-size: 12px; }
+td textarea { min-height: 0; }
+.row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+button, .btn { display: inline-block; border: 1px solid var(--brand); background: var(--brand); color: #fff; padding: 7px 14px; border-radius: 4px; cursor: pointer; font: inherit; font-weight: 600; text-decoration: none; }
+button:hover, .btn:hover { filter: brightness(1.08); }
+button.ghost, .btn.ghost { background: #fff; color: var(--brand); }
+button.danger { color: var(--high); border-color: #e3b2b2; }
+button.small { padding: 3px 9px; font-size: .85rem; }
 button:disabled { opacity: .5; cursor: wait; }
+.swatch { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #ccc; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
-.pill { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--soft); color: var(--brand); margin: 1px 2px 1px 0; white-space: nowrap; }
+.pill { display: inline-block; font-size: .78rem; padding: 1px 8px; border-radius: 999px; background: #eeeeef; color: #333; margin: 1px 2px 1px 0; white-space: nowrap; }
 .p-Alta, .lv-alta, .p-Alto { background: var(--high-bg); color: var(--high); }
 .p-Média, .lv-media, .p-Médio { background: var(--mid-bg); color: var(--mid); }
 .p-Baixa, .lv-baixa, .p-Baixo { background: var(--low-bg); color: var(--low); }
+.star { color: var(--brand); }
 .muted { color: var(--muted); }
-.alert { padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; }
+.alert { padding: 8px 10px; border-radius: 4px; margin-bottom: 6px; background: #f6f6f7; }
 .steps { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-.step { padding: 6px 12px; border-radius: 999px; background: var(--soft); color: var(--muted); font-size: 12px; }
-.step.on { background: var(--brand-2); color: #fff; }
-.checks label { display: flex; gap: 6px; align-items: center; font-weight: 400; color: var(--ink); margin: 4px 0; }
+.step { padding: 5px 12px; border-radius: 999px; background: #eaeaec; color: var(--muted); font-size: .82rem; font-weight: 600; }
+.step.on { background: var(--brand); color: #fff; }
+.tabs { display: flex; gap: 2px; flex-wrap: wrap; border-bottom: 2px solid var(--line); margin: 6px 0 16px; }
+.tabs a { padding: 8px 14px; text-decoration: none; color: #333; font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+.tabs a:hover { color: var(--brand); }
+.tabs a.on { color: var(--brand); border-bottom-color: var(--brand); }
+.checks label { display: flex; gap: 6px; align-items: center; font-weight: 400; color: var(--ink); margin: 4px 0; font-size: 1rem; }
+.checks.inline { display: flex; gap: 16px; flex-wrap: wrap; }
 .checks input { width: auto; }
-.ai-box { border-left: 3px solid var(--brand-2); background: var(--soft); padding: 10px 12px; border-radius: 6px; margin: 10px 0; white-space: pre-wrap; }
+.ai-box { border-left: 3px solid var(--brand); background: var(--soft); padding: 10px 12px; border-radius: 4px; margin: 10px 0; white-space: pre-wrap; }
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
-.toolbar input, .toolbar select { width: auto; min-width: 160px; }
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow: auto; z-index: 20; }
-.modal-box { background: var(--panel); border-radius: 12px; padding: 22px; width: min(900px, 100%); position: relative; }
+.toolbar input, .toolbar select { width: auto; min-width: 150px; }
+.progress { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+.progress b { font-variant-numeric: tabular-nums; min-width: 38px; }
+.progress-bar { flex: 1; height: 8px; background: #e4e4e6; border-radius: 4px; overflow: hidden; min-width: 70px; }
+.progress-bar span { display: block; height: 100%; background: var(--brand); border-radius: 4px; }
+.progress-bar.mini { height: 4px; margin-top: 4px; }
+.map-grid { display: grid; gap: 4px 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.logo-preview { background: #fff; border: 1px dashed #ccc; border-radius: 6px; padding: 16px; text-align: center; margin-bottom: 8px; }
+.logo-preview img { max-height: 60px; max-width: 100%; }
+.modal { position: fixed; inset: 0; background: rgba(30,30,30,.45); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow: auto; z-index: 20; }
+.modal-box { background: var(--panel); border-radius: 6px; border-top: 4px solid var(--brand); padding: 22px; width: min(960px, 100%); position: relative; }
 .close { position: absolute; right: 12px; top: 10px; background: transparent; color: var(--muted); border: 0; font-size: 22px; }
 .hidden { display: none !important; }
-.toast { position: fixed; right: 18px; bottom: 18px; background: var(--ink); color: var(--panel); padding: 10px 16px; border-radius: 8px; z-index: 30; max-width: 420px; }
+.toast { position: fixed; right: 18px; bottom: 18px; background: #1a1a1a; color: #fff; padding: 10px 16px; border-radius: 4px; border-left: 4px solid var(--brand); z-index: 30; max-width: 440px; }
 .tl li { margin-bottom: 4px; }
-.files a { color: var(--brand-2); }
-.summary-doc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 24px; }
-.summary-doc h2 { border-bottom: 2px solid var(--brand); padding-bottom: 4px; margin-top: 22px; }
-@media print { .top, .no-print { display: none !important; } main { padding: 0; } .summary-doc { border: 0; } }
-.badge:empty { display: none; }
-.lang { width: auto; padding: 4px 8px; font-size: 13px; }
+.files a { color: var(--brand); }
+.summary-doc { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 24px; }
+.summary-doc h2 { margin-top: 22px; }
+
+/* ---------- fluxos */
+.flow-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--gap); align-items: start; }
+.flow-canvas { overflow: auto; max-height: 72vh; background: #fbfbfb; border: 1px solid var(--line); border-radius: 6px; touch-action: none; user-select: none; }
+.flow-canvas .fl-node { cursor: grab; }
+.flow-canvas .fl-edge { cursor: pointer; }
+.flow-side { position: sticky; top: 150px; }
+@media (max-width: 900px) { .flow-wrap { grid-template-columns: 1fr; } .flow-side { position: static; } }
+
+@media (max-width: 640px) {
+  .top-row { padding: 8px 12px 4px; } .redbar { margin: 0 12px; } nav { padding: 4px 8px 6px; }
+  .logo { height: 24px; } .badge { display: none; }
+  main { padding: 16px 12px 40px; }
+}
+@media print { .top, .no-print, .tabs { display: none !important; } main { padding: 0; } .summary-doc { border: 0; } body { background: #fff; } }
+.acts textarea { min-width: 220px; } .acts input[type=date] { min-width: 130px; }
+input[type=range], input[type=checkbox] { accent-color: var(--brand); }
 </style>
 </head>
-<body>
+<body data-density="normal">
 <header class="top">
-  <div class="brand"><span data-t="Governança">Governança</span> <span class="ai">IA</span></div>
+  <div class="top-row">
+    <div class="brand"><span id="app-title">Governança</span> <span class="ai">IA</span></div>
+    <div class="top-right">
+      <select id="lang" class="lang" onchange="setLang(this.value)" aria-label="Idioma / Language / 语言">
+        <option value="pt">Português</option><option value="en">English</option><option value="zh">中文</option>
+      </select>
+      <div id="ai-badge" class="badge"></div>
+      <img id="logo" class="logo" alt="logo">
+    </div>
+  </div>
+  <div id="redbar" class="redbar"></div>
   <nav id="nav">
     <a href="#painel" data-t="Painel">Painel</a>
     <a href="#entradas" data-t="Entradas">Entradas</a>
@@ -87,17 +163,18 @@ button:disabled { opacity: .5; cursor: wait; }
     <a href="#projetos" data-t="Projetos">Projetos</a>
     <a href="#reunioes" data-t="Reuniões">Reuniões</a>
     <a href="#riscos" data-t="Riscos">Riscos</a>
+    <a href="#fluxos" data-t="Fluxos">Fluxos</a>
     <a href="#summaries" data-t="Summaries">Summaries</a>
     <a href="#config" data-t="Config.">Config.</a>
   </nav>
-  <select id="lang" class="lang" onchange="setLang(this.value)" aria-label="Idioma / Language / 语言">
-    <option value="pt">Português</option><option value="en">English</option><option value="zh">中文</option>
-  </select>
-  <div id="ai-badge" class="badge"></div>
 </header>
 <main id="view"><p class="muted">Carregando…</p></main>
 <div id="modal" class="modal hidden"><div class="modal-box"><button class="close" onclick="closeModal()">×</button><div id="modal-body"></div></div></div>
 <div id="toast" class="toast hidden"></div>
+<script>
+/* Logo padrão (recortado do layout de apresentação enviado). Pode ser trocado em Configurações → Aparência. */
+const DEFAULT_LOGO = "data:image/png;base64,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";
+</script>
 <script>
 /* Armazenamento local: uma pasta do computador escolhida pelo usuário (File System Access API, Edge/Chrome).
  *
@@ -646,6 +723,129 @@ const D = {
   "Itens relacionados": ["Related items", "相关事项"],
   "Atualizado em": ["Updated at", "更新时间"],
 };
+
+// ---- módulos adicionados: itens/atividades de projeto, reuniões solicitadas, riscos, fluxos, configurações
+Object.assign(D, {
+  "Reuniões a confirmar": ["Meetings to confirm", "待确认会议"],
+  "Excluir este registro?": ["Delete this record?", "删除此记录？"],
+  "Projetos principais": ["Main projects", "重点项目"],
+  "Projeto principal": ["Main project", "重点项目"],
+  "Projeto principal (gera reuniões de acompanhamento automaticamente)": ["Main project (automatically generates follow-up meetings)", "重点项目（自动生成跟进会议）"],
+  "“Ação dentro de um projeto” entra automaticamente na aba Itens adicionais do projeto.": ["“Action within a project” automatically goes to the project's Additional items tab.", "“项目内行动”会自动进入项目的“项目附加事项”标签页。"],
+  "Categoria": ["Category", "类别"], "Severidade": ["Severity", "严重程度"], "Vínculo": ["Link", "关联"], "Vínculo (ID opcional)": ["Link (optional ID)", "关联（可选 ID）"],
+  "Adicionar": ["Add", "添加"], "Descreva o impacto.": ["Describe the impact.", "请描述影响。"],
+  "Impacto": ["Impact", "影响"], "Benefício": ["Benefit", "收益"],
+  "Visão geral": ["Overview", "概览"], "Itens do projeto": ["Project items", "项目事项"], "Atividades (planilha)": ["Activities (spreadsheet)", "活动（表格）"],
+  "Atividades": ["Activities", "活动"], "Itens adicionais do projeto": ["Additional project items", "项目附加事项"], "Itens adicionais abertos": ["Open additional items", "未结附加事项"],
+  "Impactos e riscos": ["Impacts and risks", "影响与风险"], "Arquivos / master schedule": ["Files / master schedule", "文件 / 总进度计划"], "Fluxo": ["Flow", "流程图"], "Fluxos": ["Flows", "流程图"], "flows": ["flows", "流程图"],
+  "Progresso das atividades": ["Activities progress", "活动进度"], "Concluído": ["Done", "已完成"], "% concluído": ["% complete", "完成率"],
+  "Objetivo do projeto": ["Project objective", "项目目标"], "Objetivo": ["Objective", "目标"], "Reuniões do projeto": ["Project meetings", "项目会议"],
+  "Projeto concluído em": ["Project completed:", "项目完成度："], "(itens finalizados ÷ total de itens)": ["(finished items ÷ total items)", "（已完成事项 ÷ 事项总数）"],
+  "Nenhum item. Adicione os itens que compõem o projeto abaixo.": ["No items. Add the items that make up the project below.", "暂无事项。请在下方添加组成项目的事项。"],
+  "Novo item do projeto": ["New project item", "新项目事项"], "Descrição do progresso": ["Progress description", "进展描述"], "Adicionar item": ["Add item", "添加事项"],
+  "Finalizado": ["Finished", "已完成"], "Não iniciada": ["Not started", "未开始"],
+  "ACT_HELP": ["Import the project spreadsheet (layout Scope | Target | Item | No. | Subitem | Last Progress). Each row becomes an activity where you record % progress and new updates. Re-importing updates the rows and keeps the progress you entered.",
+    "导入项目表格（格式：Scope | Target | Item | 序号 | Subitem | Last Progress）。每一行成为一项活动，可在此录入完成率和最新进展。重新导入会更新各行，并保留您已录入的进度。",
+    "Importe a planilha do projeto (layout Scope | Target | Item | nº | Subitem | Last Progress). Cada linha vira uma atividade onde você registra o % de progresso e as novas atualizações. Reimportar atualiza as linhas e mantém o progresso que você inseriu."],
+  "Importar planilha": ["Import spreadsheet", "导入表格"], "Todos os escopos": ["All scopes", "全部范围"], "Novo progresso…": ["New progress…", "最新进展…"],
+  "Nenhuma atividade. Importe a planilha do projeto.": ["No activities. Import the project spreadsheet.", "暂无活动。请导入项目表格。"],
+  "Adicionar atividade manualmente": ["Add an activity manually", "手动添加活动"], "Adicionar atividade": ["Add activity", "添加活动"],
+  "Scope": ["Scope", "范围"], "Target": ["Target", "目标"], "Nº": ["No.", "序号"], "Subitem": ["Subitem", "子项"], "Last Progress": ["Last Progress", "最新进展"],
+  "Atualização": ["Update", "更新"], "Início": ["Start", "开始"], "Término / prazo": ["Finish / due", "完成 / 截止"],
+  "Atividade atualizada": ["Activity updated", "活动已更新"], "Informe o item ou subitem.": ["Enter the item or subitem.", "请填写事项或子项。"],
+  "Não foi possível ler a planilha (use .xlsx ou .csv).": ["Could not read the spreadsheet (use .xlsx or .csv).", "无法读取表格（请使用 .xlsx 或 .csv）。"],
+  "(não usar)": ["(not used)", "（不使用）"], "Importar planilha de atividades": ["Import activities spreadsheet", "导入活动表格"],
+  "Confira qual coluna corresponde a cada campo. O mapeamento fica salvo para as próximas importações.": ["Check which column matches each field. The mapping is saved for future imports.", "请确认每个字段对应的列。映射关系会保存，供以后导入使用。"],
+  "Linha do cabeçalho": ["Header row", "表头行"], "Prévia": ["Preview", "预览"], "Importar": ["Import", "导入"], "linhas": ["rows", "行"], "Cancelar": ["Cancel", "取消"],
+  "Importado: {added} novas, {updated} atualizadas": ["Imported: {added} new, {updated} updated", "已导入：新增 {added} 项，更新 {updated} 项"],
+  "Itens que chegaram pelo Inputs management classificados como “Ação dentro de um projeto”, ou adicionados aqui.": ["Items that came through Inputs management classified as “Action within a project”, or added here.", "通过输入管理并被归类为“项目内行动”的事项，或在此添加的事项。"],
+  "Mapa visual que conecta este projeto aos itens, riscos e impactos.": ["Visual map connecting this project to items, risks and impacts.", "将本项目与事项、风险和影响关联起来的可视化图。"],
+  "Mapa visual que conecta este risco às causas, projetos e impactos.": ["Visual map connecting this risk to causes, projects and impacts.", "将本风险与原因、项目和影响关联起来的可视化图。"],
+  "Abrir fluxo": ["Open flow", "打开流程图"], "Criar fluxo": ["Create flow", "创建流程图"],
+  "Se o projeto for realizado": ["If the project is carried out", "如果项目实施"], "Se o projeto NÃO for realizado": ["If the project is NOT carried out", "如果项目不实施"],
+  "Se o risco se concretizar": ["If the risk materialises", "如果风险发生"], "Se o risco for tratado / mitigado": ["If the risk is treated / mitigated", "如果风险得到处理 / 缓解"],
+  "Registre os impactos e riscos gerados pela realização ou não do projeto. Eles alimentam o fluxo visual.": ["Record the impacts and risks of carrying out the project or not. They feed the visual flow.", "记录项目实施与否所带来的影响和风险，这些内容会用于可视化流程图。"],
+  "Registre os impactos e riscos gerados se o risco se concretizar ou se for tratado. Eles alimentam o fluxo visual.": ["Record the impacts and risks if the risk materialises or is treated. They feed the visual flow.", "记录风险发生或得到处理时的影响和风险，这些内容会用于可视化流程图。"],
+  // reuniões
+  "Pendente": ["Pending", "待确认"], "Solicitada": ["Requested", "已申请"], "Realizada": ["Held", "已召开"], "Não realizada": ["Not held", "未召开"],
+  "Aguardando confirmação": ["Awaiting confirmation", "待确认"],
+  "Reuniões solicitadas e as geradas automaticamente pelos projetos principais. Confirme se a reunião foi feita ou não.": ["Requested meetings and those generated automatically by main projects. Confirm whether each meeting was held.", "已申请的会议以及重点项目自动生成的会议。请确认会议是否已召开。"],
+  "automática": ["automatic", "自动"], "Foi realizada": ["It was held", "已召开"], "Não foi realizada": ["It was not held", "未召开"], "Nada a confirmar.": ["Nothing to confirm.", "无待确认事项。"],
+  "Solicitar reunião": ["Request a meeting", "申请会议"], "Título / pauta": ["Title / topic", "标题 / 议题"], "Data prevista": ["Planned date", "计划日期"],
+  "Solicitada por": ["Requested by", "申请人"], "Pauta / objetivo": ["Agenda / objective", "议程 / 目的"], "Registrar solicitação": ["Register request", "登记申请"],
+  "Todas as reuniões": ["All meetings", "全部会议"], "Solicitação registrada": ["Request registered", "申请已登记"],
+  "Reunião confirmada. Registre a ata, se quiser.": ["Meeting confirmed. Add the minutes if you wish.", "会议已确认。如需要，可填写会议纪要。"],
+  "Motivo (opcional):": ["Reason (optional):", "原因（可选）："], "Nova data para a reunião de acompanhamento (AAAA-MM-DD):": ["New date for the follow-up meeting (YYYY-MM-DD):", "跟进会议的新日期（YYYY-MM-DD）："],
+  "Esta reunião aguarda confirmação.": ["This meeting is awaiting confirmation.", "此会议待确认。"],
+  "Acompanhamento: {name}": ["Follow-up: {name}", "跟进：{name}"], "Acompanhamento de projeto": ["Project follow-up", "项目跟进"],
+  // riscos
+  "Principais impactos": ["Main impacts", "主要影响"], "Principais impactos deste risco": ["Main impacts of this risk", "此风险的主要影响"], "Como cada impacto se manifesta": ["How each impact shows up", "各项影响的表现"],
+  "Inputs do risco": ["Risk inputs", "风险输入"], "Inputs": ["Inputs", "输入"], "Documentos e análise": ["Documents and analysis", "文档与分析"],
+  "Novo input do risco": ["New risk input", "新风险输入"], "Quem informou": ["Reported by", "报告人"], "Informação": ["Information", "信息"],
+  "Também enviar para o Inputs management (classificar)": ["Also send to Inputs management (to classify)", "同时发送到输入管理（进行分类）"],
+  "Registrar input": ["Register input", "登记输入"], "Inputs registrados": ["Registered inputs", "已登记输入"], "Entradas do Inputs management ligadas": ["Linked Inputs management entries", "关联的输入管理条目"],
+  "Escreva a informação.": ["Write the information.", "请填写信息。"], "Input registrado": ["Input registered", "输入已登记"],
+  // fluxos
+  "Fluxo não encontrado.": ["Flow not found.", "未找到流程图。"], "Geral": ["General", "总体"], "Geral (todos os projetos e riscos)": ["General (all projects and risks)", "总体（全部项目和风险）"],
+  "Fluxos de projetos, riscos e impactos": ["Flows of projects, risks and impacts", "项目、风险与影响流程图"],
+  "FLOWS_HELP": ["Each project and risk can have a flow that connects causes, projects, risks and impacts. Generate it from the registered data or with the AI from your description, then adjust it freely and save it as an example to teach the AI.",
+    "每个项目和风险都可以有一张流程图，把原因、项目、风险和影响关联起来。可根据已登记的数据生成，或让 AI 按您的描述生成，然后自由调整，并保存为示例来训练 AI。",
+    "Cada projeto e risco pode ter um fluxo que conecta causas, projetos, riscos e impactos. Gere pelos dados registrados ou com a IA a partir da sua descrição, ajuste livremente e salve como exemplo para ensinar a IA."],
+  "Nenhum fluxo.": ["No flows.", "暂无流程图。"], "Novo fluxo": ["New flow", "新流程图"], "Descrição para a IA": ["Description for the AI", "给 AI 的描述"],
+  "Criar pelos dados": ["Create from data", "根据数据创建"], "Criar com IA": ["Create with AI", "用 AI 创建"], "Em branco": ["Blank", "空白"],
+  "Clique em um nó ou ligação para editar. Arraste os nós para organizar. Duplo clique no fundo cria um nó.": ["Click a node or link to edit it. Drag nodes to arrange them. Double-click the background to create a node.", "点击节点或连线进行编辑。拖动节点进行排列。双击空白处创建节点。"],
+  "Nó selecionado": ["Selected node", "已选节点"], "Texto": ["Text", "文本"], "Registro (ID)": ["Record (ID)", "记录（ID）"], "Abrir registro": ["Open record", "打开记录"],
+  "Ligação selecionada": ["Selected link", "已选连线"], "Rótulo": ["Label", "标签"], "Inverter sentido": ["Reverse direction", "反转方向"], "Aplicar": ["Apply", "应用"],
+  "gerado por": ["generated by", "生成方式"], "dados": ["data", "数据"], "+ Nó": ["+ Node", "+ 节点"], "Conectar nós": ["Connect nodes", "连接节点"],
+  "Conectando… (clique origem e destino)": ["Connecting… (click source, then target)", "连接中…（先点起点，再点终点）"],
+  "Reorganizar": ["Rearrange", "重新排列"], "Gerar pelos dados": ["Generate from data", "根据数据生成"], "Gerar com IA": ["Generate with AI", "用 AI 生成"], "Exportar imagem (SVG)": ["Export image (SVG)", "导出图片（SVG）"],
+  "Descreva o que este fluxo deve mostrar: causas, consequências, quais projetos e riscos se relacionam e por quê.": ["Describe what this flow should show: causes, consequences, which projects and risks relate and why.", "描述此流程图应展示的内容：原因、后果、哪些项目和风险相互关联及其原因。"],
+  "Ensinar a IA": ["Teach the AI", "训练 AI"],
+  "FLOW_TEACH_HELP": ["Write rules on how you want flows to be built and save good flows as examples. The AI uses both every time it generates a new flow.",
+    "写下您希望流程图如何构建的规则，并将好的流程图保存为示例。AI 每次生成新流程图时都会参考这两者。",
+    "Escreva regras de como você quer que os fluxos sejam montados e salve fluxos bons como exemplo. A IA usa os dois sempre que gerar um novo fluxo."],
+  "Regras para montar fluxos (valem para todos)": ["Rules for building flows (apply to all)", "流程图构建规则（适用于全部）"],
+  "FLOW_GUIDE_PLACEHOLDER": ["E.g.: always start with the root cause on the left; group impacts by area; link safety risks to Compliance and People…",
+    "例如：始终把根本原因放在最左侧；按部门归类影响；把安全风险关联到合规和人员…",
+    "Ex.: sempre comece pela causa raiz à esquerda; agrupe impactos por área; ligue riscos de segurança a Compliance e People…"],
+  "Salvar regras": ["Save rules", "保存规则"], "Regras salvas": ["Rules saved", "规则已保存"], "Salvar este fluxo como exemplo": ["Save this flow as an example", "将此流程图保存为示例"],
+  "{n} exemplos salvos": ["{n} examples saved", "已保存 {n} 个示例"], "{n} decisões de classificação guardadas": ["{n} classification decisions stored", "已保存 {n} 条分类决定"],
+  "Texto do novo nó:": ["Text of the new node:", "新节点文本："], "Substituir o fluxo atual pelo novo gerado?": ["Replace the current flow with the newly generated one?", "用新生成的流程图替换当前流程图？"],
+  "IA offline: fluxo montado pelos vínculos registrados.": ["AI offline: flow built from the registered links.", "AI 离线：已根据登记的关联生成流程图。"],
+  "Exemplo salvo: a IA vai usar este fluxo como referência.": ["Example saved: the AI will use this flow as a reference.", "示例已保存：AI 将以此流程图作为参考。"],
+  "Nós": ["Nodes", "节点"], "Causa": ["Cause", "原因"], "Outro": ["Other", "其他"],
+  "origina": ["originates", "引发"], "afeta": ["affects", "影响"], "impacta": ["impacts", "冲击"], "mitiga": ["mitigates", "缓解"], "depende de": ["depends on", "依赖"],
+  "se realizado": ["if carried out", "若实施"], "se não realizado": ["if not carried out", "若不实施"], "se concretizar": ["if it materialises", "若发生"], "se tratado": ["if treated", "若处理"],
+  // configurações
+  "Aparência": ["Appearance", "外观"], "Módulos e idioma": ["Modules and language", "模块与语言"], "Listas": ["Lists", "列表"], "Pasta e backup": ["Folder and backup", "文件夹与备份"],
+  "Identidade": ["Identity", "标识"], "Nome da plataforma (topo da tela)": ["Platform name (top of screen)", "平台名称（页面顶部）"], "Cor principal": ["Main colour", "主色"],
+  "Tamanho do texto": ["Text size", "文字大小"], "Densidade": ["Density", "密度"], "compacta": ["compact", "紧凑"], "normal": ["normal", "标准"], "confortável": ["comfortable", "宽松"],
+  "Mostrar faixa vermelha abaixo do topo": ["Show the red bar below the header", "在顶部下方显示红色横条"],
+  "Vermelho GWM": ["GWM red", "长城红"], "Vinho": ["Wine", "酒红"], "Grafite": ["Graphite", "石墨灰"], "Azul": ["Blue", "蓝色"], "Verde": ["Green", "绿色"],
+  "Logo (canto superior direito)": ["Logo (top-right corner)", "标志（右上角）"], "Envie o arquivo oficial do logo (PNG, SVG ou JPG) para melhor qualidade.": ["Upload the official logo file (PNG, SVG or JPG) for best quality.", "上传官方标志文件（PNG、SVG 或 JPG）以获得最佳效果。"],
+  "Usar este logo": ["Use this logo", "使用此标志"], "Restaurar logo padrão": ["Restore default logo", "恢复默认标志"], "Ocultar logo": ["Hide logo", "隐藏标志"],
+  "Imagem muito grande (máx. 1,5 MB).": ["Image too large (max. 1.5 MB).", "图片过大（最大 1.5 MB）。"],
+  "Módulos visíveis no menu": ["Modules shown in the menu", "菜单中显示的模块"], "O idioma também define o idioma das respostas da IA e dos summaries.": ["The language also sets the language of AI answers and summaries.", "语言设置也决定 AI 回答和摘要所用的语言。"],
+  "Um valor por linha. Os valores padrão são traduzidos automaticamente; os que você criar aparecem como escritos.": ["One value per line. Default values are translated automatically; the ones you create appear as written.", "每行一个值。默认值会自动翻译；您新增的值将按原样显示。"],
+  "Origens das demandas": ["Demand sources", "需求来源"], "Ex.: Diretora, HQ, Departamento…": ["E.g.: Director, HQ, Department…", "例如：总监、总部、部门…"],
+  "Tipos de entrada": ["Input types", "输入类型"], "Ex.: Pedido pontual, Nova solicitação do HQ…": ["E.g.: One-off request, New request from HQ…", "例如：临时请求、总部新要求…"],
+  "Categorias de impacto": ["Impact categories", "影响类别"], "Usadas na classificação, nos riscos e nos fluxos.": ["Used in classification, risks and flows.", "用于分类、风险和流程图。"],
+  "Sugestões no campo Área principal.": ["Suggestions for the Main area field.", "“主要部门”字段的候选项。"],
+  "Rótulos das ligações dos fluxos": ["Flow link labels", "流程图连线标签"], "Ex.: causa, impacta, mitiga…": ["E.g.: causes, impacts, mitigates…", "例如：引发、冲击、缓解…"],
+  "Salvar listas": ["Save lists", "保存列表"], "Antecedência para gerar a reunião (dias)": ["Days in advance to generate the meeting", "提前生成会议的天数"],
+  "Aprendizado": ["Learning", "学习"], "Backup": ["Backup", "备份"],
+  "Baixe uma cópia completa da base (db.json) ou restaure uma cópia anterior. Ao restaurar, a base atual é guardada na pasta BACKUPS.": ["Download a full copy of the database (db.json) or restore an earlier copy. When restoring, the current database is kept in the BACKUPS folder.", "下载数据库完整副本（db.json）或恢复以前的副本。恢复时，当前数据库会保存到 BACKUPS 文件夹。"],
+  "Baixar backup": ["Download backup", "下载备份"], "Restaurar backup": ["Restore backup", "恢复备份"], "Arquivo de backup inválido": ["Invalid backup file", "备份文件无效"],
+  "Substituir a base atual por este backup?": ["Replace the current database with this backup?", "用此备份替换当前数据库？"], "Backup restaurado": ["Backup restored", "备份已恢复"],
+  // eventos e alertas novos
+  "{id}: {list} atualizado": ["{id}: {list} updated", "{id}：{list} 已更新"],
+  "Reunião {id} ({title}) de {date}: confirme se foi realizada.": ["Meeting {id} ({title}) on {date}: confirm whether it was held.", "会议 {id}（{title}，{date}）：请确认是否已召开。"],
+  "Reunião {id} gerada automaticamente para o projeto principal {proj} ({date})": ["Meeting {id} generated automatically for main project {proj} ({date})", "已为重点项目 {proj} 自动生成会议 {id}（{date}）"],
+  "Item {sub} de {id} finalizado — projeto {pct}% concluído": ["Item {sub} of {id} finished — project {pct}% complete", "{id} 的事项 {sub} 已完成 — 项目完成 {pct}%"],
+  "Planilha importada em {id}: {added} novas atividades, {updated} atualizadas": ["Spreadsheet imported into {id}: {added} new activities, {updated} updated", "表格已导入 {id}：新增活动 {added} 项，更新 {updated} 项"],
+  "Reunião {id} confirmada como realizada": ["Meeting {id} confirmed as held", "会议 {id} 已确认召开"], "Reunião {id} não realizada": ["Meeting {id} not held", "会议 {id} 未召开"],
+  "Fluxo {id} gerado": ["Flow {id} generated", "流程图 {id} 已生成"], "Fluxo {id} salvo como exemplo para a IA": ["Flow {id} saved as an example for the AI", "流程图 {id} 已保存为 AI 示例"],
+});
 </script>
 <script>
 /* Leitor mínimo de .xlsx (primeira planilha) e .csv, sem bibliotecas externas.
@@ -700,21 +900,33 @@ const Sheet = {
     const serialToDate = (n) => new Date(Date.UTC(1899, 11, 30) + Math.round(n * 864e5)).toISOString().slice(0, 10);
 
     const colIdx = (ref) => { let n = 0; for (const ch of ref.replace(/\d+/g, "")) n = n * 26 + ch.charCodeAt(0) - 64; return n - 1; };
+    const rowIdx = (ref) => +ref.replace(/[A-Z]+/g, "") - 1;
     const sheet = xml(await get(sheetPath));
-    const rows = [];
+    const grid = [];
     for (const row of byTag(sheet, "row")) {
-      const r = [];
       for (const c of byTag(row, "c")) {
+        const ref = c.getAttribute("r") || "A1";
         const t = c.getAttribute("t"), v = byTag(c, "v")[0]?.textContent ?? "";
         let val = v;
         if (t === "s") val = shared[+v] ?? "";
         else if (t === "inlineStr") val = byTag(c, "t").map((x) => x.textContent).join("");
-        else if (t === "b") val = v === "1" ? "VERDADEIRO" : "FALSO";
+        else if (t === "b") val = v === "1" ? "TRUE" : "FALSE";
         else if (v !== "" && !t && isDateFmt(xfs[+(c.getAttribute("s") || 0)] ?? 0)) val = serialToDate(+v);
-        r[colIdx(c.getAttribute("r") || "A")] = val;
+        (grid[rowIdx(ref)] ??= [])[colIdx(ref)] = val;
       }
-      const filled = Array.from(r, (x) => x ?? "");
-      if (filled.some((x) => x !== "")) rows.push(filled);
+    }
+    // células mescladas: o valor do canto superior esquerdo vale para todo o intervalo
+    for (const m of byTag(sheet, "mergeCell")) {
+      const [a, b] = (m.getAttribute("ref") || "").split(":");
+      if (!b) continue;
+      const r0 = rowIdx(a), c0 = colIdx(a), r1 = rowIdx(b), c1 = colIdx(b);
+      const val = grid[r0]?.[c0] ?? "";
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (r !== r0 || c !== c0) (grid[r] ??= [])[c] = val;
+    }
+    const rows = [];
+    for (const r of grid) {
+      const filled = Array.from(r || [], (x) => (x ?? "").toString());
+      if (filled.some((x) => x.trim() !== "")) rows.push(filled);
     }
     return rows;
   },
@@ -1116,6 +1328,51 @@ critério da organização e siga-os quando aplicáveis.`; },
     }
   },
 
+  // ---------------------------------------------------------------- fluxos (mapa visual)
+  FLOW_TYPES: ["project", "risk", "item", "cause", "impact", "action", "other"],
+  get FLOW_SCHEMA() {
+    return {
+      type: "object", additionalProperties: false, required: ["nodes", "edges"],
+      properties: {
+        nodes: { type: "array", items: { type: "object", additionalProperties: false, required: ["key", "label", "type", "ref"],
+          properties: { key: { type: "string" }, label: { type: "string" }, type: { type: "string", enum: this.FLOW_TYPES },
+            ref: { type: "string", description: "ID de registro existente (PROJ/RISK/GOV) ou vazio" } } } },
+        edges: { type: "array", items: { type: "object", additionalProperties: false, required: ["from", "to", "label"],
+          properties: { from: { type: "string" }, to: { type: "string" }, label: { type: "string" } } } },
+      },
+    };
+  },
+
+  /** Gera um fluxo que correlaciona projetos, riscos e impactos. Sem IA, usa os vínculos registrados. */
+  async generateFlow(db, flow, description) {
+    const base = Core.flowFromData(flow.scope_col, flow.scope_id);
+    if (!this.enabled()) return { ...base, engine: "heuristica" };
+    const brief = (col, r) => (col === "projects"
+      ? { id: r.id, name: r.name, description: r.description, main: r.main, scenarios: r.scenarios, items: r.links?.items, risks: r.links?.risks }
+      : { id: r.id, title: r.title, description: r.description, impacts: r.impacts, scenarios: r.scenarios, items: r.links?.items });
+    const scope = flow.scope_col === "geral"
+      ? { projects: db.projects.map((p) => brief("projects", p)), risks: db.risks.map((r) => brief("risks", r)) }
+      : { [flow.scope_col]: [brief(flow.scope_col, Core.find(flow.scope_col, flow.scope_id) || {})] };
+    const items = db.items.slice(-150).map((i) => ({ id: i.id, title: i.title, impacts: i.impacts, risk_reason: i.risk_reason }));
+    const prompt = "Monte um FLUXO VISUAL que correlacione logicamente projetos, riscos, causas e impactos.\n"
+      + `Descrição do usuário (o que o fluxo deve mostrar):\n${description || "(sem descrição: use os dados)"}\n\n`
+      + `Como o usuário quer que os fluxos sejam montados (regras ensinadas por ele, siga com prioridade):\n${db.settings.flow_guidelines || "(nenhuma)"}\n\n`
+      + `Exemplos de fluxos aprovados pelo usuário:\n${JSON.stringify(db.flow_examples.slice(-3))}\n\n`
+      + `Dados do escopo:\n${JSON.stringify(scope)}\nItens da lista geral:\n${JSON.stringify(items)}\n\n`
+      + `Fluxo atual montado a partir dos vínculos (pode melhorar, reorganizar, juntar ou acrescentar):\n${JSON.stringify({ nodes: base.nodes.map((n) => ({ key: n.id, label: n.label, type: n.type })), edges: base.edges })}\n\n`
+      + "Regras: rótulos curtos (até ~8 palavras); use ref com o ID quando o nó for um registro existente; "
+      + `rótulos de ligação preferidos: ${db.settings.lists.flow_edge_labels.join(", ")}; não invente fatos que não estejam nos dados ou na descrição.`;
+    try {
+      const out = await this.call(prompt, this.FLOW_SCHEMA, "medium");
+      const keys = new Set(out.nodes.map((n) => n.key));
+      const nodes = out.nodes.map((n) => ({ id: n.key, label: n.label, type: n.type, ref: n.ref || "" }));
+      const edges = out.edges.filter((e) => keys.has(e.from) && keys.has(e.to)).map((e, i) => ({ id: "E" + (i + 1), ...e }));
+      return { ...Core.layoutFlow(nodes, edges), engine: this.model };
+    } catch (e) {
+      return { ...base, engine: "heuristica", error: e.message };
+    }
+  },
+
   // ---------------------------------------------------------------- summaries
   async narrative(summary) {
     const k = summary.kpis;
@@ -1136,7 +1393,7 @@ function fileToB64(file) {
 <script>
 /* Núcleo: base de dados (db.json na pasta escolhida), regras de governança e um "roteador" local
  * com as mesmas rotas que a interface usa (api("inputs/INP001/commit", "POST", {...})). */
-const PREFIX = { inputs: "INP", items: "GOV", projects: "PROJ", risks: "RISK", meetings: "MEET", actions: "ACT" };
+const PREFIX = { inputs: "INP", items: "GOV", projects: "PROJ", risks: "RISK", meetings: "MEET", actions: "ACT", flows: "FLOW" };
 const COLLECTIONS = Object.keys(PREFIX);
 const DB_FILE = "db.json";
 
@@ -1153,15 +1410,48 @@ function emptyDb() {
   const db = Object.fromEntries(COLLECTIONS.map((c) => [c, []]));
   return Object.assign(db, {
     seq: Object.fromEntries(COLLECTIONS.map((c) => [c, 0])),
-    events: [], feedback: [], summaries: [],
-    settings: {
-      alert_days_without_update: 15,
-      project_meeting_cadence_days: 15,
-      links_for_project_alert: 3,
-      areas: ["Operação", "Manutenção", "RH", "Financeiro", "Jurídico", "Compras", "SSMA", "TI", "Comercial", "Engenharia"],
-    },
+    events: [], feedback: [], summaries: [], flow_examples: [],
+    settings: defaultSettings(),
   });
 }
+
+function defaultSettings() {
+  return {
+    alert_days_without_update: 15,
+    project_meeting_cadence_days: 15,
+    links_for_project_alert: 3,
+    meeting_lead_days: 3,
+    areas: ["Operação", "Manutenção", "RH", "Financeiro", "Jurídico", "Compras", "SSMA", "TI", "Comercial", "Engenharia"],
+    lists: {
+      sources: ["Diretora", "Reunião", "Departamento", "HQ", "Outro"],
+      input_kinds: ["Pedido pontual", "Direcionamento / estratégia (reclamação, opinião)", "Nova solicitação do HQ", "Decisão conjunta entre departamentos", "Atualização de item existente", "Outro"],
+      impact_types: ["Custo", "Eficiência", "Operação", "Compliance", "People"],
+      flow_edge_labels: ["origina", "afeta", "impacta", "mitiga", "depende de", "se realizado", "se não realizado", "se concretizar", "se tratado"],
+    },
+    appearance: { title: "", accent: "#C00000", font_scale: 1, density: "normal", logo: "", show_bar: true },
+    hidden_modules: [],
+    schedule_mapping: null,
+    flow_guidelines: "",
+  };
+}
+
+/* Campos da planilha de atividades do projeto (layout Scope | Target | Item | nº | Subitem | Last Progress)
+ * e sinônimos usados para reconhecer cada coluna automaticamente. */
+const ACTIVITY_FIELDS = {
+  scope: ["scope", "escopo", "范围"],
+  target: ["target", "objetivo", "meta", "目标"],
+  item: ["item", "tema", "事项"],
+  n: ["nº", "no.", "n°", "#", "num", "seq", "编号", "序号"],
+  subitem: ["subitem", "sub-item", "sub item", "atividade", "activity", "task", "tarefa", "子项", "任务"],
+  last_progress: ["last progress", "progress update", "último progresso", "ultimo progresso", "andamento", "status update", "最新进展", "进展"],
+  owner: ["responsável", "responsavel", "owner", "resp", "负责人"],
+  start: ["início", "inicio", "start", "开始"],
+  finish: ["término", "termino", "fim", "finish", "end", "prazo", "due", "deadline", "完成", "截止"],
+  progress: ["%", "percent", "progresso %", "concluído", "concluido", "完成率"],
+};
+const SUB_LISTS = { projects: ["pitems", "activities", "scenarios"], risks: ["inputs_log", "scenarios"] };
+const SUB_PREFIX = { pitems: "IT", activities: "AT", scenarios: "SC", inputs_log: "RI" };
+const SUB_LABEL = { pitems: "Itens do projeto", activities: "Atividades", scenarios: "Impactos e riscos", inputs_log: "Inputs do risco" };
 
 const Core = {
   db: null,
@@ -1174,10 +1464,31 @@ const Core = {
       try { db = JSON.parse(await f.text()); } catch { throw new Error(t("db.json corrompido na pasta escolhida")); }
       for (const [k, v] of Object.entries(base)) if (db[k] === undefined) db[k] = v;
       for (const c of COLLECTIONS) db.seq[c] ??= 0;
-      db.settings = { ...base.settings, ...db.settings };
     }
+    this.normalize(db);
     this.db = db;
+    AI.IMPACT_TYPES = db.settings.lists.impact_types;
     if (!f) await this.save();
+  },
+  /** Completa campos novos em bases criadas por versões anteriores. */
+  normalize(db) {
+    const d = defaultSettings();
+    db.settings = { ...d, ...db.settings, lists: { ...d.lists, ...(db.settings?.lists || {}) }, appearance: { ...d.appearance, ...(db.settings?.appearance || {}) } };
+    for (const p of db.projects) { p.main ??= false; p.pitems ??= []; p.activities ??= []; p.scenarios ??= []; p.actions ??= []; p.schedules ??= []; p.sub_seq ??= 0; }
+    for (const r of db.risks) { r.impacts ??= []; r.inputs_log ??= []; r.scenarios ??= []; r.sub_seq ??= 0; }
+    for (const m of db.meetings) { m.status ??= "Realizada"; }
+    db.flows ??= [];
+    db.flow_examples ??= [];
+  },
+  /** % de conclusão do projeto = itens do projeto finalizados / total. */
+  projectPct(p) {
+    const list = p.pitems || [];
+    return list.length ? Math.round((list.filter((i) => i.status === "Finalizado").length / list.length) * 100) : null;
+  },
+  /** Progresso médio das atividades da planilha. */
+  activitiesPct(p) {
+    const list = p.activities || [];
+    return list.length ? Math.round(list.reduce((s, a) => s + (+a.progress || 0), 0) / list.length) : null;
   },
   _saving: Promise.resolve(),
   save() {
@@ -1216,6 +1527,7 @@ const Core = {
       rec.status ??= "Em andamento";
       rec.actions ??= [];
       rec.schedules ??= [];
+      rec.pitems ??= []; rec.activities ??= []; rec.scenarios ??= []; rec.main ??= false; rec.sub_seq = 0;
       rec.last_monitored = todayISO();
       rec.next_meeting ??= addDays(todayISO(), +db.settings.project_meeting_cadence_days || 15);
       rec.folder = this.folderFor("projects", rec.id);
@@ -1224,12 +1536,14 @@ const Core = {
     } else if (col === "risks") {
       rec.status ??= "Aberto";
       rec.mode ??= "Monitorar";
+      rec.impacts ??= []; rec.inputs_log ??= []; rec.scenarios ??= []; rec.sub_seq = 0;
       rec.folder = this.folderFor("risks", rec.id);
       await Store.write(rec.folder + "/LEIA-ME.txt", `${rec.id} INFOS AND GENERAL OVERVIEW\n${rec.title || ""}\n\n`
         + "Coloque aqui todas as informações e documentos a cerca do problema.\n"
         + "A plataforma compila estes arquivos para análise e reporte.\n");
     } else if (col === "meetings") {
       rec.date ||= todayISO();
+      rec.status ||= "Realizada";
     } else if (col === "items") {
       rec.status ??= "Aberto";
     }
@@ -1333,6 +1647,10 @@ const Core = {
     for (const r of db.risks) {
       if (r.status !== "Fechado" && daysSince(r.updated_at) >= limit) add("media", r.id, "Risco {id} sem atualização há {d} dias.", { id: r.id, d: daysSince(r.updated_at) });
     }
+    for (const m of db.meetings) {
+      if (["Pendente", "Solicitada"].includes(m.status) && m.date && m.date <= today)
+        add(m.status === "Pendente" ? "alta" : "media", m.id, "Reunião {id} ({title}) de {date}: confirme se foi realizada.", { id: m.id, title: m.title, date: m.date });
+    }
     const pending = db.inputs.filter((i) => i.status !== "Registrado").length;
     if (pending) add("baixa", "inputs", "{n} entradas aguardando classificação.", { n: pending });
     return out;
@@ -1374,10 +1692,11 @@ const Core = {
       inputs_by_source: bySource,
       critical_items: open.filter((i) => i.priority === "Alta").slice(0, 25).map(brief),
       due_items: open.filter((i) => i.due_date && i.due_date <= horizon).map(brief).sort((a, b) => a.due_date.localeCompare(b.due_date)),
-      projects: activeP.map((p) => ({ id: p.id, name: p.name, status: p.status, next_meeting: p.next_meeting,
+      projects: activeP.map((p) => ({ id: p.id, name: p.name, status: p.status, next_meeting: p.next_meeting, main: p.main,
+        pct: this.projectPct(p), activities_pct: this.activitiesPct(p),
         open_actions: (p.actions || []).filter((a) => a.status !== "Concluída").length, last_monitored: p.last_monitored })),
       risks: openR.map((r) => ({ id: r.id, title: r.title, mode: r.mode, probability: r.probability, impact: r.impact, status: r.status })),
-      meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title, date: m.date, decisions: m.decisions || [], items: m.links?.items || [] })),
+      meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title, date: m.date, status: m.status, decisions: m.decisions || [], items: m.links?.items || [] })),
       report_items: open.filter((i) => i.report).map(brief),
       activity: events.slice(-200).map((ev) => ({ ts: ev.ts, msg: ev.msg, text: ev.text })),
       alerts: this.alerts(),
@@ -1439,19 +1758,151 @@ const Core = {
       ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
     const msgOf = (a) => (a.msg ? t(a.msg[0], a.msg[1]) : a.text);
     return `<!doctype html><html lang="${I18N.htmlLang()}"><meta charset="utf-8"><title>${esc(t(s.type))} ${esc(s.period.start)}</title>
-<style>body{font:14px system-ui;margin:32px;color:#1f2937}h1{margin:0}h2{border-bottom:2px solid #1e3a8a;padding-bottom:4px;margin-top:28px}
-table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding:4px 8px;text-align:left}.k{display:inline-block;margin:6px 12px 6px 0;padding:8px 12px;background:#eef2ff;border-radius:8px}</style>
+<style>body{font:14px system-ui;margin:32px;color:#1a1a1a;background:#fafafa}h1{margin:0;color:${esc(Core.db.settings.appearance.accent)}}
+h2{color:#1a1a1a;border-left:5px solid ${esc(Core.db.settings.appearance.accent)};padding-left:8px;margin-top:28px}
+table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid #d9d9d9;padding:4px 8px;text-align:left}th{background:#f0f0f0}
+.k{display:inline-block;margin:6px 12px 6px 0;padding:8px 12px;background:#fff;border:1px solid #e1e1e1;border-top:3px solid ${esc(Core.db.settings.appearance.accent)};border-radius:6px}</style>
 <h1>${esc(t(s.type))}</h1><p>${esc(t("Período"))}: ${esc(s.period.start)} – ${esc(s.period.end)} · ${esc(t("gerado"))} ${esc(s.generated_at)}</p>
 <h2>1. ${esc(t("Destaques"))}</h2><div style="white-space:pre-wrap">${esc(text)}</div>
 <h2>2. ${esc(t("Indicadores"))}</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${esc(t(n))}</span>`).join("")}
 <h2>3. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
 <h2>4. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
 <h2>5. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
-<h2>6. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "Ações abertas", "Próx. reunião"])}${rows(s.projects, ["id", "name", "status", "open_actions", "next_meeting"])}</table>
+<h2>6. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Próx. reunião"])}${rows(s.projects.map((p) => ({ ...p, pct: p.pct == null ? "—" : p.pct + "%" })), ["id", "name", "status", "pct", "open_actions", "next_meeting"])}</table>
 <h2>7. ${esc(t("Riscos"))}</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
-<h2>8. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}</p>`).join("") || "<p>—</p>"}
+<h2>8. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)} · ${esc(t(m.status || "Realizada"))})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}</p>`).join("") || "<p>—</p>"}
 <h2>9. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
 <h2>10. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
+  },
+
+  // ------------------------------------------------------------ reuniões automáticas de projetos principais
+  /** Projetos principais geram, na aba Reuniões, a necessidade de reunião de acompanhamento (a confirmar). */
+  autoMeetings() {
+    const db = this.db, lead = +db.settings.meeting_lead_days || 0, limit = addDays(todayISO(), lead);
+    let created = false;
+    for (const p of db.projects) {
+      if (!p.main || ["Concluído", "Cancelado"].includes(p.status) || !p.next_meeting || p.next_meeting > limit) continue;
+      if (db.meetings.some((m) => m.project_id === p.id && ["Pendente", "Solicitada"].includes(m.status))) continue;
+      const m = { id: this.nextId("meetings"), title: I18N.fill("Acompanhamento: {name}", { name: p.name }), title_msg: ["Acompanhamento: {name}", { name: p.name }],
+        date: p.next_meeting, project_id: p.id, status: "Pendente", auto: true, kind: "Acompanhamento de projeto",
+        created_at: nowISO(), updated_at: nowISO(), links: {}, history: [] };
+      db.meetings.push(m);
+      this.link("meetings", m.id, "projects", p.id);
+      this.log("meetings.auto", m.id, "Reunião {id} gerada automaticamente para o projeto principal {proj} ({date})", { id: m.id, proj: p.id, date: m.date });
+      created = true;
+    }
+    return created;
+  },
+
+  // ------------------------------------------------------------ atividades a partir da planilha
+  /** Sugere qual coluna corresponde a cada campo, a partir da linha de cabeçalho. */
+  guessMapping(header) {
+    const norm = (x) => AI.norm(x).trim();
+    const H = header.map(norm), map = {};
+    const saved = this.db.settings.schedule_mapping;
+    for (const [field, syn] of Object.entries(ACTIVITY_FIELDS)) {
+      let idx = -1;
+      if (saved?.[field]) idx = H.indexOf(norm(saved[field]));
+      if (idx < 0) idx = H.findIndex((h) => h && syn.some((s) => h === norm(s)));
+      if (idx < 0) idx = H.findIndex((h) => h && syn.some((s) => norm(s).length > 2 && h.includes(norm(s))));
+      if (idx >= 0 && !Object.values(map).includes(idx)) map[field] = idx;
+    }
+    // coluna de numeração sem título logo antes do Subitem (como no layout padrão)
+    if (map.n === undefined && map.subitem > 0 && !H[map.subitem - 1]) map.n = map.subitem - 1;
+    return map;
+  },
+  findHeaderRow(rows) {
+    let best = 0, score = -1;
+    rows.slice(0, 15).forEach((r, i) => {
+      const m = this.guessMapping(r);
+      const sc = Object.keys(m).length;
+      if (sc > score) { score = sc; best = i; }
+    });
+    return best;
+  },
+  importActivities(p, rows, headerRow, mapping) {
+    const header = rows[headerRow] || [];
+    const get = (r, f) => (mapping[f] === undefined || mapping[f] === "" || mapping[f] === null ? "" : String(r[+mapping[f]] ?? "").trim());
+    const key = (a) => [a.scope, a.item, a.n, a.subitem].map((x) => AI.norm(x)).join("|");
+    const existing = new Map(p.activities.map((a) => [key(a), a]));
+    const out = [];
+    let added = 0, updated = 0;
+    for (const r of rows.slice(headerRow + 1)) {
+      const a = Object.fromEntries(Object.keys(ACTIVITY_FIELDS).map((f) => [f, get(r, f)]));
+      if (!a.subitem && !a.item && !a.n && !a.last_progress) continue;
+      const pct = a.progress ? parseFloat(a.progress.replace("%", "").replace(",", ".")) : NaN;
+      const old = existing.get(key(a));
+      if (old) {
+        Object.assign(old, { scope: a.scope, target: a.target, item: a.item, n: a.n, subitem: a.subitem, last_progress: a.last_progress || old.last_progress,
+          owner: a.owner || old.owner, start: a.start || old.start, finish: a.finish || old.finish });
+        if (!isNaN(pct)) old.progress = pct <= 1 && !a.progress.includes("%") ? Math.round(pct * 100) : Math.round(pct);
+        out.push(old); existing.delete(key(a)); updated++;
+      } else {
+        out.push({ ...a, id: this.subId(p, "activities"), progress: isNaN(pct) ? 0 : (pct <= 1 && !a.progress.includes("%") ? Math.round(pct * 100) : Math.round(pct)), notes: "", created_at: nowISO() });
+        added++;
+      }
+    }
+    // atividades que não estão mais na planilha são mantidas (podem ter progresso registrado)
+    p.activities = [...out, ...existing.values()];
+    this.db.settings.schedule_mapping = Object.fromEntries(Object.entries(mapping).filter(([, v]) => v !== "" && v !== null && v !== undefined).map(([f, i]) => [f, header[+i] ?? ""]));
+    return { added, updated, kept: existing.size };
+  },
+  subId(rec, list) { rec.sub_seq = (rec.sub_seq || 0) + 1; return `${SUB_PREFIX[list]}${String(rec.sub_seq).padStart(3, "0")}`; },
+
+  // ------------------------------------------------------------ fluxos (mapa visual)
+  /** Monta um fluxo a partir dos vínculos e impactos já registrados. */
+  flowFromData(scopeCol, scopeId) {
+    const db = this.db, nodes = new Map(), edges = [];
+    const node = (key, label, type, ref) => { if (!nodes.has(key)) nodes.set(key, { id: key, label, type, ref: ref || "" }); return key; };
+    const edge = (from, to, label) => { if (from !== to && !edges.some((e) => e.from === from && e.to === to)) edges.push({ id: "E" + (edges.length + 1), from, to, label }); };
+    const addImpacts = (rec, key, col) => {
+      for (const s of rec.scenarios || []) {
+        const k = node(`${rec.id}-${s.id}`, `${s.category ? s.category + ": " : ""}${s.description || ""}`.slice(0, 80), s.kind === "Risco" ? "risk" : "impact");
+        edge(key, k, s.scenario || (col === "projects" ? "se não realizado" : "se concretizar"));
+      }
+      for (const imp of rec.impacts || []) edge(key, node(`impact-${imp}`, imp, "impact"), "impacta");
+    };
+    const addProject = (p) => {
+      const pk = node(p.id, `${p.id} · ${p.name}`, "project", p.id);
+      for (const iid of p.links?.items || []) { const it = this.find("items", iid); if (it) edge(node(it.id, `${it.id} · ${it.title}`, "item", it.id), pk, "origina"); }
+      // riscos ligados ao projeto, diretamente ou pelos mesmos itens, com os impactos de cada risco
+      const riskIds = new Set([...(p.links?.risks || []), ...(p.links?.items || []).flatMap((iid) => this.find("items", iid)?.links?.risks || [])]);
+      for (const rid of riskIds) {
+        const r = this.find("risks", rid);
+        if (!r) continue;
+        const rk = node(r.id, `${r.id} · ${r.title}`, "risk", r.id);
+        edge(rk, pk, "afeta");
+        addImpacts(r, rk, "risks");
+      }
+      addImpacts(p, pk, "projects");
+      return pk;
+    };
+    const addRisk = (r) => {
+      const rk = node(r.id, `${r.id} · ${r.title}`, "risk", r.id);
+      for (const iid of r.links?.items || []) { const it = this.find("items", iid); if (it) edge(node(it.id, `${it.id} · ${it.title}`, "cause", it.id), rk, "origina"); }
+      for (const iid of r.links?.items || []) for (const pid of this.find("items", iid)?.links?.projects || []) { const p = this.find("projects", pid); if (p) edge(rk, node(p.id, `${p.id} · ${p.name}`, "project", p.id), "afeta"); }
+      addImpacts(r, rk, "risks");
+      return rk;
+    };
+    if (scopeCol === "projects") { const p = this.find("projects", scopeId); if (p) addProject(p); }
+    else if (scopeCol === "risks") { const r = this.find("risks", scopeId); if (r) addRisk(r); }
+    else {
+      db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).forEach(addProject);
+      db.risks.filter((r) => r.status !== "Fechado").forEach(addRisk);
+    }
+    return this.layoutFlow([...nodes.values()], edges);
+  },
+  /** Organiza os nós em colunas: causas/itens → projetos/riscos → impactos. */
+  layoutFlow(nodes, edges) {
+    const COL = { cause: 0, item: 0, input: 0, action: 1, project: 1, risk: 1, other: 1, impact: 2 };
+    const count = {};
+    for (const n of nodes) {
+      const c = COL[n.type] ?? 1;
+      count[c] = (count[c] || 0) + 1;
+      n.x = 40 + c * 320;
+      n.y = 40 + (count[c] - 1) * 90;
+    }
+    return { nodes, edges };
   },
 
   // ------------------------------------------------------------ roteador local
@@ -1467,13 +1918,30 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
     const [head, rid, action] = parts;
 
     if (head === "state" && method === "GET") {
-      let dirty = false;
+      let dirty = this.autoMeetings();
       for (const p of db.projects) dirty = (await this.syncSchedules(p)) || dirty;
-      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings"].map((k) => [k, db[k]])), events: db.events.slice(-60),
+      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples"].map((k) => [k, db[k]])), events: db.events.slice(-60),
         alerts: this.alerts(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
         summaries: db.summaries.slice(-30), today: todayISO() };
     }
-    if (head === "settings" && method === "PATCH") { Object.assign(db.settings, body); return db.settings; }
+    if (head === "settings" && method === "PATCH") {
+      for (const [k, v] of Object.entries(body)) {
+        if ((k === "lists" || k === "appearance") && v && typeof v === "object") db.settings[k] = { ...db.settings[k], ...v };
+        else db.settings[k] = v;
+      }
+      AI.IMPACT_TYPES = db.settings.lists.impact_types;
+      return db.settings;
+    }
+    if (head === "backup" && method === "POST") {
+      // restaura um db.json exportado (substitui a base atual; a anterior é guardada em BACKUPS/)
+      const incoming = body.db;
+      if (!incoming || !Array.isArray(incoming.items) || !incoming.seq) throw new ApiError(t("Arquivo de backup inválido"));
+      await Store.write(`BACKUPS/db_${nowISO().replace(/[:T]/g, "-")}.json`, JSON.stringify(db, null, 2));
+      this.normalize(incoming);
+      this.db = incoming;
+      AI.IMPACT_TYPES = incoming.settings.lists.impact_types;
+      return { ok: true };
+    }
 
     if (head === "summary" && method === "POST") {
       const kind = body.type || "daily";
@@ -1500,9 +1968,12 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       const proj = col === "meetings" && rec.project_id ? this.find("projects", rec.project_id) : null;
       if (proj) {
         this.link("meetings", rec.id, "projects", proj.id);
-        proj.next_meeting = addDays(rec.date, +db.settings.project_meeting_cadence_days || 15);
-        proj.last_monitored = todayISO();
+        if (rec.status === "Realizada") {
+          proj.next_meeting = addDays(rec.date, +db.settings.project_meeting_cadence_days || 15);
+          proj.last_monitored = todayISO();
+        }
       }
+      if (col === "flows" && rec.scope_col && rec.scope_col !== "geral") this.link("flows", rec.id, rec.scope_col, rec.scope_id);
       return rec;
     }
 
@@ -1512,15 +1983,15 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
     if (method === "GET" && rec && !action) return rec;
     if (method === "PATCH" && rec && !action) {
       const data = { ...body };
-      for (const k of ["id", "created_at", "links", "folder"]) delete data[k];
-      const note = data._note;
-      delete data._note;
+      for (const k of ["id", "created_at", "links", "folder", "pitems", "activities", "scenarios", "inputs_log", "actions", "schedules"]) delete data[k];
+      const note = data._note, silent = data._silent;
+      delete data._note; delete data._silent;
       Object.assign(rec, data);
       if (note) (rec.history ??= []).push({ date: nowISO(), text: note });  // texto do usuário: não traduzido
       if (col === "projects") rec.last_monitored = todayISO();
       this.touch(rec);
       if (note) this.log(`${col}.updated`, rid, "{id} atualizado: {note}", { id: rid, note });
-      else this.log(`${col}.updated`, rid, "{id} atualizado", { id: rid });
+      else if (!silent) this.log(`${col}.updated`, rid, "{id} atualizado", { id: rid });
       return rec;
     }
     if (method === "DELETE" && rec) {
@@ -1593,6 +2064,77 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       this.log("risks.analyzed", rid, "Risco {id} analisado", { id: rid });
       return rec;
     }
+    if (action === "sub" && SUB_LISTS[col]?.includes(body.list)) {
+      const list = (rec[body.list] ??= []);
+      let entry = null;
+      if (body.remove) {
+        rec[body.list] = list.filter((x) => x.id !== body.remove);
+      } else if (body.entry?.id) {
+        entry = list.find((x) => x.id === body.entry.id);
+        if (!entry) throw new ApiError(t("{id} não encontrado", { id: body.entry.id }));
+        const wasDone = entry.status === "Finalizado";
+        Object.assign(entry, body.entry, { updated_at: nowISO() });
+        if (body.list === "pitems" && entry.status === "Finalizado" && !wasDone) {
+          entry.done_at = todayISO();
+          this.log("projects.item_done", rid, "Item {sub} de {id} finalizado — projeto {pct}% concluído", { sub: entry.id, id: rid, pct: this.projectPct(rec) });
+        }
+      } else {
+        entry = { ...body.entry, id: this.subId(rec, body.list), created_at: nowISO() };
+        list.push(entry);
+        if (body.list === "inputs_log" && body.to_inputs) {
+          const inp = await this.createRecord("inputs", { source: entry.source || "Outro", source_detail: "Atualização de item existente", title: `${rec.id}: ${entry.text.slice(0, 80)}`,
+            description: entry.text, origin: entry.author || "", risk_id: rec.id });
+          inp.status = "Novo";
+          this.link("inputs", inp.id, "risks", rec.id);
+          entry.input_id = inp.id;
+        }
+      }
+      if (col === "projects") rec.last_monitored = todayISO();
+      this.touch(rec);
+      if (!(body.list === "pitems" && entry?.status === "Finalizado")) this.log(`${col}.sub`, rid, "{id}: {list} atualizado", { id: rid, list: [SUB_LABEL[body.list]] });
+      return rec;
+    }
+    if (col === "projects" && action === "import") {
+      if (body.file) await Store.writeUnique(`${rec.folder}/master_schedule`, body.file.name, body.file);
+      const res = this.importActivities(rec, body.rows || [], +body.header_row || 0, body.mapping || {});
+      await this.syncSchedules(rec);
+      rec.last_monitored = todayISO();
+      this.touch(rec);
+      this.log("projects.import", rid, "Planilha importada em {id}: {added} novas atividades, {updated} atualizadas", { id: rid, ...res });
+      return { project: rec, result: res };
+    }
+    if (col === "meetings" && action === "status") {
+      const proj = rec.project_id ? this.find("projects", rec.project_id) : null;
+      rec.status = body.status;
+      if (body.note) (rec.history ??= []).push({ date: nowISO(), text: body.note });
+      if (body.status === "Realizada") {
+        rec.held_at = body.date || rec.date || todayISO();
+        if (proj) { proj.next_meeting = addDays(rec.held_at, +db.settings.project_meeting_cadence_days || 15); proj.last_monitored = todayISO(); }
+        this.log("meetings.done", rid, "Reunião {id} confirmada como realizada", { id: rid });
+      } else if (body.status === "Não realizada") {
+        if (proj) proj.next_meeting = body.new_date || addDays(todayISO(), 7);
+        this.log("meetings.not_done", rid, "Reunião {id} não realizada", { id: rid });
+      }
+      this.touch(rec);
+      return rec;
+    }
+    if (col === "flows" && action === "generate") {
+      let g;
+      if (body.mode === "ai") g = await AI.generateFlow(db, rec, body.description ?? rec.description ?? "");
+      else g = this.flowFromData(rec.scope_col, rec.scope_id);
+      if (body.description !== undefined) rec.description = body.description;
+      rec.nodes = g.nodes; rec.edges = g.edges; rec.engine = g.engine || "dados";
+      this.touch(rec);
+      this.log("flows.generated", rid, "Fluxo {id} gerado", { id: rid });
+      return rec;
+    }
+    if (col === "flows" && action === "learn") {
+      db.flow_examples.push({ date: nowISO(), title: rec.title, scope: `${rec.scope_col}:${rec.scope_id || ""}`, description: rec.description || "",
+        nodes: (rec.nodes || []).map((n) => ({ key: n.id, label: n.label, type: n.type })), edges: (rec.edges || []).map((e) => ({ from: e.from, to: e.to, label: e.label })) });
+      db.flow_examples = db.flow_examples.slice(-10);
+      this.log("flows.learned", rid, "Fluxo {id} salvo como exemplo para a IA", { id: rid });
+      return rec;
+    }
     if (col === "meetings" && action === "extract") {
       const out = await AI.extractMeeting(db, rec);
       rec.extraction = out;
@@ -1605,15 +2147,290 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
 };
 </script>
 <script>
+/* Editor visual de fluxos (SVG): nós arrastáveis, ligações com rótulo, geração pelos dados ou pela IA.
+ * Cada fluxo é um registro em db.flows: { nodes:[{id,label,type,ref,x,y}], edges:[{id,from,to,label}] }. */
+const FlowEd = {
+  flow: null,
+  sel: null,          // { kind: "node"|"edge", id }
+  connecting: null,   // id do nó de origem quando em modo "Conectar"
+  connectMode: false,
+  drag: null,
+  _saveTimer: null,
+
+  TYPES: ["project", "risk", "item", "cause", "impact", "action", "other"],
+  TYPE_LABEL: { project: "Projeto", risk: "Risco", item: "Item", cause: "Causa", impact: "Impacto", action: "Ação", other: "Outro" },
+
+  style(type) {
+    const accent = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim() || "#C00000";
+    return {
+      project: { fill: "#ffffff", stroke: accent, sw: 2.5, text: "#1a1a1a" },
+      risk: { fill: "#fdeaea", stroke: accent, sw: 1.5, text: "#7a0000" },
+      impact: { fill: "#efefef", stroke: "#6b6b6b", sw: 1.2, text: "#1a1a1a" },
+      item: { fill: "#ffffff", stroke: "#9a9a9a", sw: 1.2, text: "#1a1a1a" },
+      cause: { fill: "#ffffff", stroke: "#9a9a9a", sw: 1.2, text: "#1a1a1a" },
+      action: { fill: "#fff6e5", stroke: "#a86500", sw: 1.2, text: "#5a3600" },
+      other: { fill: "#ffffff", stroke: "#bdbdbd", sw: 1, text: "#333333" },
+    }[type] || { fill: "#fff", stroke: "#bbb", sw: 1, text: "#333" };
+  },
+  lines(label) {
+    const words = String(label || "").split(/\s+/), out = [];
+    let cur = "";
+    for (const w of words) {
+      if ((cur + " " + w).trim().length > 28 && cur) { out.push(cur); cur = w; } else cur = (cur + " " + w).trim();
+    }
+    if (cur) out.push(cur);
+    if (out.length > 3) { out.length = 3; out[2] = out[2].slice(0, 25) + "…"; }
+    return out.length ? out : [""];
+  },
+  size(n) { const ls = this.lines(n.label); return { w: Math.min(230, Math.max(120, Math.max(...ls.map((l) => l.length)) * 7 + 26)), h: 18 + ls.length * 16, ls }; },
+
+  // ------------------------------------------------------------ desenho
+  svg() {
+    const f = this.flow, E = (x) => esc(x);
+    const nodes = f.nodes || [], edges = f.edges || [];
+    const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+    let W = 900, H = 500;
+    for (const n of nodes) { const s = this.size(n); W = Math.max(W, n.x + s.w + 80); H = Math.max(H, n.y + s.h + 80); }
+    const accent = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim() || "#C00000";
+    const edgeSvg = edges.map((e) => {
+      const a = byId[e.from], b = byId[e.to];
+      if (!a || !b) return "";
+      const sa = this.size(a), sb = this.size(b);
+      let x1 = a.x + sa.w, y1 = a.y + sa.h / 2, x2 = b.x, y2 = b.y + sb.h / 2;
+      if (b.x + sb.w / 2 < a.x + sa.w / 2) { x1 = a.x; x2 = b.x + sb.w; }        // destino à esquerda
+      const dx = Math.max(40, Math.abs(x2 - x1) / 2) * (x2 >= x1 ? 1 : -1);
+      const sel = this.sel?.kind === "edge" && this.sel.id === e.id;
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, lab = tv(e.label);
+      return `<g class="fl-edge" data-edge="${E(e.id)}">
+        <path d="M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}" fill="none" stroke="transparent" stroke-width="14"/>
+        <path d="M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}" fill="none" stroke="${sel ? accent : "#8a8a8a"}" stroke-width="${sel ? 2.5 : 1.5}" marker-end="url(#arrow${sel ? "S" : ""})"/>
+        ${lab ? `<rect x="${mx - lab.length * 3.4 - 6}" y="${my - 10}" width="${lab.length * 6.8 + 12}" height="18" rx="9" fill="#ffffff" stroke="#d6d6d6"/>
+        <text x="${mx}" y="${my + 3}" text-anchor="middle" font-size="11" fill="#444">${E(lab)}</text>` : ""}
+      </g>`;
+    }).join("");
+    const nodeSvg = nodes.map((n) => {
+      const s = this.size(n), st = this.style(n.type), sel = this.sel?.kind === "node" && this.sel.id === n.id;
+      const src = this.connecting === n.id;
+      return `<g class="fl-node" data-node="${E(n.id)}" transform="translate(${n.x},${n.y})">
+        <rect width="${s.w}" height="${s.h}" rx="8" fill="${st.fill}" stroke="${sel || src ? accent : st.stroke}" stroke-width="${sel || src ? 3 : st.sw}" ${src ? 'stroke-dasharray="5 3"' : ""}/>
+        ${n.type === "project" ? `<rect width="6" height="${s.h}" rx="3" fill="${accent}"/>` : ""}
+        <text x="${s.w / 2}" y="18" text-anchor="middle" font-size="12.5" fill="${st.text}" font-weight="${n.type === "project" || n.type === "risk" ? 700 : 500}">
+          ${s.ls.map((l, i) => `<tspan x="${s.w / 2}" dy="${i ? 16 : 0}">${E(l)}</tspan>`).join("")}</text>
+        <title>${E(t(this.TYPE_LABEL[n.type] || n.type))}${n.ref ? " · " + E(n.ref) : ""}: ${E(n.label)}</title>
+      </g>`;
+    }).join("");
+    return `<svg id="fl-svg" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background:#fbfbfb">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a8a8a"/></marker>
+        <marker id="arrowS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${accent}"/></marker>
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#efefef"/></pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)" class="fl-bg"/>
+      ${edgeSvg}${nodeSvg}
+    </svg>`;
+  },
+
+  panel() {
+    const f = this.flow, sel = this.sel;
+    const labels = S.db.settings.lists.flow_edge_labels || [];
+    let props = `<p class="muted">${t("Clique em um nó ou ligação para editar. Arraste os nós para organizar. Duplo clique no fundo cria um nó.")}</p>`;
+    if (sel?.kind === "node") {
+      const n = f.nodes.find((x) => x.id === sel.id);
+      if (n) props = `<h3>${t("Nó selecionado")}</h3>${L("Texto")}<textarea id="fl-label" style="min-height:60px">${esc(n.label)}</textarea>
+        <div class="row"><div>${L("Tipo")}<select id="fl-type">${this.TYPES.map((x) => `<option value="${x}" ${x === n.type ? "selected" : ""}>${esc(t(this.TYPE_LABEL[x]))}</option>`).join("")}</select></div>
+        <div>${L("Registro (ID)")}<input id="fl-ref" value="${esc(n.ref)}" placeholder="PROJ001"></div></div>
+        <div class="actions"><button class="small" onclick="FlowEd.applyNode()">${t("Aplicar")}</button>
+        ${n.ref ? `<button class="small ghost" onclick="FlowEd.openRef('${esc(n.ref)}')">${t("Abrir registro")}</button>` : ""}
+        <button class="small ghost danger" onclick="FlowEd.removeSel()">${t("Excluir")}</button></div>`;
+    } else if (sel?.kind === "edge") {
+      const e = f.edges.find((x) => x.id === sel.id);
+      if (e) props = `<h3>${t("Ligação selecionada")}</h3>${L("Rótulo")}<input id="fl-elabel" list="fl-labels" value="${esc(tv(e.label))}">
+        <datalist id="fl-labels">${labels.map((l) => `<option value="${esc(t(l))}">`).join("")}</datalist>
+        <div class="actions"><button class="small" onclick="FlowEd.applyEdge()">${t("Aplicar")}</button><button class="small ghost" onclick="FlowEd.reverseEdge()">${t("Inverter sentido")}</button>
+        <button class="small ghost danger" onclick="FlowEd.removeSel()">${t("Excluir")}</button></div>`;
+    }
+    return props;
+  },
+
+  view(flow) {
+    this.flow = flow;
+    const scopeName = flow.scope_col === "geral" ? t("Geral (todos os projetos e riscos)")
+      : `${flow.scope_id} · ${esc((Core.find(flow.scope_col, flow.scope_id) || {}).name || (Core.find(flow.scope_col, flow.scope_id) || {}).title || "")}`;
+    return `<p><a href="#fluxos">← ${t("Fluxos")}</a></p>
+    <h1>${flow.id} · ${esc(flow.title)}</h1><p class="muted">${t("Escopo")}: ${scopeName} · ${t("gerado por")} ${esc(tv(flow.engine) || "—")}</p>
+    <div class="toolbar">
+      <select id="fl-newtype">${this.TYPES.map((x) => `<option value="${x}">${esc(t(this.TYPE_LABEL[x]))}</option>`).join("")}</select>
+      <button class="small" onclick="FlowEd.addNode()">${t("+ Nó")}</button>
+      <button class="small ${this.connectMode ? "" : "ghost"}" id="fl-connect" onclick="FlowEd.toggleConnect()">${t(this.connectMode ? "Conectando… (clique origem e destino)" : "Conectar nós")}</button>
+      <button class="small ghost" onclick="FlowEd.relayout()">${t("Reorganizar")}</button>
+      <button class="small ghost" onclick="busy(this, ()=>FlowEd.generate('data'))">${t("Gerar pelos dados")}</button>
+      <button class="small" onclick="busy(this, ()=>FlowEd.generate('ai'))">${t("Gerar com IA")}</button>
+      <button class="small ghost" onclick="FlowEd.exportSvg()">${t("Exportar imagem (SVG)")}</button>
+    </div>
+    <div class="flow-wrap"><div class="flow-canvas" id="fl-canvas">${this.svg()}</div>
+      <div class="flow-side card" id="fl-panel">${this.panel()}</div></div>
+    <div class="grid" style="margin-top:14px">
+      <div class="card"><h2>${t("Descrição para a IA")}</h2>
+        <p class="muted">${t("Descreva o que este fluxo deve mostrar: causas, consequências, quais projetos e riscos se relacionam e por quê.")}</p>
+        <textarea id="fl-desc" style="min-height:110px">${esc(flow.description)}</textarea>
+        <div class="actions"><button onclick="busy(this, ()=>FlowEd.generate('ai'))">${t("Gerar com IA")}</button></div></div>
+      <div class="card"><h2>${t("Ensinar a IA")}</h2>
+        <p class="muted">${t("FLOW_TEACH_HELP")}</p>
+        ${L("Regras para montar fluxos (valem para todos)")}<textarea id="fl-guide" style="min-height:110px" placeholder="${esc(t("FLOW_GUIDE_PLACEHOLDER"))}">${esc(S.db.settings.flow_guidelines)}</textarea>
+        <div class="actions"><button class="ghost" onclick="busy(this, ()=>FlowEd.saveGuide())">${t("Salvar regras")}</button>
+          <button onclick="busy(this, ()=>FlowEd.learn())">${t("Salvar este fluxo como exemplo")}</button>
+          <span class="muted">${t("{n} exemplos salvos", { n: (S.db.flow_examples || []).length })}</span></div></div>
+    </div>`;
+  },
+
+  mount() {
+    const c = $("#fl-canvas");
+    if (!c) return;
+    c.onpointerdown = (ev) => this.down(ev);
+    c.onpointermove = (ev) => this.move(ev);
+    c.onpointerup = (ev) => this.up(ev);
+    c.ondblclick = (ev) => this.dbl(ev);
+  },
+  redraw() { $("#fl-canvas").innerHTML = this.svg(); $("#fl-panel").innerHTML = this.panel(); },
+  pt(ev) { const r = $("#fl-svg").getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; },
+
+  // ------------------------------------------------------------ interação
+  down(ev) {
+    const g = ev.target.closest("[data-node],[data-edge]");
+    if (!g) { this.sel = null; this.redraw(); return; }
+    if (g.dataset.edge) { this.sel = { kind: "edge", id: g.dataset.edge }; this.redraw(); return; }
+    const id = g.dataset.node;
+    if (this.connectMode) {
+      if (!this.connecting) { this.connecting = id; this.redraw(); return; }
+      if (this.connecting !== id) {
+        const labels = S.db.settings.lists.flow_edge_labels || [];
+        this.flow.edges.push({ id: "E" + Date.now().toString(36), from: this.connecting, to: id, label: labels[2] || "" });
+        this.sel = { kind: "edge", id: this.flow.edges.at(-1).id };
+        this.save();
+      }
+      this.connecting = null; this.redraw(); return;
+    }
+    const n = this.flow.nodes.find((x) => x.id === id), p = this.pt(ev);
+    this.drag = { id, dx: p.x - n.x, dy: p.y - n.y, moved: false };
+    this.sel = { kind: "node", id };
+    $("#fl-canvas").setPointerCapture(ev.pointerId);
+    $("#fl-panel").innerHTML = this.panel();
+  },
+  move(ev) {
+    if (!this.drag) return;
+    const n = this.flow.nodes.find((x) => x.id === this.drag.id), p = this.pt(ev);
+    n.x = Math.max(0, Math.round((p.x - this.drag.dx) / 10) * 10);
+    n.y = Math.max(0, Math.round((p.y - this.drag.dy) / 10) * 10);
+    this.drag.moved = true;
+    $("#fl-canvas").innerHTML = this.svg();
+  },
+  up() { if (this.drag?.moved) this.save(); this.drag = null; this.redraw(); },
+  dbl(ev) {
+    if (ev.target.closest("[data-node]")) { $("#fl-label")?.focus(); return; }
+    const p = this.pt(ev);
+    const label = prompt(t("Texto do novo nó:"));
+    if (!label) return;
+    this.flow.nodes.push({ id: "N" + Date.now().toString(36), label, type: $("#fl-newtype").value, ref: "", x: Math.round(p.x / 10) * 10, y: Math.round(p.y / 10) * 10 });
+    this.sel = { kind: "node", id: this.flow.nodes.at(-1).id };
+    this.save(); this.redraw();
+  },
+  addNode() {
+    const label = prompt(t("Texto do novo nó:"));
+    if (!label) return;
+    const maxY = Math.max(0, ...this.flow.nodes.map((n) => n.y + this.size(n).h));
+    this.flow.nodes.push({ id: "N" + Date.now().toString(36), label, type: $("#fl-newtype").value, ref: "", x: 40, y: maxY + 30 });
+    this.sel = { kind: "node", id: this.flow.nodes.at(-1).id };
+    this.save(); this.redraw();
+  },
+  toggleConnect() { this.connectMode = !this.connectMode; this.connecting = null; $("#view").innerHTML = this.view(this.flow); this.mount(); },
+  applyNode() {
+    const n = this.flow.nodes.find((x) => x.id === this.sel.id);
+    Object.assign(n, { label: $("#fl-label").value, type: $("#fl-type").value, ref: $("#fl-ref").value.trim().toUpperCase() });
+    this.save(); this.redraw();
+  },
+  applyEdge() {
+    const e = this.flow.edges.find((x) => x.id === this.sel.id);
+    const typed = $("#fl-elabel").value.trim();
+    // guarda o código original quando o texto é a tradução de um rótulo padrão
+    const code = (S.db.settings.lists.flow_edge_labels || []).find((l) => t(l) === typed);
+    e.label = code || typed;
+    this.save(); this.redraw();
+  },
+  reverseEdge() { const e = this.flow.edges.find((x) => x.id === this.sel.id); [e.from, e.to] = [e.to, e.from]; this.save(); this.redraw(); },
+  removeSel() {
+    if (!this.sel) return;
+    if (this.sel.kind === "node") {
+      this.flow.nodes = this.flow.nodes.filter((n) => n.id !== this.sel.id);
+      this.flow.edges = this.flow.edges.filter((e) => e.from !== this.sel.id && e.to !== this.sel.id);
+    } else this.flow.edges = this.flow.edges.filter((e) => e.id !== this.sel.id);
+    this.sel = null; this.save(); this.redraw();
+  },
+  relayout() { Core.layoutFlow(this.flow.nodes, this.flow.edges); this.save(); this.redraw(); },
+  openRef(ref) {
+    const view = { PROJ: "projetos", RISK: "riscos", GOV: "lista", MEET: "reunioes", INP: "entradas" }[ref.replace(/\d+$/, "")];
+    if (view) location.hash = `${view}/${ref}`;
+  },
+  save() {
+    clearTimeout(this._saveTimer);
+    const f = this.flow;
+    this._saveTimer = setTimeout(() => api(`flows/${f.id}`, "PATCH", { nodes: f.nodes, edges: f.edges, _silent: true }).catch((e) => toast(e.message)), 400);
+  },
+  async generate(mode) {
+    if (this.flow.nodes?.length && !confirm(t("Substituir o fluxo atual pelo novo gerado?"))) return;
+    clearTimeout(this._saveTimer);
+    const desc = $("#fl-desc") ? $("#fl-desc").value : this.flow.description;
+    const r = await api(`flows/${this.flow.id}/generate`, "POST", { mode, description: desc });
+    S.db.flows = S.db.flows.map((f) => (f.id === r.id ? r : f));
+    this.flow = r; this.sel = null;
+    $("#view").innerHTML = this.view(r); this.mount();
+    if (r.engine === "heuristica" && mode === "ai") toast(t("IA offline: fluxo montado pelos vínculos registrados."));
+  },
+  async saveGuide() {
+    await api("settings", "PATCH", { flow_guidelines: $("#fl-guide").value });
+    S.db.settings.flow_guidelines = $("#fl-guide").value;
+    toast(t("Regras salvas"));
+  },
+  async learn() {
+    clearTimeout(this._saveTimer);
+    await api(`flows/${this.flow.id}`, "PATCH", { nodes: this.flow.nodes, edges: this.flow.edges, description: $("#fl-desc").value, _silent: true });
+    await api(`flows/${this.flow.id}/learn`, "POST");
+    await refresh();
+    toast(t("Exemplo salvo: a IA vai usar este fluxo como referência."));
+  },
+  exportSvg() {
+    const blob = new Blob([$("#fl-svg").outerHTML], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    download(url, `${this.flow.id}.svg`);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  },
+};
+
+/** Abre (ou cria e gera pelos dados) o fluxo de um projeto/risco. */
+async function openFlowFor(col, id) {
+  let f = S.db.flows.find((x) => x.scope_col === col && x.scope_id === id);
+  if (!f) {
+    const rec = byId(col, id);
+    f = await api("flows", "POST", { title: `${t("Fluxo")} — ${rec.name || rec.title}`, scope_col: col, scope_id: id, nodes: [], edges: [], description: "" });
+    await api(`flows/${f.id}/generate`, "POST", { mode: "data" });
+    await refresh();
+  }
+  location.hash = "fluxos/" + f.id;
+}
+</script>
+<script>
 /* Plataforma de Governança — interface (JS puro, sem build).
  * Textos de tela passam por t() (i18n.js). Valores guardados nos dados (status, prioridade, origem…)
  * ficam como códigos fixos em português e são traduzidos só na exibição, com tv(). */
 let S = null; // estado vindo de Core.api("state")
 
-const SOURCES = ["Diretora", "Reunião", "Departamento", "HQ", "Outro"];
-const INPUT_KIND = ["Pedido pontual", "Direcionamento / estratégia (reclamação, opinião)", "Nova solicitação do HQ", "Decisão conjunta entre departamentos", "Atualização de item existente", "Outro"];
 const STATUS_ITEM = ["Aberto", "Em andamento", "Aguardando", "Concluído"];
 const LEVELS = ["Alta", "Média", "Baixa"];
+const PITEM_STATUS = ["Aberto", "Em andamento", "Finalizado"];
+const MEETING_STATUS = ["Pendente", "Solicitada", "Realizada", "Não realizada"];
+const MODULES = ["painel", "entradas", "lista", "projetos", "reunioes", "riscos", "fluxos", "summaries"];
+const SCENARIOS = { projects: ["se realizado", "se não realizado"], risks: ["se concretizar", "se tratado"] };
+const ACT_FIELDS = { scope: "Scope", target: "Target", item: "Item", n: "Nº", subitem: "Subitem", last_progress: "Last Progress",
+  owner: "Responsável", start: "Início", finish: "Término / prazo", progress: "% concluído" };
 
 // ------------------------------------------------------------------ utilidades
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -1623,12 +2440,19 @@ const tv = (v) => (v ? t(v) : "");
 const prio = (p) => pill(tv(p), "p-" + p);
 const opts = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? "selected" : ""}>${esc(t(o))}</option>`).join("");
 const msg = (r) => (r.msg ? t(r.msg[0], r.msg[1]) : r.text || "");
+const titleOf = (m) => (m.title_msg ? t(m.title_msg[0], m.title_msg[1]) : m.title || "");
 const byId = (col, id) => (S.db[col] || []).find((r) => r.id === id);
 const defLabel = (d) => t(S.definitions[d] || d);
 const fmt = (iso) => (iso ? iso.replace("T", " ").slice(0, 16) : "");
 const th = (heads) => `<tr>${heads.map((h) => `<th>${h === "ID" ? "ID" : esc(t(h))}</th>`).join("")}</tr>`;
 const L = (text) => `<label>${esc(t(text))}</label>`;
+const LIST = (k) => S.db.settings.lists[k] || [];
 const timeline = (list) => list.map((h) => `<li><span class="muted">${fmt(h.date || h.ts)}</span> ${esc(msg(h))}</li>`).join("") || '<li class="muted">—</li>';
+const bar = (pct, label = "") => (pct == null ? `<span class="muted">—</span>`
+  : `<div class="progress" title="${esc(label)}"><div class="progress-bar"><span style="width:${pct}%"></span></div><b>${pct}%</b></div>`);
+const statusPill = (s) => pill(tv(s), { Realizada: "p-Baixa", "Não realizada": "p-Alta", Pendente: "p-Média", Solicitada: "p-Média", Finalizado: "p-Baixa", Concluído: "p-Baixa", Concluída: "p-Baixa" }[s] || "");
+const tabs = (base, list, cur) => `<div class="tabs">${list.map(([k, label]) => `<a href="#${base}/${k}" class="${k === cur ? "on" : ""}">${label}</a>`).join("")}</div>`;
+const actStatus = (a) => ((+a.progress || 0) >= 100 ? "Concluída" : (+a.progress || 0) > 0 ? "Em andamento" : "Não iniciada");
 
 const api = (path, method = "GET", body) => Core.api(path, method, body);
 function toast(text) {
@@ -1656,15 +2480,12 @@ async function openFile(rel) {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 function download(url, name) { const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+function downloadText(text, name, type) { const url = URL.createObjectURL(new Blob([text], { type })); download(url, name); setTimeout(() => URL.revokeObjectURL(url), 60000); }
 function fileLink(rel, label) { return `<a href="#" data-rel="${esc(rel)}" onclick="openFile(this.dataset.rel);return false">${esc(label)}</a>`; }
-function exportCsv() {
-  const url = URL.createObjectURL(new Blob([Core.exportCsv()], { type: "text/csv;charset=utf-8" }));
-  download(url, `${t("lista_governanca")}_${S.today}.csv`);
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
-}
+function exportCsv() { downloadText(Core.exportCsv(), `${t("lista_governanca")}_${S.today}.csv`, "text/csv;charset=utf-8"); }
 function linksHtml(rec) {
-  const names = { items: "Itens", projects: "Projetos", risks: "Riscos", meetings: "Reuniões", inputs: "Entradas" };
-  const views = { items: "lista", projects: "projetos", risks: "riscos", meetings: "reunioes", inputs: "entradas" };
+  const names = { items: "Itens", projects: "Projetos", risks: "Riscos", meetings: "Reuniões", inputs: "Entradas", flows: "Fluxos" };
+  const views = { items: "lista", projects: "projetos", risks: "riscos", meetings: "reunioes", inputs: "entradas", flows: "fluxos" };
   const parts = Object.entries(rec.links || {}).filter(([, v]) => v.length).map(([k, v]) =>
     `<b>${esc(t(names[k] || k))}:</b> ` + v.map((id) => `<a href="#${views[k]}/${id}" onclick="closeModal()">${esc(id)}</a>`).join(", "));
   return parts.join(" · ") || `<span class="muted">${t("sem vínculos")}</span>`;
@@ -1677,13 +2498,30 @@ async function addLink(col, id) {
   try { await api(`${col}/${id}/link`, "POST", { collection: $("#lk-col").value, id: $("#lk-id").value.trim().toUpperCase() }); toast(t("Vínculo criado")); await refresh(); }
   catch (e) { toast(t(e.message)); }
 }
+async function sub(col, id, list, entry, extra = {}) { await api(`${col}/${id}/sub`, "POST", { list, entry, ...extra }); await refresh(); }
+async function subRemove(col, id, list, sid) { if (confirm(t("Excluir este registro?"))) { await api(`${col}/${id}/sub`, "POST", { list, remove: sid }); await refresh(); } }
 
-// ------------------------------------------------------------------ idioma
+// ------------------------------------------------------------------ aparência e idioma
+function applyAppearance() {
+  const ap = S?.db.settings.appearance || { accent: "#C00000", font_scale: 1, density: "normal", show_bar: true };
+  const root = document.documentElement.style;
+  root.setProperty("--brand", ap.accent || "#C00000");
+  root.setProperty("--font-scale", ap.font_scale || 1);
+  document.body.dataset.density = ap.density || "normal";
+  $("#redbar").classList.toggle("hidden", ap.show_bar === false);
+  const logo = $("#logo");
+  logo.src = ap.logo || DEFAULT_LOGO;
+  logo.classList.toggle("hidden", ap.logo === "none");
+  $("#app-title").textContent = ap.title || t("Governança");
+  document.querySelectorAll("nav a").forEach((a) => a.classList.toggle("hidden", (S?.db.settings.hidden_modules || []).includes(a.getAttribute("href").slice(1))));
+}
 function applyStaticTexts() {
-  document.documentElement.lang = { pt: "pt-BR", en: "en", zh: "zh-CN" }[I18N.lang];
+  document.documentElement.lang = I18N.htmlLang();
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
   const sel = $("#lang");
   if (sel) sel.value = I18N.lang;
+  document.querySelector(".brand .ai").textContent = I18N.lang === "pt" ? "IA" : "AI";
+  if (!S?.db.settings.appearance.title) $("#app-title").textContent = t("Governança");
 }
 async function setLang(l) {
   await I18N.set(l);
@@ -1695,33 +2533,41 @@ async function setLang(l) {
 async function refresh() { S = await api("state"); render(); }
 function render() {
   if (!S) return;
-  const [view, id] = (location.hash.slice(1) || "painel").split("/");
+  applyAppearance();
+  const [view, id, tab] = (location.hash.slice(1) || "painel").split("/");
   document.querySelectorAll("nav a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + view));
   const b = $("#ai-badge");
   b.className = "badge" + (S.ai.enabled ? " on" : "");
-  document.querySelector(".brand .ai").textContent = I18N.lang === "pt" ? "IA" : "AI";
   b.textContent = S.ai.enabled ? t("IA: ") + S.ai.model : t("IA offline (heurística)");
   b.title = S.ai.detail ? t(S.ai.detail) : "";
-  const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, reunioes: viewReunioes, riscos: viewRiscos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
-  $("#view").innerHTML = V(id);
+  const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, reunioes: viewReunioes, riscos: viewRiscos,
+    fluxos: viewFluxos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
+  $("#view").innerHTML = V(id, tab);
   if (V === viewEntradas && id) openTriage(id);
   if (V === viewLista && id) openItem(id);
+  if (V === viewFluxos && id) FlowEd.mount();
+  if (V === viewRiscos && id && (tab || "geral") === "docs") loadRiskFiles(id);
 }
 window.addEventListener("hashchange", render);
 
 // ------------------------------------------------------------------ painel
 function viewPainel() {
   const open = S.db.items.filter((i) => i.status !== "Concluído");
+  const toConfirm = S.db.meetings.filter((m) => ["Pendente", "Solicitada"].includes(m.status));
   const k = [
-    ["Entradas pendentes", S.db.inputs.filter((i) => i.status !== "Registrado").length],
-    ["Itens em aberto", open.length],
-    ["Alta prioridade", open.filter((i) => i.priority === "Alta").length],
-    ["Vencidos", open.filter((i) => i.due_date && i.due_date < S.today).length],
-    ["Projetos ativos", S.db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).length],
-    ["Riscos abertos", S.db.risks.filter((r) => r.status !== "Fechado").length],
+    ["Entradas pendentes", S.db.inputs.filter((i) => i.status !== "Registrado").length, "entradas"],
+    ["Itens em aberto", open.length, "lista"],
+    ["Alta prioridade", open.filter((i) => i.priority === "Alta").length, "lista"],
+    ["Vencidos", open.filter((i) => i.due_date && i.due_date < S.today).length, "lista"],
+    ["Projetos ativos", S.db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).length, "projetos"],
+    ["Reuniões a confirmar", toConfirm.length, "reunioes"],
+    ["Riscos abertos", S.db.risks.filter((r) => r.status !== "Fechado").length, "riscos"],
   ];
+  const mains = S.db.projects.filter((p) => p.main && !["Concluído", "Cancelado"].includes(p.status));
   return `<h1>${t("Painel de governança")}</h1>
-  <div class="kpis">${k.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${t(n)}</span></div>`).join("")}</div>
+  <div class="kpis">${k.map(([n, v, h]) => `<a class="kpi" href="#${h}"><b>${v}</b><span>${t(n)}</span></a>`).join("")}</div>
+  ${mains.length ? `<div class="card" style="margin-bottom:14px"><h2>${t("Projetos principais")}</h2><table>${th(["ID", "Projeto", "% concluído", "Atividades", "Próx. reunião"])}
+    ${mains.map((p) => `<tr class="click" onclick="location.hash='projetos/${p.id}'"><td>${p.id}</td><td>${esc(p.name)}</td><td>${bar(Core.projectPct(p))}</td><td>${bar(Core.activitiesPct(p))}</td><td>${esc(p.next_meeting)}</td></tr>`).join("")}</table></div>` : ""}
   <div class="grid">
     <div class="card"><h2>${t("Alertas")}</h2>${S.alerts.map((a) => `<div class="alert lv-${a.level}">${esc(msg(a))}</div>`).join("") || `<p class="muted">${t("Nenhum alerta.")}</p>`}</div>
     <div class="card"><h2>${t("Atividade recente")}</h2><ul class="tl">${timeline(S.events.slice().reverse().slice(0, 15))}</ul></div>
@@ -1744,13 +2590,13 @@ function viewEntradas() {
 }
 function inputForm(pre = {}) {
   const meetings = S.db.meetings.slice().reverse();
-  return `<div class="row"><div>${L("Origem")}<select id="f-source">${opts(SOURCES, pre.source || "Diretora")}</select></div>
-    <div>${L("Tipo")}<select id="f-kind">${opts(INPUT_KIND, pre.kind)}</select></div></div>
+  return `<div class="row"><div>${L("Origem")}<select id="f-source">${opts(LIST("sources"), pre.source || LIST("sources")[0])}</select></div>
+    <div>${L("Tipo")}<select id="f-kind">${opts(LIST("input_kinds"), pre.kind)}</select></div></div>
   ${L("Título / assunto")}<input id="f-title" value="${esc(pre.title)}">
   ${L("Descrição do input")}<textarea id="f-desc">${esc(pre.description)}</textarea>
   ${L("Background / contexto")}<textarea id="f-bg" style="min-height:60px">${esc(pre.background)}</textarea>
   <div class="row"><div>${L("De onde a demanda veio (pessoa / fórum)")}<input id="f-origin" value="${esc(pre.origin)}"></div>
-    <div>${L("Reunião")}<select id="f-meeting"><option value="">—</option>${meetings.map((m) => `<option value="${m.id}" ${m.id === pre.meeting_id ? "selected" : ""}>${m.id} · ${esc(m.title)}</option>`).join("")}</select></div></div>
+    <div>${L("Reunião")}<select id="f-meeting"><option value="">—</option>${meetings.map((m) => `<option value="${m.id}" ${m.id === pre.meeting_id ? "selected" : ""}>${m.id} · ${esc(titleOf(m))}</option>`).join("")}</select></div></div>
   <div class="row"><div>${L("Área principal")}<input id="f-area" list="areas" value="${esc(pre.area_main)}"></div>
     <div>${L("Áreas impactadas")}<input id="f-areas-imp" value="${esc(pre.areas_impacted)}"></div>
     <div>${L("Áreas que impactam")}<input id="f-areas-by" value="${esc(pre.areas_impacting)}"></div></div>
@@ -1797,11 +2643,12 @@ function openTriage(id) {
     <div>${L("Urgência")}<select id="t-urg">${opts(LEVELS, a.urgency || "Média")}</select></div>
     <div>${L("De onde a demanda veio")}<input id="t-origin" value="${esc(a.origin || inp.origin || tv(inp.source))}"></div></div>
   ${L("Riscos e urgência — explique o porquê")}<textarea id="t-risk" style="min-height:50px">${esc(a.risk_reason)}</textarea>
-  ${L("Impactos")}<div class="checks" style="display:flex;gap:16px;flex-wrap:wrap">${S.impact_types.map((x) => `<label><input type="checkbox" class="t-imp" value="${x}" ${(a.impacts || []).includes(x) ? "checked" : ""}> ${esc(t(x))}</label>`).join("")}</div>
+  ${L("Impactos")}<div class="checks inline">${S.impact_types.map((x) => `<label><input type="checkbox" class="t-imp" value="${esc(x)}" ${(a.impacts || []).includes(x) ? "checked" : ""}> ${esc(t(x))}</label>`).join("")}</div>
   ${L("Impactos em quais projetos / operações, por quê")}<textarea id="t-impd" style="min-height:50px">${esc(a.impact_details)}</textarea>
   ${L("Gaps (por que não foi previsto antes?)")}<textarea id="t-gap" style="min-height:50px">${esc(a.gap_analysis)}</textarea>
   <div class="steps" style="margin-top:14px"><span class="step on">${t("3. Definição (pode ser mais de uma)")}</span></div>
   <div class="checks">${Object.entries(S.definitions).map(([k, v]) => `<label><input type="checkbox" class="t-def" value="${k}" ${defs.includes(k) ? "checked" : ""}> ${esc(t(v))}</label>`).join("")}</div>
+  <p class="muted">${t("“Ação dentro de um projeto” entra automaticamente na aba Itens adicionais do projeto.")}</p>
   <div class="row"><div>${L('Projeto (para "Ação dentro de um projeto")')}<select id="t-proj"><option value="">—</option>${projects.map((p) => `<option value="${p.id}" ${p.id === a.project_id ? "selected" : ""}>${p.id} · ${esc(p.name)}</option>`).join("")}</select></div>
     <div>${L('Nome do novo projeto (se "Criação de um novo projeto")')}<input id="t-newproj" value="${esc(inp.title)}"></div></div>
   <div class="actions">${done ? `<span class="pill p-Baixa">${t("Registrado em")} ${inp.item_id}</span> <a class="btn ghost" href="#lista/${inp.item_id}">${t("Abrir item")}</a>` : `<button onclick="busy(this, ()=>commitTriage('${id}'))">${t("Confirmar e registrar na lista geral")}</button>`}
@@ -1835,7 +2682,7 @@ function viewLista() {
   <div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(F.q)}" onchange="F.q=this.value;render()">
     <select onchange="F.status=this.value;render()"><option value="">${t("Status")}</option>${opts(STATUS_ITEM, F.status)}</select>
     <select onchange="F.prio=this.value;render()"><option value="">${t("Prioridade")}</option>${opts(LEVELS, F.prio)}</select>
-    <select onchange="F.src=this.value;render()"><option value="">${t("Origem")}</option>${opts(SOURCES, F.src)}</select>
+    <select onchange="F.src=this.value;render()"><option value="">${t("Origem")}</option>${opts(LIST("sources"), F.src)}</select>
     <select onchange="F.def=this.value;render()"><option value="">${t("Definição")}</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${esc(t(v))}</option>`).join("")}</select>
     <button class="ghost" onclick="exportCsv()">${t("Baixar planilha (CSV)")}</button></div>
   <div class="card" style="overflow:auto"><table>${th(["ID", "Item", "Origem", "Responsável", "Emitido", "Prazo", "Prioridade", "Impactos", "Definição", "Vínculos", "Status"])}
@@ -1867,45 +2714,199 @@ async function saveItem(id) {
   toast(t("Item atualizado")); closeModal(); location.hash = "lista"; await refresh();
 }
 
+// ------------------------------------------------------------------ impactos e riscos (cenários) — projetos e riscos
+function scenariosTab(col, rec) {
+  const [sA, sB] = SCENARIOS[col];
+  const block = (sc) => {
+    const list = (rec.scenarios || []).filter((x) => x.scenario === sc);
+    return `<div class="card"><h2>${esc(t(col === "projects" ? (sc === sA ? "Se o projeto for realizado" : "Se o projeto NÃO for realizado") : (sc === sA ? "Se o risco se concretizar" : "Se o risco for tratado / mitigado")))}</h2>
+      <table>${th(["Tipo", "Categoria", "Descrição", "Severidade", "Vínculo", ""])}
+      ${list.map((x) => `<tr><td>${pill(tv(x.kind), x.kind === "Risco" ? "p-Alta" : "")}</td><td>${esc(tv(x.category))}</td><td>${esc(x.description)}</td><td>${prio(x.severity)}</td>
+        <td>${x.link ? esc(x.link) : ""}</td><td><button class="small ghost danger" onclick="busy(this, ()=>subRemove('${col}','${rec.id}','scenarios','${x.id}'))">×</button></td></tr>`).join("") || `<tr><td colspan=6 class="muted">—</td></tr>`}</table>
+      <div class="row"><div>${L("Tipo")}<select id="sc-kind-${sc.replace(/\W/g, "")}">${opts(["Impacto", "Risco", "Benefício"])}</select></div>
+        <div>${L("Categoria")}<select id="sc-cat-${sc.replace(/\W/g, "")}">${opts(LIST("impact_types"))}</select></div>
+        <div>${L("Severidade")}<select id="sc-sev-${sc.replace(/\W/g, "")}">${opts(LEVELS, "Média")}</select></div>
+        <div>${L("Vínculo (ID opcional)")}<input id="sc-link-${sc.replace(/\W/g, "")}" placeholder="RISK001"></div></div>
+      ${L("Descrição")}<textarea id="sc-desc-${sc.replace(/\W/g, "")}" style="min-height:50px"></textarea>
+      <div class="actions"><button class="small" onclick="busy(this, ()=>addScenario('${col}','${rec.id}','${sc}'))">${t("Adicionar")}</button></div></div>`;
+  };
+  return `<p class="muted">${t(col === "projects" ? "Registre os impactos e riscos gerados pela realização ou não do projeto. Eles alimentam o fluxo visual." : "Registre os impactos e riscos gerados se o risco se concretizar ou se for tratado. Eles alimentam o fluxo visual.")}</p>
+    <div class="grid">${block(sA)}${block(sB)}</div>`;
+}
+async function addScenario(col, id, sc) {
+  const k = sc.replace(/\W/g, "");
+  const description = $(`#sc-desc-${k}`).value.trim();
+  if (!description) throw new Error(t("Descreva o impacto."));
+  await sub(col, id, "scenarios", { scenario: sc, kind: $(`#sc-kind-${k}`).value, category: $(`#sc-cat-${k}`).value, severity: $(`#sc-sev-${k}`).value,
+    link: $(`#sc-link-${k}`).value.trim().toUpperCase(), description });
+}
+
 // ------------------------------------------------------------------ projetos
-function viewProjetos(id) {
-  if (id) return projectDetail(byId("projects", id));
+function viewProjetos(id, tab) {
+  if (id) return projectDetail(byId("projects", id), tab || "geral");
+  const list = S.db.projects.slice().sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0));
   return `<h1>${t("Gerenciamento de projetos")}</h1>
-  <div class="grid" style="grid-template-columns: minmax(300px,2fr) minmax(280px,1fr)">
-  <div class="card"><table>${th(["ID", "Projeto", "Responsável", "Ações abertas", "Últ. monitoramento", "Próx. reunião", "Status"])}
-  ${S.db.projects.map((p) => `<tr class="click" onclick="location.hash='projetos/${p.id}'"><td>${p.id}</td><td>${esc(p.name)}</td><td>${esc(p.owner)}</td>
-    <td>${(p.actions || []).filter((a) => a.status !== "Concluída").length}</td><td>${esc(p.last_monitored)}</td><td>${p.next_meeting <= S.today ? pill(p.next_meeting, "p-Alta") : esc(p.next_meeting)}</td><td>${esc(tv(p.status))}</td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Nenhum projeto.")}</td></tr>`}
+  <div class="grid" style="grid-template-columns: minmax(300px,2.2fr) minmax(280px,1fr)">
+  <div class="card" style="overflow:auto"><table>${th(["ID", "Projeto", "Responsável", "% concluído", "Atividades", "Itens adicionais abertos", "Próx. reunião", "Status"])}
+  ${list.map((p) => `<tr class="click" onclick="location.hash='projetos/${p.id}'"><td>${p.id}</td><td>${p.main ? `<span class="star" title="${esc(t("Projeto principal"))}">★</span> ` : ""}${esc(p.name)}</td><td>${esc(p.owner)}</td>
+    <td>${bar(Core.projectPct(p))}</td><td>${bar(Core.activitiesPct(p))}</td><td>${(p.actions || []).filter((a) => a.status !== "Concluída").length}</td>
+    <td>${p.next_meeting <= S.today ? pill(p.next_meeting, "p-Alta") : esc(p.next_meeting)}</td><td>${esc(tv(p.status))}</td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nenhum projeto.")}</td></tr>`}
   </table></div>
   <div class="card"><h2>${t("Novo projeto")}</h2>${L("Nome")}<input id="p-name">${L("Descrição")}<textarea id="p-desc"></textarea>${L("Responsável")}<input id="p-owner">
-    <div class="actions"><button onclick="busy(this, async()=>{const r=await api('projects','POST',{name:$('#p-name').value,description:$('#p-desc').value,owner:$('#p-owner').value}); await refresh(); location.hash='projetos/'+r.id;})">${t("Criar projeto e pasta local")}</button></div></div></div>`;
+    <div class="checks"><label><input type="checkbox" id="p-main"> ${t("Projeto principal (gera reuniões de acompanhamento automaticamente)")}</label></div>
+    <div class="actions"><button onclick="busy(this, async()=>{const r=await api('projects','POST',{name:$('#p-name').value,description:$('#p-desc').value,owner:$('#p-owner').value,main:$('#p-main').checked}); await refresh(); location.hash='projetos/'+r.id;})">${t("Criar projeto e pasta local")}</button></div></div></div>`;
 }
-function projectDetail(p) {
+function projectDetail(p, tab) {
   if (!p) return `<p>${t("Projeto não encontrado.")}</p>`;
-  const items = S.db.items.filter((i) => (p.links.items || []).includes(i.id));
-  return `<p><a href="#projetos">← ${t("Projetos")}</a></p><h1>${p.id} · ${esc(p.name)}</h1>
-  <p class="muted">${t("Pasta local:")} <code>${esc(S.workspace)}/${esc(p.folder)}</code></p>
-  <div class="grid">
+  const pct = Core.projectPct(p), apct = Core.activitiesPct(p);
+  const open = (p.actions || []).filter((a) => a.status !== "Concluída").length;
+  const T = [["geral", t("Visão geral")], ["itens", `${t("Itens do projeto")} (${pct == null ? 0 : pct}%)`], ["atividades", `${t("Atividades (planilha)")} (${p.activities.length})`],
+    ["adicionais", `${t("Itens adicionais do projeto")} (${open})`], ["impactos", t("Impactos e riscos")], ["arquivos", t("Arquivos / master schedule")], ["fluxo", t("Fluxo")]];
+  const body = { geral: projOverview, itens: projItems, atividades: projActivities, adicionais: projAdditional, impactos: (x) => scenariosTab("projects", x), arquivos: projFiles, fluxo: projFlow }[tab] || projOverview;
+  return `<p><a href="#projetos">← ${t("Projetos")}</a></p>
+  <div class="title-row"><h1>${p.main ? '<span class="star">★</span> ' : ""}${p.id} · ${esc(p.name)}</h1><div class="pct-big">${t("Concluído")}: ${bar(pct)}</div></div>
+  <p class="muted">${t("Pasta local:")} <code>${esc(S.workspace)}/${esc(p.folder)}</code>${apct != null ? ` · ${t("Progresso das atividades")}: ${apct}%` : ""}</p>
+  ${tabs("projetos/" + p.id, T, tab)}${body(p)}`;
+}
+function projOverview(p) {
+  const meetings = S.db.meetings.filter((m) => m.project_id === p.id).slice().reverse();
+  return `<div class="grid">
   <div class="card"><h2>${t("Dados")}</h2>${L("Descrição")}<textarea id="pd-desc">${esc(p.description)}</textarea>
+    ${L("Objetivo do projeto")}<textarea id="pd-obj" style="min-height:50px">${esc(p.objective)}</textarea>
     <div class="row"><div>${L("Responsável")}<input id="pd-owner" value="${esc(p.owner)}"></div><div>${L("Status")}<select id="pd-status">${opts(["Em andamento", "Em risco", "Pausado", "Concluído", "Cancelado"], p.status)}</select></div><div>${L("Próxima reunião")}<input type="date" id="pd-next" value="${esc(p.next_meeting)}"></div></div>
+    <div class="checks"><label><input type="checkbox" id="pd-main" ${p.main ? "checked" : ""}> ${t("Projeto principal (gera reuniões de acompanhamento automaticamente)")}</label></div>
     ${L("Atualização / monitoramento")}<textarea id="pd-note" style="min-height:50px"></textarea>
-    <div class="actions"><button onclick="busy(this, async()=>{await api('projects/${p.id}','PATCH',{description:$('#pd-desc').value,owner:$('#pd-owner').value,status:$('#pd-status').value,next_meeting:$('#pd-next').value,_note:$('#pd-note').value.trim()||undefined}); toast(t('Projeto atualizado')); await refresh();})">${t("Salvar (marca monitoramento)")}</button>
+    <div class="actions"><button onclick="busy(this, async()=>{await api('projects/${p.id}','PATCH',{description:$('#pd-desc').value,objective:$('#pd-obj').value,owner:$('#pd-owner').value,status:$('#pd-status').value,next_meeting:$('#pd-next').value,main:$('#pd-main').checked,_note:$('#pd-note').value.trim()||undefined}); toast(t('Projeto atualizado')); await refresh();})">${t("Salvar (marca monitoramento)")}</button>
     <a class="btn ghost" href="#reunioes" onclick="window._newMeetingProject='${p.id}'">${t("Registrar reunião")}</a></div>
     ${L("Vínculos")}<div>${linksHtml(p)}</div>${linkForm("projects", p.id)}</div>
-  <div class="card"><h2>${t("Master schedules")}</h2>
+  <div class="card"><h2>${t("Reuniões do projeto")}</h2><table>${th(["ID", "Reunião", "Data", "Status"])}
+    ${meetings.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=4 class="muted">—</td></tr>`}</table>
+    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((p.history || []).slice().reverse())}</ul></div></div>`;
+}
+function projItems(p) {
+  const pct = Core.projectPct(p);
+  return `<div class="card"><h2>${t("Itens do projeto")}</h2>
+    <p>${t("Projeto concluído em")} ${bar(pct)} <span class="muted">${t("(itens finalizados ÷ total de itens)")}</span></p>
+    <div style="overflow:auto"><table>${th(["ID", "Item", "Objetivo", "Descrição do progresso", "Responsável", "Prazo", "Status", ""])}
+    ${(p.pitems || []).map((x) => `<tr class="${x.status === "Finalizado" ? "done" : ""}"><td>${x.id}</td>
+      <td><input id="pi-t-${x.id}" value="${esc(x.title)}"></td><td><textarea id="pi-o-${x.id}" rows="2">${esc(x.objective)}</textarea></td>
+      <td><textarea id="pi-p-${x.id}" rows="2">${esc(x.progress_desc)}</textarea></td><td><input id="pi-w-${x.id}" value="${esc(x.owner)}" style="width:110px"></td>
+      <td><input type="date" id="pi-d-${x.id}" value="${esc(x.due)}"></td><td><select id="pi-s-${x.id}">${opts(PITEM_STATUS, x.status)}</select></td>
+      <td class="nowrap"><button class="small" onclick="busy(this, ()=>savePItem('${p.id}','${x.id}'))">${t("Salvar")}</button>
+        <button class="small ghost danger" onclick="busy(this, ()=>subRemove('projects','${p.id}','pitems','${x.id}'))">×</button></td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nenhum item. Adicione os itens que compõem o projeto abaixo.")}</td></tr>`}</table></div>
+    <h3>${t("Novo item do projeto")}</h3>
+    <div class="row"><div>${L("Item")}<input id="pi-new-t"></div><div>${L("Objetivo")}<input id="pi-new-o"></div><div>${L("Responsável")}<input id="pi-new-w"></div><div>${L("Prazo")}<input type="date" id="pi-new-d"></div></div>
+    ${L("Descrição do progresso")}<textarea id="pi-new-p" style="min-height:50px"></textarea>
+    <div class="actions"><button onclick="busy(this, ()=>addPItem('${p.id}'))">${t("Adicionar item")}</button></div></div>`;
+}
+async function addPItem(pid) {
+  const title = $("#pi-new-t").value.trim();
+  if (!title) throw new Error(t("Informe o título."));
+  await sub("projects", pid, "pitems", { title, objective: $("#pi-new-o").value, owner: $("#pi-new-w").value, due: $("#pi-new-d").value, progress_desc: $("#pi-new-p").value, status: "Aberto" });
+}
+async function savePItem(pid, id) {
+  const g = (k) => $(`#pi-${k}-${id}`).value;
+  await sub("projects", pid, "pitems", { id, title: g("t"), objective: g("o"), progress_desc: g("p"), owner: g("w"), due: g("d"), status: g("s") });
+  toast(t("Item atualizado"));
+}
+let ACT_FILTER = "";
+function projActivities(p) {
+  const acts = (p.activities || []).filter((a) => !ACT_FILTER || a.scope === ACT_FILTER);
+  const scopes = [...new Set((p.activities || []).map((a) => a.scope).filter(Boolean))];
+  let lastScope = null, lastItem = null;
+  return `<div class="card"><h2>${t("Atividades (planilha)")}</h2>
+    <p class="muted">${t("ACT_HELP")}</p>
+    <div class="toolbar"><input type="file" id="act-file" accept=".xlsx,.xlsm,.csv"><button onclick="busy(this, ()=>startImport('${p.id}'))">${t("Importar planilha")}</button>
+      ${scopes.length ? `<select onchange="ACT_FILTER=this.value;render()"><option value="">${t("Todos os escopos")}</option>${scopes.map((s) => `<option ${s === ACT_FILTER ? "selected" : ""}>${esc(s)}</option>`).join("")}</select>` : ""}
+      <span>${t("Progresso das atividades")}: ${bar(Core.activitiesPct(p))}</span></div>
+    <div style="overflow:auto"><table class="acts">${th(["Scope", "Target", "Item", "Nº", "Subitem", "Last Progress", "% concluído", "Status", "Atualização", "Responsável", "Prazo", ""])}
+    ${acts.map((a) => {
+      const showScope = a.scope !== lastScope, showItem = showScope || a.item !== lastItem;
+      lastScope = a.scope; lastItem = a.item;
+      const late = a.finish && a.finish < S.today && (+a.progress || 0) < 100;
+      return `<tr class="${(+a.progress || 0) >= 100 ? "done" : ""} ${showScope ? "group-start" : ""}">
+        <td class="grp">${showScope ? esc(a.scope) : ""}</td><td class="grp">${showScope ? esc(a.target) : ""}</td><td class="grp">${showItem ? esc(a.item) : ""}</td>
+        <td>${esc(a.n)}</td><td>${esc(a.subitem)}</td><td class="lp">${esc(a.last_progress)}</td>
+        <td class="nowrap"><input type="number" min="0" max="100" step="5" id="ac-p-${a.id}" value="${+a.progress || 0}" style="width:70px"> %
+          <div class="progress-bar mini"><span style="width:${+a.progress || 0}%"></span></div></td>
+        <td>${pill(t(actStatus(a)), actStatus(a) === "Concluída" ? "p-Baixa" : late ? "p-Alta" : "")}</td>
+        <td><textarea id="ac-n-${a.id}" rows="2" placeholder="${esc(t("Novo progresso…"))}">${esc(a.notes)}</textarea></td>
+        <td><input id="ac-w-${a.id}" value="${esc(a.owner)}" style="width:100px"></td>
+        <td><input type="date" id="ac-d-${a.id}" value="${esc(a.finish)}" class="${late ? "late" : ""}"></td>
+        <td class="nowrap"><button class="small" onclick="busy(this, ()=>saveActivity('${p.id}','${a.id}'))">${t("Salvar")}</button>
+          <button class="small ghost danger" onclick="busy(this, ()=>subRemove('projects','${p.id}','activities','${a.id}'))">×</button></td></tr>`;
+    }).join("") || `<tr><td colspan=12 class="muted">${t("Nenhuma atividade. Importe a planilha do projeto.")}</td></tr>`}</table></div>
+    <h3>${t("Adicionar atividade manualmente")}</h3>
+    <div class="row"><div>${L("Scope")}<input id="ac-new-s" list="act-scopes"></div><div>${L("Item")}<input id="ac-new-i"></div><div>${L("Subitem")}<input id="ac-new-sub"></div><div>${L("Responsável")}<input id="ac-new-w"></div><div>${L("Prazo")}<input type="date" id="ac-new-d"></div></div>
+    <datalist id="act-scopes">${scopes.map((s) => `<option>${esc(s)}</option>`).join("")}</datalist>
+    <div class="actions"><button class="small" onclick="busy(this, ()=>addActivity('${p.id}'))">${t("Adicionar atividade")}</button></div></div>`;
+}
+async function saveActivity(pid, id) {
+  const pct = Math.max(0, Math.min(100, +$(`#ac-p-${id}`).value || 0));
+  await sub("projects", pid, "activities", { id, progress: pct, notes: $(`#ac-n-${id}`).value, owner: $(`#ac-w-${id}`).value, finish: $(`#ac-d-${id}`).value });
+  toast(t("Atividade atualizada"));
+}
+async function addActivity(pid) {
+  const subitem = $("#ac-new-sub").value.trim(), item = $("#ac-new-i").value.trim();
+  if (!subitem && !item) throw new Error(t("Informe o item ou subitem."));
+  await sub("projects", pid, "activities", { scope: $("#ac-new-s").value, item, subitem, owner: $("#ac-new-w").value, finish: $("#ac-new-d").value, progress: 0, notes: "" });
+}
+let IMPORT = null;
+async function startImport(pid) {
+  const file = $("#act-file").files[0];
+  if (!file) throw new Error(t("Escolha um arquivo."));
+  const rows = await Sheet.table(file);
+  if (!rows || !rows.length) throw new Error(t("Não foi possível ler a planilha (use .xlsx ou .csv)."));
+  const hr = Core.findHeaderRow(rows);
+  IMPORT = { pid, file, rows, hr, map: Core.guessMapping(rows[hr]) };
+  importModal();
+}
+function importModal() {
+  const { rows, hr, map } = IMPORT, header = rows[hr] || [];
+  const ncol = Math.max(...rows.slice(0, 40).map((r) => r.length));
+  const colName = (i) => `${String.fromCharCode(65 + (i % 26))}${i >= 26 ? Math.floor(i / 26) : ""}: ${header[i] || "—"}`;
+  const sel = (f) => `<select data-field="${f}" onchange="IMPORT.map['${f}']=this.value===''?undefined:+this.value;importModal()"><option value="">${t("(não usar)")}</option>
+    ${Array.from({ length: ncol }, (_, i) => `<option value="${i}" ${map[f] === i ? "selected" : ""}>${esc(colName(i))}</option>`).join("")}</select>`;
+  const preview = rows.slice(hr + 1, hr + 8);
+  openModal(`<h2>${t("Importar planilha de atividades")}</h2>
+    <p class="muted">${t("Confira qual coluna corresponde a cada campo. O mapeamento fica salvo para as próximas importações.")}</p>
+    <div class="row"><div>${L("Linha do cabeçalho")}<select onchange="IMPORT.hr=+this.value;IMPORT.map=Core.guessMapping(IMPORT.rows[IMPORT.hr]);importModal()">
+      ${rows.slice(0, 15).map((r, i) => `<option value="${i}" ${i === hr ? "selected" : ""}>${i + 1}: ${esc(r.filter(Boolean).slice(0, 4).join(" | ").slice(0, 60))}</option>`).join("")}</select></div></div>
+    <div class="map-grid">${Object.entries(ACT_FIELDS).map(([f, label]) => `<div>${L(label)}${sel(f)}</div>`).join("")}</div>
+    <h3>${t("Prévia")}</h3><div style="overflow:auto"><table>${th(Object.values(ACT_FIELDS).filter((_, i) => map[Object.keys(ACT_FIELDS)[i]] !== undefined))}
+      ${preview.map((r) => `<tr>${Object.keys(ACT_FIELDS).filter((f) => map[f] !== undefined).map((f) => `<td>${esc(r[map[f]])}</td>`).join("")}</tr>`).join("")}</table></div>
+    <div class="actions"><button onclick="busy(this, doImport)">${t("Importar")} (${Math.max(0, rows.length - hr - 1)} ${t("linhas")})</button><button class="ghost" onclick="closeModal()">${t("Cancelar")}</button></div>`);
+}
+async function doImport() {
+  const { pid, file, rows, hr, map } = IMPORT;
+  const r = await api(`projects/${pid}/import`, "POST", { rows, header_row: hr, mapping: map, file });
+  closeModal(); IMPORT = null;
+  toast(t("Importado: {added} novas, {updated} atualizadas", r.result));
+  location.hash = `projetos/${pid}/atividades`;
+  await refresh();
+}
+function projAdditional(p) {
+  return `<div class="card"><h2>${t("Itens adicionais do projeto")}</h2>
+    <p class="muted">${t("Itens que chegaram pelo Inputs management classificados como “Ação dentro de um projeto”, ou adicionados aqui.")}</p>
+    <div style="overflow:auto"><table>${th(["ID", "Ação", "Item", "Responsável", "Prazo", "Gap (por que não foi prevista)", "Status"])}
+    ${(p.actions || []).map((a) => `<tr><td>${a.id}</td><td>${esc(a.text)}</td><td>${a.item_id ? `<a href="#lista/${a.item_id}">${a.item_id}</a>` : ""}</td><td>${esc(a.owner)}</td><td>${esc(a.due)}</td><td>${esc(a.gap_reason)}</td>
+      <td><select onchange="api('projects/${p.id}/actions','POST',{id:'${a.id}',status:this.value}).then(refresh)">${opts(["Aberta", "Em andamento", "Concluída"], a.status)}</select></td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Sem ações.")}</td></tr>`}</table></div>
+    <div class="row"><div>${L("Nova ação")}<input id="pa-text"></div><div>${L("Responsável")}<input id="pa-owner"></div><div>${L("Prazo")}<input type="date" id="pa-due"></div><div>${L("Gap")}<input id="pa-gap"></div></div>
+    <div class="actions"><button class="small" onclick="busy(this, async()=>{await api('projects/${p.id}/actions','POST',{text:$('#pa-text').value,owner:$('#pa-owner').value,due:$('#pa-due').value,gap_reason:$('#pa-gap').value}); await refresh();})">${t("Adicionar ação")}</button></div>
+    <h3>${t("Itens da lista geral vinculados")}</h3>${S.db.items.filter((i) => (p.links.items || []).includes(i.id)).map((i) => `<div><a href="#lista/${i.id}">${i.id}</a> ${esc(i.title)} ${prio(i.priority)} <span class="muted">${esc(tv(i.status))}</span></div>`).join("") || '<p class="muted">—</p>'}</div>`;
+}
+function projFiles(p) {
+  return `<div class="card"><h2>${t("Master schedules")}</h2>
     <p class="muted">${t("MS_HELP")}</p>
     <div class="toolbar"><input type="file" id="pd-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('projects/${p.id}/upload', $('#pd-file')); await refresh();})">${t("Upload")}</button><button class="ghost small" onclick="refresh()">${t("Sincronizar pasta")}</button></div>
     <table>${th(["Arquivo", "Data", ""])}${(p.schedules || []).map((s, k) => `<tr><td class="files">${fileLink(s.rel, s.name)}</td><td>${fmt(s.uploaded_at)}</td>
       <td><button class="small" onclick="busy(this, async()=>{await api('projects/${p.id}/analyze','POST',{rel:byId('projects','${p.id}').schedules[${k}].rel}); await refresh();})">${t("Organizar com IA")}</button></td></tr>
-      ${s.analysis ? `<tr><td colspan=3>${scheduleAnalysis(s.analysis)}</td></tr>` : ""}`).join("") || `<tr><td colspan=3 class="muted">${t("Nenhum cronograma.")}</td></tr>`}</table></div>
-  </div>
-  <div class="card" style="margin-top:14px"><h2>${t("Portfólio de ações")}</h2>
-    <table>${th(["ID", "Ação", "Item", "Responsável", "Prazo", "Gap (por que não foi prevista)", "Status"])}
-    ${(p.actions || []).map((a) => `<tr><td>${a.id}</td><td>${esc(a.text)}</td><td>${a.item_id ? `<a href="#lista/${a.item_id}">${a.item_id}</a>` : ""}</td><td>${esc(a.owner)}</td><td>${esc(a.due)}</td><td>${esc(a.gap_reason)}</td>
-      <td><select onchange="api('projects/${p.id}/actions','POST',{id:'${a.id}',status:this.value}).then(refresh)">${opts(["Aberta", "Em andamento", "Concluída"], a.status)}</select></td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Sem ações.")}</td></tr>`}</table>
-    <div class="row"><div>${L("Nova ação")}<input id="pa-text"></div><div>${L("Responsável")}<input id="pa-owner"></div><div>${L("Prazo")}<input type="date" id="pa-due"></div><div>${L("Gap")}<input id="pa-gap"></div></div>
-    <div class="actions"><button class="small" onclick="busy(this, async()=>{await api('projects/${p.id}/actions','POST',{text:$('#pa-text').value,owner:$('#pa-owner').value,due:$('#pa-due').value,gap_reason:$('#pa-gap').value}); await refresh();})">${t("Adicionar ação")}</button></div>
-    <h3>${t("Itens da lista geral vinculados")}</h3>${items.map((i) => `<div><a href="#lista/${i.id}">${i.id}</a> ${esc(i.title)} ${prio(i.priority)} <span class="muted">${esc(tv(i.status))}</span></div>`).join("") || '<p class="muted">—</p>'}
-    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((p.history || []).slice().reverse())}</ul></div>`;
+      ${s.analysis ? `<tr><td colspan=3>${scheduleAnalysis(s.analysis)}</td></tr>` : ""}`).join("") || `<tr><td colspan=3 class="muted">${t("Nenhum cronograma.")}</td></tr>`}</table></div>`;
+}
+function projFlow(p) {
+  const f = S.db.flows.find((x) => x.scope_col === "projects" && x.scope_id === p.id);
+  return `<div class="card"><h2>${t("Fluxo")}</h2><p class="muted">${t("Mapa visual que conecta este projeto aos itens, riscos e impactos.")}</p>
+    <div class="actions"><button onclick="busy(this, ()=>openFlowFor('projects','${p.id}'))">${t(f ? "Abrir fluxo" : "Criar fluxo")}</button></div></div>`;
 }
 function scheduleAnalysis(a) {
   const list = (arr) => (arr || []).map((x) => `<li>${esc(typeof x === "string" ? x : `${x.task || x.name} — ${x.finish || ""} ${x.progress != null ? "(" + x.progress + "%)" : ""} ${x.status || ""}`)}</li>`).join("");
@@ -1915,25 +2916,63 @@ function scheduleAnalysis(a) {
 }
 
 // ------------------------------------------------------------------ reuniões
+let M_FILTER = "";
 function viewReunioes(id) {
   if (id) return meetingDetail(byId("meetings", id));
   const pre = window._newMeetingProject || ""; window._newMeetingProject = "";
+  const pend = S.db.meetings.filter((m) => ["Pendente", "Solicitada"].includes(m.status)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const all = S.db.meetings.filter((m) => !M_FILTER || m.status === M_FILTER).slice().reverse();
+  const projSel = (idp) => `<select id="${idp}"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}" ${p.id === pre ? "selected" : ""}>${p.id} · ${esc(p.name)}</option>`).join("")}</select>`;
   return `<h1>${t("Gerenciamento de reuniões")}</h1>
-  <div class="grid" style="grid-template-columns: minmax(300px,1fr) minmax(300px,1.3fr)">
-  <div class="card"><table>${th(["ID", "Reunião", "Data", "Itens"])}
-  ${S.db.meetings.slice().reverse().map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(m.title)}</td><td>${esc(m.date)}</td><td>${(m.links.items || []).length + (m.links.inputs || []).length}</td></tr>`).join("") || `<tr><td colspan=4 class="muted">${t("Nenhuma reunião.")}</td></tr>`}
-  </table></div>
+  <div class="card" style="margin-bottom:14px"><h2>${t("Aguardando confirmação")} (${pend.length})</h2>
+    <p class="muted">${t("Reuniões solicitadas e as geradas automaticamente pelos projetos principais. Confirme se a reunião foi feita ou não.")}</p>
+    <table>${th(["ID", "Reunião", "Data", "Projeto", "Solicitada por", "Status", ""])}
+    ${pend.map((m) => `<tr class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}${m.auto ? ` ${pill(t("automática"))}` : ""}</td><td>${esc(m.date)}</td>
+      <td>${m.project_id ? `<a href="#projetos/${m.project_id}">${m.project_id}</a>` : ""}</td><td>${esc(tv(m.requested_by))}</td><td>${statusPill(m.status)}</td>
+      <td class="nowrap"><button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
+        <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Nada a confirmar.")}</td></tr>`}</table></div>
+  <div class="grid">
+  <div class="card"><h2>${t("Solicitar reunião")}</h2>
+    <div class="row"><div>${L("Título / pauta")}<input id="rq-title"></div><div>${L("Data prevista")}<input type="date" id="rq-date" value="${S.today}"></div></div>
+    <div class="row"><div>${L("Solicitada por")}<input id="rq-by" list="rq-sources"></div><div>${L("Participantes")}<input id="rq-part"></div><div>${L("Projeto")}${projSel("rq-proj")}</div></div>
+    <datalist id="rq-sources">${LIST("sources").map((s) => `<option value="${esc(t(s))}">`).join("")}</datalist>
+    ${L("Pauta / objetivo")}<textarea id="rq-agenda" style="min-height:60px"></textarea>
+    <div class="actions"><button onclick="busy(this, requestMeeting)">${t("Registrar solicitação")}</button></div></div>
   <div class="card"><h2>${t("Nova ata / anotação")}</h2>
     <div class="row"><div>${L("Título")}<input id="m-title"></div><div>${L("Data")}<input type="date" id="m-date" value="${S.today}"></div></div>
-    <div class="row"><div>${L("Participantes")}<input id="m-part"></div><div>${L("Departamentos")}<input id="m-dept"></div>
-      <div>${L("Projeto (acompanhamento)")}<select id="m-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}" ${p.id === pre ? "selected" : ""}>${p.id} · ${esc(p.name)}</option>`).join("")}</select></div></div>
-    ${L("Ata")}<textarea id="m-min" style="min-height:140px" placeholder="${esc(t("MINUTES_HINT"))}"></textarea>
+    <div class="row"><div>${L("Participantes")}<input id="m-part"></div><div>${L("Departamentos")}<input id="m-dept"></div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
+    ${L("Ata")}<textarea id="m-min" style="min-height:120px" placeholder="${esc(t("MINUTES_HINT"))}"></textarea>
     ${L("Anotações pessoais")}<textarea id="m-notes"></textarea>
-    <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>`;
+    <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>
+  <div class="card" style="margin-top:14px"><h2>${t("Todas as reuniões")}</h2>
+    <div class="toolbar"><select onchange="M_FILTER=this.value;render()"><option value="">${t("Status")}</option>${opts(MEETING_STATUS, M_FILTER)}</select></div>
+    <table>${th(["ID", "Reunião", "Data", "Projeto", "Itens", "Status"])}
+    ${all.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)}</td><td>${esc(m.project_id)}</td>
+      <td>${(m.links.items || []).length + (m.links.inputs || []).length}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=6 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
+}
+async function requestMeeting() {
+  const title = $("#rq-title").value.trim();
+  if (!title) throw new Error(t("Informe o título."));
+  await api("meetings", "POST", { title, date: $("#rq-date").value, requested_by: $("#rq-by").value, participants: $("#rq-part").value,
+    project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: "Solicitada", kind: "Solicitada" });
+  toast(t("Solicitação registrada")); await refresh();
+}
+async function meetingDone(id) {
+  await api(`meetings/${id}/status`, "POST", { status: "Realizada", date: byId("meetings", id).date });
+  toast(t("Reunião confirmada. Registre a ata, se quiser."));
+  await refresh(); location.hash = "reunioes/" + id;
+}
+async function meetingNotDone(id) {
+  const m = byId("meetings", id);
+  const reason = prompt(t("Motivo (opcional):")) ?? "";
+  let new_date;
+  if (m.project_id) new_date = prompt(t("Nova data para a reunião de acompanhamento (AAAA-MM-DD):"), addDays(S.today, 7)) || undefined;
+  await api(`meetings/${id}/status`, "POST", { status: "Não realizada", note: reason || undefined, new_date });
+  await refresh();
 }
 async function saveMeeting() {
   const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, participants: $("#m-part").value,
-    departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value });
+    departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value, status: "Realizada" });
   await api(`meetings/${r.id}/extract`, "POST");
   await refresh(); location.hash = "reunioes/" + r.id;
 }
@@ -1941,12 +2980,18 @@ function meetingDetail(m) {
   if (!m) return `<p>${t("Reunião não encontrada.")}</p>`;
   const ex = m.extraction;
   window._demands = ex?.demands || [];
-  return `<p><a href="#reunioes">← ${t("Reuniões")}</a></p><h1>${m.id} · ${esc(m.title)}</h1><p class="muted">${esc(m.date)} · ${esc(m.participants)} ${m.departments ? "· " + esc(m.departments) : ""}</p>
+  const pending = ["Pendente", "Solicitada"].includes(m.status);
+  return `<p><a href="#reunioes">← ${t("Reuniões")}</a></p><h1>${m.id} · ${esc(titleOf(m))}</h1>
+  <p>${statusPill(m.status)} <span class="muted">${[m.date, m.participants, m.departments, m.requested_by ? t("Solicitada por") + ": " + tv(m.requested_by) : ""].filter(Boolean).map(esc).join(" · ")}</span></p>
+  ${pending ? `<div class="alert lv-media">${t("Esta reunião aguarda confirmação.")} <button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
+    <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></div>` : ""}
+  ${m.agenda ? `<div class="card" style="margin-bottom:14px"><b>${t("Pauta / objetivo")}:</b> ${esc(m.agenda)}</div>` : ""}
   <div class="grid">
   <div class="card"><h2>${t("Ata")}</h2><textarea id="md-min" style="min-height:200px">${esc(m.minutes)}</textarea>${L("Anotações")}<textarea id="md-notes">${esc(m.notes)}</textarea>
     <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{minutes:$('#md-min').value,notes:$('#md-notes').value}); await api('meetings/${m.id}/extract','POST'); await refresh();})">${t("Salvar e reprocessar")}</button></div>
     ${L("Anexos")}<div class="toolbar"><input type="file" id="md-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('meetings/${m.id}/upload', $('#md-file')); toast(t('Anexado')); await refresh();})">${t("Upload")}</button></div>
-    ${L("Vínculos")}<div>${linksHtml(m)}</div></div>
+    ${L("Vínculos")}<div>${linksHtml(m)}</div>
+    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((m.history || []).slice().reverse())}</ul></div>
   <div class="card"><h2>${t("Extração")} (${esc(tv(ex?.engine) || "—")})</h2>${ex?.hint ? `<p class="muted">${esc(t(ex.hint))}</p>` : ""}
     ${ex?.summary ? `<div class="ai-box">${esc(ex.summary)}</div>` : ""}
     <h3>${t("Decisões")}</h3><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || '<li class="muted">—</li>'}</ul>
@@ -1958,42 +3003,106 @@ function meetingDetail(m) {
 async function demandToInput(mid, k) {
   const d = window._demands[k], m = byId("meetings", mid);
   const rec = await api("inputs", "POST", { source: "Reunião", source_detail: "Pedido pontual", title: d.title, description: d.description,
-    origin: m.title, meeting_id: mid, owner: d.owner, due_date: d.due_date, area_main: d.area_main });
+    origin: titleOf(m), meeting_id: mid, owner: d.owner, due_date: d.due_date, area_main: d.area_main });
   await api(`inputs/${rec.id}/suggest`, "POST");
   await refresh(); location.hash = "entradas/" + rec.id;
 }
 
 // ------------------------------------------------------------------ riscos
-function viewRiscos(id) {
-  if (id) return riskDetail(byId("risks", id));
+function viewRiscos(id, tab) {
+  if (id) return riskDetail(byId("risks", id), tab || "geral");
   return `<h1>${t("Gerenciamento de riscos")}</h1>
   <div class="grid" style="grid-template-columns: minmax(300px,2fr) minmax(260px,1fr)">
-  <div class="card"><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto", "Responsável", "Status"])}
-  ${S.db.risks.map((r) => `<tr class="click" onclick="location.hash='riscos/${r.id}'"><td>${r.id}</td><td>${esc(r.title)}</td><td>${esc(tv(r.mode))}</td><td>${prio(r.probability)}</td><td>${pill(tv(r.impact), "p-" + r.impact)}</td><td>${esc(r.owner)}</td><td>${esc(tv(r.status))}</td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Nenhum risco.")}</td></tr>`}
+  <div class="card" style="overflow:auto"><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto", "Principais impactos", "Inputs", "Responsável", "Status"])}
+  ${S.db.risks.map((r) => `<tr class="click" onclick="location.hash='riscos/${r.id}'"><td>${r.id}</td><td>${esc(r.title)}</td><td>${esc(tv(r.mode))}</td><td>${prio(r.probability)}</td><td>${pill(tv(r.impact), "p-" + r.impact)}</td>
+    <td>${(r.impacts || []).map((x) => pill(t(x))).join("")}</td><td>${(r.inputs_log || []).length}</td><td>${esc(r.owner)}</td><td>${esc(tv(r.status))}</td></tr>`).join("") || `<tr><td colspan=9 class="muted">${t("Nenhum risco.")}</td></tr>`}
   </table></div>
   <div class="card"><h2>${t("Novo risco")}</h2><p class="muted">${t("Normalmente nasce pela definição de uma entrada; aqui é o cadastro direto.")}</p>${L("Título")}<input id="r-title">${L("Descrição")}<textarea id="r-desc"></textarea>
     <div class="row"><div>${L("Modo")}<select id="r-mode">${opts(["Monitorar", "Investigar"])}</select></div><div>${L("Responsável")}<input id="r-owner"></div></div>
-    <div class="actions"><button onclick="busy(this, async()=>{const r=await api('risks','POST',{title:$('#r-title').value,description:$('#r-desc').value,mode:$('#r-mode').value,owner:$('#r-owner').value}); await refresh(); location.hash='riscos/'+r.id;})">${t("Criar risco e pasta")}</button></div></div></div>`;
+    ${L("Principais impactos")}<div class="checks inline">${LIST("impact_types").map((x) => `<label><input type="checkbox" class="r-imp" value="${esc(x)}"> ${esc(t(x))}</label>`).join("")}</div>
+    <div class="actions"><button onclick="busy(this, async()=>{const r=await api('risks','POST',{title:$('#r-title').value,description:$('#r-desc').value,mode:$('#r-mode').value,owner:$('#r-owner').value,impacts:[...document.querySelectorAll('.r-imp')].filter(c=>c.checked).map(c=>c.value)}); await refresh(); location.hash='riscos/'+r.id;})">${t("Criar risco e pasta")}</button></div></div></div>`;
 }
-function riskDetail(r) {
+function riskDetail(r, tab) {
   if (!r) return `<p>${t("Risco não encontrado.")}</p>`;
-  const a = r.analysis;
-  setTimeout(() => api(`risks/${r.id}/files`).then((fs) => { const el = $("#rk-files"); if (el) el.innerHTML = fs.map((f) => `<li>${fileLink(f.rel, f.name)} <span class="muted">${fmt(f.modified)}</span></li>`).join("") || `<li class="muted">${t("Pasta vazia")}</li>`; }), 0);
-  const sections = { causes: "Causas", consequences: "Consequências", mitigations: "Mitigações", report_points: "Pontos para reporte" };
-  return `<p><a href="#riscos">← ${t("Riscos")}</a></p><h1>${r.id} · ${esc(r.title)}</h1><p class="muted">${t("Pasta:")} <code>${esc(S.workspace)}/${esc(r.folder)}</code></p>
-  <div class="grid"><div class="card">
+  const T = [["geral", t("Visão geral")], ["inputs", `${t("Inputs do risco")} (${(r.inputs_log || []).length})`], ["impactos", t("Impactos e riscos")], ["docs", t("Documentos e análise")], ["fluxo", t("Fluxo")]];
+  const body = { geral: riskOverview, inputs: riskInputs, impactos: (x) => scenariosTab("risks", x), docs: riskDocs, fluxo: riskFlow }[tab] || riskOverview;
+  return `<p><a href="#riscos">← ${t("Riscos")}</a></p><h1>${r.id} · ${esc(r.title)}</h1>
+  <p>${(r.impacts || []).map((x) => pill(t(x), "p-Alta")).join("")} <span class="muted">${t("Pasta:")} <code>${esc(S.workspace)}/${esc(r.folder)}</code></span></p>
+  ${tabs("riscos/" + r.id, T, tab)}${body(r)}`;
+}
+function riskOverview(r) {
+  return `<div class="grid"><div class="card">
     <div class="row"><div>${L("Modo")}<select id="rd-mode">${opts(["Monitorar", "Investigar"], r.mode)}</select></div><div>${L("Probabilidade")}<select id="rd-prob">${opts(LEVELS, r.probability)}</select></div>
-      <div>${L("Impacto")}<select id="rd-imp">${opts(["Alto", "Médio", "Baixo"], r.impact)}</select></div><div>${L("Status")}<select id="rd-status">${opts(["Aberto", "Em tratamento", "Fechado"], r.status)}</select></div></div>
+      <div>${L("Impacto")}<select id="rd-imp">${opts(["Alto", "Médio", "Baixo"], r.impact)}</select></div><div>${L("Status")}<select id="rd-status">${opts(["Aberto", "Em tratamento", "Fechado"], r.status)}</select></div><div>${L("Responsável")}<input id="rd-owner" value="${esc(r.owner)}"></div></div>
+    ${L("Principais impactos deste risco")}<div class="checks inline">${LIST("impact_types").map((x) => `<label><input type="checkbox" class="rd-impc" value="${esc(x)}" ${(r.impacts || []).includes(x) ? "checked" : ""}> ${esc(t(x))}</label>`).join("")}</div>
+    ${L("Como cada impacto se manifesta")}<textarea id="rd-impnotes" style="min-height:60px">${esc(r.impact_notes)}</textarea>
     ${L("Descrição")}<textarea id="rd-desc">${esc(r.description)}</textarea>${L("Notas / informações")}<textarea id="rd-notes">${esc(r.notes)}</textarea>
-    <div class="actions"><button onclick="busy(this, async()=>{await api('risks/${r.id}','PATCH',{mode:$('#rd-mode').value,probability:$('#rd-prob').value,impact:$('#rd-imp').value,status:$('#rd-status').value,description:$('#rd-desc').value,notes:$('#rd-notes').value}); toast(t('Risco atualizado')); await refresh();})">${t("Salvar")}</button></div>
-    ${L("Vínculos")}<div>${linksHtml(r)}</div>${linkForm("risks", r.id)}
-    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((r.history || []).slice().reverse())}</ul></div>
-  <div class="card"><h2>${t("Documentos da pasta")}</h2><div class="toolbar"><input type="file" id="rd-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('risks/${r.id}/upload', $('#rd-file')); await refresh();})">${t("Upload")}</button></div>
+    <div class="actions"><button onclick="busy(this, saveRisk.bind(null,'${r.id}'))">${t("Salvar")}</button></div></div>
+    <div class="card">${L("Vínculos")}<div>${linksHtml(r)}</div>${linkForm("risks", r.id)}
+    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((r.history || []).slice().reverse())}</ul></div></div>`;
+}
+async function saveRisk(id) {
+  await api("risks/" + id, "PATCH", { mode: $("#rd-mode").value, probability: $("#rd-prob").value, impact: $("#rd-imp").value, status: $("#rd-status").value, owner: $("#rd-owner").value,
+    impacts: [...document.querySelectorAll(".rd-impc")].filter((c) => c.checked).map((c) => c.value), impact_notes: $("#rd-impnotes").value,
+    description: $("#rd-desc").value, notes: $("#rd-notes").value });
+  toast(t("Risco atualizado")); await refresh();
+}
+function riskInputs(r) {
+  const linked = S.db.inputs.filter((i) => (r.links?.inputs || []).includes(i.id) || i.risk_id === r.id);
+  return `<div class="grid"><div class="card"><h2>${t("Novo input do risco")}</h2>
+    <div class="row"><div>${L("Data")}<input type="date" id="ri-date" value="${S.today}"></div><div>${L("Origem")}<select id="ri-src">${opts(LIST("sources"))}</select></div><div>${L("Quem informou")}<input id="ri-author"></div></div>
+    ${L("Informação")}<textarea id="ri-text" style="min-height:90px"></textarea>
+    <div class="checks"><label><input type="checkbox" id="ri-toinp"> ${t("Também enviar para o Inputs management (classificar)")}</label></div>
+    <div class="actions"><button onclick="busy(this, ()=>addRiskInput('${r.id}'))">${t("Registrar input")}</button></div></div>
+  <div class="card"><h2>${t("Inputs registrados")}</h2><ul class="tl">${(r.inputs_log || []).slice().reverse().map((x) => `<li><span class="muted">${esc(x.date)} · ${esc(tv(x.source))}${x.author ? " · " + esc(x.author) : ""}</span><br>${esc(x.text)}
+      ${x.input_id ? ` ${pill(x.input_id)}` : ""} <button class="small ghost danger" onclick="busy(this, ()=>subRemove('risks','${r.id}','inputs_log','${x.id}'))">×</button></li>`).join("") || '<li class="muted">—</li>'}</ul>
+    ${linked.length ? `<h3>${t("Entradas do Inputs management ligadas")}</h3>${linked.map((i) => `<div><a href="#entradas/${i.id}">${i.id}</a> ${esc(i.title)} ${pill(tv(i.status))}</div>`).join("")}` : ""}</div></div>`;
+}
+async function addRiskInput(id) {
+  const text = $("#ri-text").value.trim();
+  if (!text) throw new Error(t("Escreva a informação."));
+  await sub("risks", id, "inputs_log", { date: $("#ri-date").value, source: $("#ri-src").value, author: $("#ri-author").value, text }, { to_inputs: $("#ri-toinp").checked });
+  toast(t("Input registrado"));
+}
+function loadRiskFiles(id) {
+  api(`risks/${id}/files`).then((fs) => { const el = $("#rk-files"); if (el) el.innerHTML = fs.map((f) => `<li>${fileLink(f.rel, f.name)} <span class="muted">${fmt(f.modified)}</span></li>`).join("") || `<li class="muted">${t("Pasta vazia")}</li>`; });
+}
+function riskDocs(r) {
+  const a = r.analysis;
+  const sections = { causes: "Causas", consequences: "Consequências", mitigations: "Mitigações", report_points: "Pontos para reporte" };
+  return `<div class="card"><h2>${t("Documentos da pasta")}</h2><div class="toolbar"><input type="file" id="rd-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('risks/${r.id}/upload', $('#rd-file')); await refresh();})">${t("Upload")}</button></div>
     <ul id="rk-files" class="files"><li class="muted">${t("carregando…")}</li></ul>
     <div class="actions"><button onclick="busy(this, async()=>{await api('risks/${r.id}/analyze','POST'); await refresh();})">${t("Compilar e analisar com IA")}</button></div>
     ${a ? `<div class="ai-box" style="white-space:normal"><b>${t("Análise")} (${esc(tv(a.engine))}) — ${t("confirme antes de reportar")}</b><p>${esc(a.msg ? msg(a) : a.summary)}</p><p>${t("Probabilidade")}: ${esc(tv(a.probability))} · ${t("Impacto")}: ${esc(tv(a.impact))}</p>
-      ${Object.entries(sections).map(([k, title]) => (a[k]?.length ? `<b>${t(title)}</b><ul>${a[k].map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "")).join("")}</div>` : ""}
-  </div></div>`;
+      ${Object.entries(sections).map(([k, title]) => (a[k]?.length ? `<b>${t(title)}</b><ul>${a[k].map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "")).join("")}</div>` : ""}</div>`;
+}
+function riskFlow(r) {
+  const f = S.db.flows.find((x) => x.scope_col === "risks" && x.scope_id === r.id);
+  return `<div class="card"><h2>${t("Fluxo")}</h2><p class="muted">${t("Mapa visual que conecta este risco às causas, projetos e impactos.")}</p>
+    <div class="actions"><button onclick="busy(this, ()=>openFlowFor('risks','${r.id}'))">${t(f ? "Abrir fluxo" : "Criar fluxo")}</button></div></div>`;
+}
+
+// ------------------------------------------------------------------ fluxos
+function viewFluxos(id) {
+  if (id) { const f = byId("flows", id); return f ? FlowEd.view(structuredClone(f)) : `<p>${t("Fluxo não encontrado.")}</p>`; }
+  const scopeName = (f) => (f.scope_col === "geral" ? t("Geral") : `${f.scope_id} · ${esc((byId(f.scope_col, f.scope_id) || {}).name || (byId(f.scope_col, f.scope_id) || {}).title || "")}`);
+  return `<h1>${t("Fluxos de projetos, riscos e impactos")}</h1>
+  <p class="muted">${t("FLOWS_HELP")}</p>
+  <div class="grid" style="grid-template-columns: minmax(300px,2fr) minmax(260px,1fr)">
+  <div class="card"><table>${th(["ID", "Fluxo", "Escopo", "Nós", "Atualizado em"])}
+    ${S.db.flows.slice().reverse().map((f) => `<tr class="click" onclick="location.hash='fluxos/${f.id}'"><td>${f.id}</td><td>${esc(f.title)}</td><td>${scopeName(f)}</td><td>${(f.nodes || []).length}</td><td>${fmt(f.updated_at)}</td></tr>`).join("") || `<tr><td colspan=5 class="muted">${t("Nenhum fluxo.")}</td></tr>`}</table></div>
+  <div class="card"><h2>${t("Novo fluxo")}</h2>${L("Título")}<input id="fw-title">
+    ${L("Escopo")}<select id="fw-scope"><option value="geral:">${t("Geral (todos os projetos e riscos)")}</option>
+      ${S.db.projects.map((p) => `<option value="projects:${p.id}">${t("Projeto")} · ${p.id} · ${esc(p.name)}</option>`).join("")}
+      ${S.db.risks.map((r) => `<option value="risks:${r.id}">${t("Risco")} · ${r.id} · ${esc(r.title)}</option>`).join("")}</select>
+    ${L("Descrição para a IA")}<textarea id="fw-desc" style="min-height:80px"></textarea>
+    <div class="actions"><button onclick="busy(this, ()=>newFlow('data'))">${t("Criar pelos dados")}</button><button class="ghost" onclick="busy(this, ()=>newFlow('ai'))">${t("Criar com IA")}</button><button class="ghost" onclick="busy(this, ()=>newFlow('blank'))">${t("Em branco")}</button></div></div></div>`;
+}
+async function newFlow(mode) {
+  const [scope_col, scope_id] = $("#fw-scope").value.split(":");
+  const f = await api("flows", "POST", { title: $("#fw-title").value || t("Fluxo"), scope_col, scope_id, description: $("#fw-desc").value, nodes: [], edges: [] });
+  if (mode !== "blank") await api(`flows/${f.id}/generate`, "POST", { mode, description: $("#fw-desc").value });
+  await refresh(); location.hash = "fluxos/" + f.id;
 }
 
 // ------------------------------------------------------------------ summaries
@@ -2011,7 +3120,7 @@ async function genSummary() {
 }
 function summaryDoc({ summary: s, narrative }) {
   const k = s.kpis;
-  const tbl = (rows, cols, heads) => `<table>${th(heads)}${rows.map((r) => `<tr>${cols.map((c) => `<td>${c === "priority" ? prio(r[c]) : ["status", "mode", "probability", "impact"].includes(c) ? esc(tv(r[c])) : esc(r[c])}</td>`).join("")}</tr>`).join("") || `<tr><td colspan=${cols.length} class="muted">—</td></tr>`}</table>`;
+  const tbl = (rows, cols, heads) => `<table>${th(heads)}${rows.map((r) => `<tr>${cols.map((c) => `<td>${c === "priority" ? prio(r[c]) : c === "pct" ? bar(r[c]) : ["status", "mode", "probability", "impact"].includes(c) ? esc(tv(r[c])) : esc(r[c])}</td>`).join("")}</tr>`).join("") || `<tr><td colspan=${cols.length} class="muted">—</td></tr>`}</table>`;
   const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Em aberto", k.open_items], ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
   return `<div class="summary-doc"><h1>${esc(t(s.type))}</h1><p class="muted">${t("Período")} ${esc(s.period.start)}${s.period.end !== s.period.start ? " – " + esc(s.period.end) : ""} · ${t("gerado")} ${fmt(s.generated_at)}</p>
   <h2>1. ${t("Destaques")}</h2><div class="ai-box">${esc(narrative)}</div>
@@ -2019,36 +3128,110 @@ function summaryDoc({ summary: s, narrative }) {
   <h2>3. ${t("Novas demandas por origem")}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(tv(src))} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || `<p class="muted">${t("Nenhuma nova demanda.")}</p>`}
   <h2>4. ${t("Itens críticos (alta prioridade)")}</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
   <h2>5. ${t("Prazos — vencidos e próximos 7 dias")}</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
-  <h2>6. ${t("Projetos")}</h2>${tbl(s.projects, ["id", "name", "status", "open_actions", "last_monitored", "next_meeting"], ["ID", "Projeto", "Status", "Ações abertas", "Últ. monitoramento", "Próx. reunião"])}
+  <h2>6. ${t("Projetos")}</h2>${tbl(s.projects, ["id", "name", "status", "pct", "open_actions", "last_monitored", "next_meeting"], ["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Últ. monitoramento", "Próx. reunião"])}
   <h2>7. ${t("Riscos")}</h2>${tbl(s.risks, ["id", "title", "mode", "probability", "impact"], ["ID", "Risco", "Modo", "Prob.", "Impacto"])}
-  <h2>8. ${t("Reuniões e decisões")}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)})</p><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || `<li class="muted">${t("Sem decisões registradas")}</li>`}</ul>`).join("") || `<p class="muted">${t("Nenhuma reunião no período.")}</p>`}
+  <h2>8. ${t("Reuniões e decisões")}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)}) ${statusPill(m.status)}</p><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || `<li class="muted">${t("Sem decisões registradas")}</li>`}</ul>`).join("") || `<p class="muted">${t("Nenhuma reunião no período.")}</p>`}
   <h2>9. ${t("Infos a reportar")}</h2>${tbl(s.report_items, ["id", "title", "owner", "status"], ["ID", "Item", "Responsável", "Status"])}
   <h2>10. ${t("Alertas")}</h2><ul>${s.alerts.map((a) => `<li>${esc(msg(a))}</li>`).join("") || '<li class="muted">—</li>'}</ul>
   <h2>11. ${t("Linha do tempo")}</h2><ul class="tl">${timeline(s.activity)}</ul></div>`;
 }
 
-// ------------------------------------------------------------------ config
-function viewConfig() {
-  const st = S.db.settings;
-  return `<h1>${t("Configurações")}</h1>
-  <div class="grid">
-  <div class="card"><h2>${t("IA (Claude)")}</h2>
+// ------------------------------------------------------------------ configurações
+let CFG_TAB = "aparencia";
+function viewConfig(id) {
+  CFG_TAB = id || CFG_TAB;
+  const T = [["aparencia", t("Aparência")], ["modulos", t("Módulos e idioma")], ["listas", t("Listas")], ["regras", t("Regras")], ["ia", t("IA (Claude)")], ["pasta", t("Pasta e backup")]];
+  const body = { aparencia: cfgAppearance, modulos: cfgModules, listas: cfgLists, regras: cfgRules, ia: cfgAI, pasta: cfgFolder }[CFG_TAB] || cfgAppearance;
+  return `<h1>${t("Configurações")}</h1>${tabs("config", T, CFG_TAB)}${body(S.db.settings)}`;
+}
+function cfgAppearance(st) {
+  const ap = st.appearance;
+  const presets = [["#C00000", "Vermelho GWM"], ["#8B0A1A", "Vinho"], ["#333333", "Grafite"], ["#1F4E79", "Azul"], ["#2E7D32", "Verde"]];
+  return `<div class="grid"><div class="card"><h2>${t("Identidade")}</h2>
+    ${L("Nome da plataforma (topo da tela)")}<input id="ap-title" value="${esc(ap.title)}" placeholder="${esc(t("Governança"))}">
+    ${L("Cor principal")}<div class="toolbar"><input type="color" id="ap-accent" value="${esc(ap.accent)}" style="width:60px;height:36px;padding:2px">
+      ${presets.map(([c, n]) => `<button class="swatch" style="background:${c}" title="${esc(t(n))}" onclick="$('#ap-accent').value='${c}'"></button>`).join("")}</div>
+    ${L("Tamanho do texto")}<input type="range" id="ap-font" min="0.85" max="1.25" step="0.05" value="${ap.font_scale}">
+    ${L("Densidade")}<select id="ap-density">${opts(["compacta", "normal", "confortável"], ap.density)}</select>
+    <div class="checks"><label><input type="checkbox" id="ap-bar" ${ap.show_bar !== false ? "checked" : ""}> ${t("Mostrar faixa vermelha abaixo do topo")}</label></div>
+    <div class="actions"><button onclick="busy(this, saveAppearance)">${t("Aplicar")}</button></div></div>
+  <div class="card"><h2>${t("Logo (canto superior direito)")}</h2>
+    <div class="logo-preview"><img src="${ap.logo && ap.logo !== "none" ? ap.logo : DEFAULT_LOGO}" alt="logo"></div>
+    <p class="muted">${t("Envie o arquivo oficial do logo (PNG, SVG ou JPG) para melhor qualidade.")}</p>
+    <div class="toolbar"><input type="file" id="ap-logo" accept="image/*"><button class="small" onclick="busy(this, uploadLogo)">${t("Usar este logo")}</button></div>
+    <div class="actions"><button class="small ghost" onclick="busy(this, ()=>saveAp({logo:''}))">${t("Restaurar logo padrão")}</button><button class="small ghost" onclick="busy(this, ()=>saveAp({logo:'none'}))">${t("Ocultar logo")}</button></div></div></div>`;
+}
+async function saveAp(patch) { await api("settings", "PATCH", { appearance: patch }); await refresh(); toast(t("Salvo")); }
+async function saveAppearance() {
+  await saveAp({ title: $("#ap-title").value.trim(), accent: $("#ap-accent").value, font_scale: +$("#ap-font").value, density: $("#ap-density").value, show_bar: $("#ap-bar").checked });
+}
+async function uploadLogo() {
+  const f = $("#ap-logo").files[0];
+  if (!f) throw new Error(t("Escolha um arquivo."));
+  if (f.size > 1.5e6) throw new Error(t("Imagem muito grande (máx. 1,5 MB)."));
+  const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(f); });
+  await saveAp({ logo: data });
+}
+function cfgModules(st) {
+  const names = { painel: "Painel", entradas: "Entradas", lista: "Lista geral", projetos: "Projetos", reunioes: "Reuniões", riscos: "Riscos", fluxos: "Fluxos", summaries: "Summaries" };
+  return `<div class="grid"><div class="card"><h2>${t("Módulos visíveis no menu")}</h2>
+    <div class="checks">${MODULES.map((m) => `<label><input type="checkbox" class="mod" value="${m}" ${(st.hidden_modules || []).includes(m) ? "" : "checked"}> ${t(names[m])}</label>`).join("")}</div>
+    <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{hidden_modules:[...document.querySelectorAll('.mod')].filter(c=>!c.checked).map(c=>c.value)}); await refresh(); toast(t('Salvo'));})">${t("Salvar")}</button></div></div>
+  <div class="card"><h2>${t("Idioma")}</h2><select onchange="setLang(this.value)">${Object.entries(I18N.LANGS).map(([k, v]) => `<option value="${k}" ${k === I18N.lang ? "selected" : ""}>${v}</option>`).join("")}</select>
+    <p class="muted">${t("O idioma também define o idioma das respostas da IA e dos summaries.")}</p></div></div>`;
+}
+function cfgLists(st) {
+  const L2 = st.lists;
+  const box = (k, label, help) => `<div class="card"><h2>${t(label)}</h2><p class="muted">${t(help)}</p><textarea id="ls-${k}" style="min-height:150px">${esc((k === "areas" ? st.areas : L2[k]).join("\n"))}</textarea></div>`;
+  return `<p class="muted">${t("Um valor por linha. Os valores padrão são traduzidos automaticamente; os que você criar aparecem como escritos.")}</p>
+  <div class="grid">${box("sources", "Origens das demandas", "Ex.: Diretora, HQ, Departamento…")}${box("input_kinds", "Tipos de entrada", "Ex.: Pedido pontual, Nova solicitação do HQ…")}
+    ${box("impact_types", "Categorias de impacto", "Usadas na classificação, nos riscos e nos fluxos.")}${box("areas", "Áreas", "Sugestões no campo Área principal.")}
+    ${box("flow_edge_labels", "Rótulos das ligações dos fluxos", "Ex.: causa, impacta, mitiga…")}</div>
+  <div class="actions"><button onclick="busy(this, saveLists)">${t("Salvar listas")}</button></div>`;
+}
+async function saveLists() {
+  const v = (k) => $(`#ls-${k}`).value.split("\n").map((x) => x.trim()).filter(Boolean);
+  await api("settings", "PATCH", { areas: v("areas"), lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels") } });
+  toast(t("Salvo")); await refresh();
+}
+function cfgRules(st) {
+  return `<div class="card"><h2>${t("Regras")}</h2>
+  <div class="row"><div>${L("Alerta: dias sem atualização")}<input type="number" id="c-days" value="${st.alert_days_without_update}"></div>
+    <div>${L("Cadência de reunião de projeto (dias)")}<input type="number" id="c-cad" value="${st.project_meeting_cadence_days}"></div>
+    <div>${L("Antecedência para gerar a reunião (dias)")}<input type="number" id="c-lead" value="${st.meeting_lead_days}"></div>
+    <div>${L("Nº de vínculos para sugerir projeto")}<input type="number" id="c-links" value="${st.links_for_project_alert}"></div></div>
+  <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{alert_days_without_update:+$('#c-days').value,project_meeting_cadence_days:+$('#c-cad').value,meeting_lead_days:+$('#c-lead').value,links_for_project_alert:+$('#c-links').value}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>`;
+}
+function cfgAI() {
+  return `<div class="grid"><div class="card"><h2>${t("IA (Claude)")}</h2>
     <p class="muted">${t("Sem chave, a plataforma usa sugestões heurísticas locais. A chave fica guardada só neste navegador (não vai para a pasta).")}</p>
     ${L("Chave da API da Anthropic")}<input id="c-key" type="password" placeholder="sk-ant-..." value="${esc(AI.key)}">
     ${L("Modelo")}<input id="c-model" value="${esc(AI.model)}">
     <div class="actions"><button onclick="busy(this, saveAi)">${t("Salvar e testar")}</button>
       <span class="muted">${S.ai.enabled ? t("IA ativa —") + " " + esc(S.ai.model) : t("IA offline")}</span></div></div>
-  <div class="card"><h2>${t("Pasta de trabalho")}</h2>
+  <div class="card"><h2>${t("Aprendizado")}</h2>
+    <p>${t("{n} decisões de classificação guardadas", { n: Core.db.feedback.length })} · ${t("{n} exemplos salvos", { n: (S.db.flow_examples || []).length })}</p>
+    ${L("Regras para montar fluxos (valem para todos)")}<textarea id="c-guide" style="min-height:120px" placeholder="${esc(t("FLOW_GUIDE_PLACEHOLDER"))}">${esc(S.db.settings.flow_guidelines)}</textarea>
+    <div class="actions"><button class="ghost" onclick="busy(this, async()=>{await api('settings','PATCH',{flow_guidelines:$('#c-guide').value}); toast(t('Regras salvas')); await refresh();})">${t("Salvar regras")}</button></div></div></div>`;
+}
+function cfgFolder() {
+  return `<div class="grid"><div class="card"><h2>${t("Pasta de trabalho")}</h2>
     <p>${t("Pasta atual:")} <code>${esc(S.workspace)}</code></p>
     <p class="muted">${t("FOLDER_HELP")}</p>
     <div class="actions"><button class="ghost" onclick="busy(this, changeFolder)">${t("Trocar de pasta")}</button></div></div>
-  </div>
-  <div class="card" style="margin-top:14px"><h2>${t("Regras")}</h2>
-  <div class="row"><div>${L("Alerta: dias sem atualização")}<input type="number" id="c-days" value="${st.alert_days_without_update}"></div>
-    <div>${L("Cadência de reunião de projeto (dias)")}<input type="number" id="c-cad" value="${st.project_meeting_cadence_days}"></div>
-    <div>${L("Nº de vínculos para sugerir projeto")}<input type="number" id="c-links" value="${st.links_for_project_alert}"></div></div>
-  ${L("Áreas (separadas por vírgula)")}<input id="c-areas" value="${esc((st.areas || []).join(", "))}">
-  <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{alert_days_without_update:+$('#c-days').value,project_meeting_cadence_days:+$('#c-cad').value,links_for_project_alert:+$('#c-links').value,areas:$('#c-areas').value.split(',').map(s=>s.trim()).filter(Boolean)}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>`;
+  <div class="card"><h2>${t("Backup")}</h2>
+    <p class="muted">${t("Baixe uma cópia completa da base (db.json) ou restaure uma cópia anterior. Ao restaurar, a base atual é guardada na pasta BACKUPS.")}</p>
+    <div class="actions"><button onclick="downloadText(JSON.stringify(Core.db, null, 2), 'governanca_backup_' + S.today + '.json', 'application/json')">${t("Baixar backup")}</button></div>
+    <div class="toolbar"><input type="file" id="bk-file" accept=".json"><button class="small ghost" onclick="busy(this, restoreBackup)">${t("Restaurar backup")}</button></div></div></div>`;
+}
+async function restoreBackup() {
+  const f = $("#bk-file").files[0];
+  if (!f) throw new Error(t("Escolha um arquivo."));
+  let db;
+  try { db = JSON.parse(await f.text()); } catch { throw new Error(t("Arquivo de backup inválido")); }
+  if (!confirm(t("Substituir a base atual por este backup?"))) return;
+  await api("backup", "POST", { db });
+  await refresh(); toast(t("Backup restaurado"));
 }
 async function saveAi() {
   await AI.configure($("#c-key").value, $("#c-model").value);
@@ -2068,9 +3251,10 @@ async function changeFolder() {
 // ------------------------------------------------------------------ inicialização (escolha da pasta)
 function welcome(remembered) {
   document.querySelectorAll("nav a").forEach((a) => a.classList.remove("active"));
+  $("#logo").src = DEFAULT_LOGO;
   const ok = Store.supported();
   const fromZip = /\/(temp|tmp)\//i.test(decodeURI(location.href));
-  $("#view").innerHTML = `<div class="card" style="max-width:640px;margin:40px auto">
+  $("#view").innerHTML = `<div class="card welcome">
     <h1>${t("Plataforma de Governança")}</h1>
     ${fromZip ? `<div class="alert lv-media">${t("ZIP_WARNING")}</div>` : ""}
     ${ok ? `<p>${t("WELCOME_1")}</p><p class="muted">${t("WELCOME_2")}</p>

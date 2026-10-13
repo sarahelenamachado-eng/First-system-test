@@ -50,21 +50,33 @@ const Sheet = {
     const serialToDate = (n) => new Date(Date.UTC(1899, 11, 30) + Math.round(n * 864e5)).toISOString().slice(0, 10);
 
     const colIdx = (ref) => { let n = 0; for (const ch of ref.replace(/\d+/g, "")) n = n * 26 + ch.charCodeAt(0) - 64; return n - 1; };
+    const rowIdx = (ref) => +ref.replace(/[A-Z]+/g, "") - 1;
     const sheet = xml(await get(sheetPath));
-    const rows = [];
+    const grid = [];
     for (const row of byTag(sheet, "row")) {
-      const r = [];
       for (const c of byTag(row, "c")) {
+        const ref = c.getAttribute("r") || "A1";
         const t = c.getAttribute("t"), v = byTag(c, "v")[0]?.textContent ?? "";
         let val = v;
         if (t === "s") val = shared[+v] ?? "";
         else if (t === "inlineStr") val = byTag(c, "t").map((x) => x.textContent).join("");
-        else if (t === "b") val = v === "1" ? "VERDADEIRO" : "FALSO";
+        else if (t === "b") val = v === "1" ? "TRUE" : "FALSE";
         else if (v !== "" && !t && isDateFmt(xfs[+(c.getAttribute("s") || 0)] ?? 0)) val = serialToDate(+v);
-        r[colIdx(c.getAttribute("r") || "A")] = val;
+        (grid[rowIdx(ref)] ??= [])[colIdx(ref)] = val;
       }
-      const filled = Array.from(r, (x) => x ?? "");
-      if (filled.some((x) => x !== "")) rows.push(filled);
+    }
+    // células mescladas: o valor do canto superior esquerdo vale para todo o intervalo
+    for (const m of byTag(sheet, "mergeCell")) {
+      const [a, b] = (m.getAttribute("ref") || "").split(":");
+      if (!b) continue;
+      const r0 = rowIdx(a), c0 = colIdx(a), r1 = rowIdx(b), c1 = colIdx(b);
+      const val = grid[r0]?.[c0] ?? "";
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (r !== r0 || c !== c0) (grid[r] ??= [])[c] = val;
+    }
+    const rows = [];
+    for (const r of grid) {
+      const filled = Array.from(r || [], (x) => (x ?? "").toString());
+      if (filled.some((x) => x.trim() !== "")) rows.push(filled);
     }
     return rows;
   },
