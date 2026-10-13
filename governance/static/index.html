@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Governança IA</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">Governança <span>IA</span></div>
+  <nav id="nav">
+    <a href="#painel">Painel</a>
+    <a href="#entradas">Entradas</a>
+    <a href="#lista">Lista geral</a>
+    <a href="#projetos">Projetos</a>
+    <a href="#reunioes">Reuniões</a>
+    <a href="#riscos">Riscos</a>
+    <a href="#summaries">Summaries</a>
+    <a href="#config">Config.</a>
+  </nav>
+  <div id="ai-badge" class="badge"></div>
+</header>
+<main id="view"></main>
+<div id="modal" class="modal hidden"><div class="modal-box"><button class="close" onclick="closeModal()">×</button><div id="modal-body"></div></div></div>
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>
