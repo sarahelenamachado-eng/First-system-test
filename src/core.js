@@ -35,7 +35,7 @@ const Core = {
     const base = emptyDb();
     let db = base;
     if (f) {
-      try { db = JSON.parse(await f.text()); } catch { throw new Error("db.json corrompido na pasta escolhida"); }
+      try { db = JSON.parse(await f.text()); } catch { throw new Error(t("db.json corrompido na pasta escolhida")); }
       for (const [k, v] of Object.entries(base)) if (db[k] === undefined) db[k] = v;
       for (const c of COLLECTIONS) db.seq[c] ??= 0;
       db.settings = { ...base.settings, ...db.settings };
@@ -52,7 +52,9 @@ const Core = {
 
   nextId(col) { this.db.seq[col] += 1; return `${PREFIX[col]}${String(this.db.seq[col]).padStart(3, "0")}`; },
   find(col, id) { return this.db[col].find((r) => r.id === id) || null; },
-  log(type, ref, text) { this.db.events.push({ ts: nowISO(), date: todayISO(), type, ref, text }); },
+  /** Eventos guardam a chave da mensagem + parâmetros, para serem exibidos no idioma atual. */
+  log(type, ref, key, params = {}) { this.db.events.push({ ts: nowISO(), date: todayISO(), type, ref, msg: [key, params], text: I18N.fill(key, params) }); },
+  hist(rec, key, params = {}) { (rec.history ??= []).push({ date: nowISO(), msg: [key, params], text: I18N.fill(key, params) }); },
   touch(rec) { rec.updated_at = nowISO(); },
   /** Vínculo bidirecional entre dois registros (ex.: item <-> projeto). */
   link(aCol, aId, bCol, bId) {
@@ -96,7 +98,7 @@ const Core = {
       rec.status ??= "Aberto";
     }
     db[col].push(rec);
-    this.log(`${col}.created`, rec.id, `${rec.id} criado: ${rec.title || rec.name || ""}`);
+    this.log(`${col}.created`, rec.id, "{id} criado: {label}", { id: rec.id, label: rec.title || rec.name || "" });
     return rec;
   },
 
@@ -108,13 +110,13 @@ const Core = {
     const included = !!item;
     if (item) {
       const order = { Baixa: 0, Média: 1, Alta: 2 };
-      item.history.push({ date: nowISO(), text: `Nova entrada ${inp.id} (${inp.source}): ${inp.title}` });
+      this.hist(item, "Nova entrada {inp} ({source}): {title}", { inp: inp.id, source: [inp.source], title: inp.title });
       for (const k of ["priority", "urgency"]) if ((order[a[k]] ?? -1) > (order[item[k]] ?? -1)) item[k] = a[k];
       item.impacts = [...new Set([...(item.impacts || []), ...(a.impacts || [])])].sort();
       item.definitions = [...new Set([...(item.definitions || []), ...defs])].sort();
       if (item.status === "Concluído") item.status = "Em andamento";
       this.touch(item);
-      this.log("items.updated", item.id, `${item.id} atualizado com a entrada ${inp.id}`);
+      this.log("items.updated", item.id, "{id} atualizado com a entrada {inp}", { id: item.id, inp: inp.id });
     } else {
       item = await this.createRecord("items", {
         title: inp.title, description: inp.description, background: inp.background, source: inp.source, source_detail: inp.source_detail,
@@ -134,7 +136,7 @@ const Core = {
       if ((d === "risco_monitorar" || d === "risco_investigar") && included && openRisks.length) {
         // item on going já tem risco aberto: registra a nova informação nele em vez de duplicar
         for (const r of openRisks) {
-          (r.history ??= []).push({ date: nowISO(), text: `Nova entrada ${inp.id}: ${inp.title}` });
+          this.hist(r, "Nova entrada {inp}: {title}", { inp: inp.id, title: inp.title });
           if (d === "risco_investigar") r.mode = "Investigar";
           this.touch(r);
         }
@@ -154,13 +156,13 @@ const Core = {
         created.project = proj.id;
       } else if (d === "acao_projeto") {
         const proj = this.find("projects", body.project_id || "");
-        if (!proj) throw new ApiError("Selecione o projeto para 'Ação dentro de um projeto'.");
+        if (!proj) throw new ApiError(t("Selecione o projeto para 'Ação dentro de um projeto'."));
         const actId = this.nextId("actions");
         proj.actions.push({ id: actId, text: inp.title, item_id: item.id, owner: inp.owner, due: inp.due_date, status: "Aberta",
           gap_reason: body.gap_reason || a.gap_analysis || "", created_at: nowISO() });
         this.touch(proj);
         this.link("items", item.id, "projects", proj.id);
-        this.log("projects.action", proj.id, `Ação ${actId} incluída no portfólio de ${proj.id}: ${inp.title}`);
+        this.log("projects.action", proj.id, "Ação {act} incluída no portfólio de {id}: {title}", { act: actId, id: proj.id, title: inp.title });
         created.action = actId;
       } else if (d === "info_reportar") {
         item.report = true;
@@ -170,32 +172,33 @@ const Core = {
     this.db.feedback.push({ date: nowISO(), ref: inp.id, text: AI.inputText(inp), ai: inp.ai_suggestion || null, final: { ...a, definitions: defs, relation_mode: mode } });
     Object.assign(inp, { status: "Registrado", item_id: item.id, assessment: a, definitions: defs });
     this.touch(inp);
-    this.log("inputs.committed", inp.id, `${inp.id} classificado e registrado em ${item.id} (${defs.map((d) => AI.DEFINITIONS[d] || d).join(", ")})`);
+    this.log("inputs.committed", inp.id, "{inp} classificado e registrado em {item} ({defs})", { inp: inp.id, item: item.id, defs: defs.map((d) => AI.DEFINITIONS[d] || d) });
     return created;
   },
 
   alerts() {
     const db = this.db, s = db.settings, out = [], today = todayISO();
+    const add = (level, ref, key, params) => out.push({ level, ref, msg: [key, params], text: I18N.fill(key, params) });
     const limit = +s.alert_days_without_update || 15, n = +s.links_for_project_alert || 3;
     for (const p of db.projects) {
       if (["Concluído", "Cancelado"].includes(p.status)) continue;
       const d = daysSince(p.last_monitored || p.updated_at);
-      if (d >= limit) out.push({ level: "alta", ref: p.id, text: `Projeto ${p.id} — ${p.name}: ${d} dias sem monitoramento/atualização.` });
-      if (p.next_meeting && p.next_meeting <= today) out.push({ level: "media", ref: p.id, text: `Reunião de acompanhamento de ${p.id} prevista para ${p.next_meeting}.` });
+      if (d >= limit) add("alta", p.id, "Projeto {id} — {name}: {d} dias sem monitoramento/atualização.", { id: p.id, name: p.name, d });
+      if (p.next_meeting && p.next_meeting <= today) add("media", p.id, "Reunião de acompanhamento de {id} prevista para {date}.", { id: p.id, date: p.next_meeting });
     }
     for (const it of db.items) {
       if (it.status === "Concluído") continue;
       const L = it.links || {};
       if ((L.items || []).length >= n && !(L.projects || []).length)
-        out.push({ level: "alta", ref: it.id, text: `${it.id} está interligado a ${L.items.length} itens: avaliar criação de um projeto com overview maior.` });
-      if (it.due_date && it.due_date < today) out.push({ level: "alta", ref: it.id, text: `${it.id} — ${it.title}: prazo vencido em ${it.due_date}.` });
-      if ((L.inputs || []).length >= n) out.push({ level: "media", ref: it.id, text: `${it.id} recebeu ${L.inputs.length} entradas: tema recorrente.` });
+        add("alta", it.id, "{id} está interligado a {n} itens: avaliar criação de um projeto com overview maior.", { id: it.id, n: L.items.length });
+      if (it.due_date && it.due_date < today) add("alta", it.id, "{id} — {title}: prazo vencido em {date}.", { id: it.id, title: it.title, date: it.due_date });
+      if ((L.inputs || []).length >= n) add("media", it.id, "{id} recebeu {n} entradas: tema recorrente.", { id: it.id, n: L.inputs.length });
     }
     for (const r of db.risks) {
-      if (r.status !== "Fechado" && daysSince(r.updated_at) >= limit) out.push({ level: "media", ref: r.id, text: `Risco ${r.id} sem atualização há ${daysSince(r.updated_at)} dias.` });
+      if (r.status !== "Fechado" && daysSince(r.updated_at) >= limit) add("media", r.id, "Risco {id} sem atualização há {d} dias.", { id: r.id, d: daysSince(r.updated_at) });
     }
     const pending = db.inputs.filter((i) => i.status !== "Registrado").length;
-    if (pending) out.push({ level: "baixa", ref: "inputs", text: `${pending} entradas aguardando classificação.` });
+    if (pending) add("baixa", "inputs", "{n} entradas aguardando classificação.", { n: pending });
     return out;
   },
 
@@ -240,7 +243,7 @@ const Core = {
       risks: openR.map((r) => ({ id: r.id, title: r.title, mode: r.mode, probability: r.probability, impact: r.impact, status: r.status })),
       meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title, date: m.date, decisions: m.decisions || [], items: m.links?.items || [] })),
       report_items: open.filter((i) => i.report).map(brief),
-      activity: events.slice(-200).map((ev) => ({ ts: ev.ts, text: ev.text })),
+      activity: events.slice(-200).map((ev) => ({ ts: ev.ts, msg: ev.msg, text: ev.text })),
       alerts: this.alerts(),
     };
     if (kind === "weekly") {
@@ -252,14 +255,15 @@ const Core = {
 
   exportCsv() {
     const q = (v) => { v = Array.isArray(v) ? v.join(", ") : String(v ?? ""); return /[;"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+    const tv = (v) => (Array.isArray(v) ? v.map((x) => t(x)) : v ? t(v) : "");
     const lines = [["ID", "Título", "Status", "Origem", "Detalhe origem", "De onde veio", "Responsável", "Data emitida", "Prazo",
       "Escopo (o que é)", "O que fazer", "Prioridade", "Urgência", "Justificativa risco", "Impactos", "Detalhe impactos",
-      "Área principal", "Áreas impactadas", "Definições", "Projetos", "Riscos", "Reuniões", "Itens relacionados", "Atualizado em"]];
+      "Área principal", "Áreas impactadas", "Definições", "Projetos", "Riscos", "Reuniões", "Itens relacionados", "Atualizado em"].map((h) => (h === "ID" ? h : t(h)))];
     for (const i of this.db.items) {
       const L = i.links || {};
-      lines.push([i.id, i.title, i.status, i.source, i.source_detail, i.origin, i.owner, i.emitted_at || (i.created_at || "").slice(0, 10), i.due_date,
-        i.scope, i.scope_action, i.priority, i.urgency, i.risk_reason, i.impacts || [], i.impact_details, i.area_main, i.areas_impacted,
-        (i.definitions || []).map((d) => AI.DEFINITIONS[d] || d), L.projects || [], L.risks || [], L.meetings || [], L.items || [], i.updated_at]);
+      lines.push([i.id, i.title, tv(i.status), tv(i.source), tv(i.source_detail), i.origin, i.owner, i.emitted_at || (i.created_at || "").slice(0, 10), i.due_date,
+        i.scope, i.scope_action, tv(i.priority), tv(i.urgency), i.risk_reason, tv(i.impacts || []), i.impact_details, i.area_main, i.areas_impacted,
+        tv((i.definitions || []).map((d) => AI.DEFINITIONS[d] || d)), L.projects || [], L.risks || [], L.meetings || [], L.items || [], i.updated_at]);
     }
     return "﻿" + lines.map((r) => r.map(q).join(";")).join("\r\n");
   },
@@ -282,8 +286,8 @@ const Core = {
       if (/\.(txt|md|csv)$/.test(n) && f.size < 500000) parts.push(`--- ${f.name} ---\n${await file.text()}`);
       else if (/\.xlsx?$/.test(n)) {
         try { parts.push(`--- ${f.name} ---\n` + ((await Sheet.table(file)) || []).slice(0, 300).map((r) => r.join(" | ")).join("\n")); }
-        catch { parts.push(`--- ${f.name} (não foi possível ler) ---`); }
-      } else parts.push(`--- ${f.name} (arquivo binário, ${f.size} bytes) ---`);
+        catch { parts.push(`--- ${f.name} (unreadable) ---`); }
+      } else parts.push(`--- ${f.name} (binary file, ${f.size} bytes) ---`);
     }
     return parts.join("\n");
   },
@@ -291,25 +295,27 @@ const Core = {
   /** Versão do summary salva na pasta local SUMMARIES (abre no navegador / imprime em PDF). */
   summaryHtml(s, text) {
     const esc = (x) => String(x ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const rows = (lst, cols) => lst.map((r) => "<tr>" + cols.map((c) => `<td>${esc(r[c])}</td>`).join("") + "</tr>").join("") || `<tr><td colspan=${cols.length}>—</td></tr>`;
-    const th = (hs) => "<tr>" + hs.map((h) => `<th>${h}</th>`).join("") + "</tr>";
+    const coded = ["status", "mode", "probability", "impact", "priority"];
+    const rows = (lst, cols) => lst.map((r) => "<tr>" + cols.map((c) => `<td>${esc(coded.includes(c) && r[c] ? t(r[c]) : r[c])}</td>`).join("") + "</tr>").join("") || `<tr><td colspan=${cols.length}>—</td></tr>`;
+    const th = (hs) => "<tr>" + hs.map((h) => `<th>${esc(h === "ID" ? h : t(h))}</th>`).join("") + "</tr>";
     const k = s.kpis;
-    const kp = [["novas demandas", k.new_inputs], ["itens criados", k.items_created], ["itens atualizados", k.items_updated], ["em aberto", k.open_items],
-      ["alta prioridade", k.high_priority_open], ["vencidos", k.overdue], ["reuniões", k.meetings], ["riscos abertos", k.open_risks], ["projetos ativos", k.active_projects]];
-    return `<!doctype html><meta charset="utf-8"><title>${esc(s.type)} ${esc(s.period.start)}</title>
+    const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Em aberto", k.open_items],
+      ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
+    const msgOf = (a) => (a.msg ? t(a.msg[0], a.msg[1]) : a.text);
+    return `<!doctype html><html lang="${I18N.htmlLang()}"><meta charset="utf-8"><title>${esc(t(s.type))} ${esc(s.period.start)}</title>
 <style>body{font:14px system-ui;margin:32px;color:#1f2937}h1{margin:0}h2{border-bottom:2px solid #1e3a8a;padding-bottom:4px;margin-top:28px}
 table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding:4px 8px;text-align:left}.k{display:inline-block;margin:6px 12px 6px 0;padding:8px 12px;background:#eef2ff;border-radius:8px}</style>
-<h1>${esc(s.type)}</h1><p>Período: ${esc(s.period.start)} a ${esc(s.period.end)} · gerado em ${esc(s.generated_at)}</p>
-<h2>1. Destaques</h2><div style="white-space:pre-wrap">${esc(text)}</div>
-<h2>2. Indicadores</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${n}</span>`).join("")}
-<h2>3. Novas demandas por origem</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(src)}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
-<h2>4. Itens críticos (alta prioridade)</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
-<h2>5. Prazos (vencidos e próximos 7 dias)</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
-<h2>6. Projetos</h2><table>${th(["ID", "Projeto", "Status", "Ações abertas", "Próx. reunião"])}${rows(s.projects, ["id", "name", "status", "open_actions", "next_meeting"])}</table>
-<h2>7. Riscos</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
-<h2>8. Reuniões e decisões</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)})<br>${m.decisions.map(esc).join("<br>") || "Sem decisões registradas"}</p>`).join("") || "<p>—</p>"}
-<h2>9. Infos a reportar</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
-<h2>10. Alertas</h2><ul>${s.alerts.map((a) => `<li>${esc(a.text)}</li>`).join("") || "<li>—</li>"}</ul>`;
+<h1>${esc(t(s.type))}</h1><p>${esc(t("Período"))}: ${esc(s.period.start)} – ${esc(s.period.end)} · ${esc(t("gerado"))} ${esc(s.generated_at)}</p>
+<h2>1. ${esc(t("Destaques"))}</h2><div style="white-space:pre-wrap">${esc(text)}</div>
+<h2>2. ${esc(t("Indicadores"))}</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${esc(t(n))}</span>`).join("")}
+<h2>3. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
+<h2>4. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
+<h2>5. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
+<h2>6. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "Ações abertas", "Próx. reunião"])}${rows(s.projects, ["id", "name", "status", "open_actions", "next_meeting"])}</table>
+<h2>7. ${esc(t("Riscos"))}</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
+<h2>8. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}</p>`).join("") || "<p>—</p>"}
+<h2>9. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
+<h2>10. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
   },
 
   // ------------------------------------------------------------ roteador local
@@ -337,14 +343,14 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       const kind = body.type || "daily";
       const summary = this.buildSummary(kind, body.date || todayISO());
       const text = body.narrative === false ? "" : await AI.narrative(summary);
-      const file = `SUMMARIES/${kind === "weekly" ? "semanal" : "diario"}_${summary.period.start}.html`;
+      const file = `SUMMARIES/${kind === "weekly" ? "semanal" : "diario"}_${summary.period.start}_${I18N.lang}.html`;
       await Store.write(file, this.summaryHtml(summary, text));
       db.summaries = db.summaries.filter((x) => x.file !== file);
       db.summaries.push({ type: kind, period: summary.period, file, generated_at: nowISO() });
       return { summary, narrative: text, file };
     }
 
-    if (!COLLECTIONS.includes(head) || head === "actions") throw new ApiError("Rota desconhecida");
+    if (!COLLECTIONS.includes(head) || head === "actions") throw new ApiError("Unknown route");
     const col = head;
 
     if (method === "POST" && !rid) {
@@ -365,7 +371,7 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
     }
 
     const rec = rid ? this.find(col, rid) : null;
-    if (rid && !rec) throw new ApiError(`${rid} não encontrado`);
+    if (rid && !rec) throw new ApiError(t("{id} não encontrado", { id: rid }));
 
     if (method === "GET" && rec && !action) return rec;
     if (method === "PATCH" && rec && !action) {
@@ -374,10 +380,11 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       const note = data._note;
       delete data._note;
       Object.assign(rec, data);
-      if (note) (rec.history ??= []).push({ date: nowISO(), text: note });
+      if (note) (rec.history ??= []).push({ date: nowISO(), text: note });  // texto do usuário: não traduzido
       if (col === "projects") rec.last_monitored = todayISO();
       this.touch(rec);
-      this.log(`${col}.updated`, rid, `${rid} atualizado` + (note ? `: ${note}` : ""));
+      if (note) this.log(`${col}.updated`, rid, "{id} atualizado: {note}", { id: rid, note });
+      else this.log(`${col}.updated`, rid, "{id} atualizado", { id: rid });
       return rec;
     }
     if (method === "DELETE" && rec) {
@@ -386,15 +393,15 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
         const lst = r.links?.[col];
         if (lst?.includes(rid)) lst.splice(lst.indexOf(rid), 1);
       }
-      this.log(`${col}.deleted`, rid, `${rid} removido (a pasta local foi mantida)`);
+      this.log(`${col}.deleted`, rid, "{id} removido (a pasta local foi mantida)", { id: rid });
       return { ok: true };
     }
 
     // ---- ações específicas
     if (method === "POST" && action === "link") {
-      if (!this.find(body.collection, body.id)) throw new ApiError(`${body.id} não encontrado`);
+      if (!this.find(body.collection, body.id)) throw new ApiError(t("{id} não encontrado", { id: body.id }));
       this.link(col, rid, body.collection, body.id);
-      this.log("link", rid, `${rid} vinculado a ${body.id}`);
+      this.log("link", rid, "{a} vinculado a {b}", { a: rid, b: body.id });
       return rec;
     }
     if (col === "inputs" && action === "suggest") {
@@ -410,43 +417,44 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       await this.syncSchedules(rec);
       rec.last_monitored = todayISO();
       this.touch(rec);
-      this.log("projects.upload", rid, `Upload em ${rid}: ${rel.split("/").pop()}`);
+      this.log("projects.upload", rid, "Upload em {id}: {file}", { id: rid, file: rel.split("/").pop() });
       return rec;
     }
     if (col === "projects" && action === "analyze") {
       const sched = rec.schedules.find((s) => s.rel === body.rel);
       const file = sched && (await Store.read(sched.rel));
-      if (!file) throw new ApiError("Cronograma não encontrado na pasta");
+      if (!file) throw new ApiError(t("Cronograma não encontrado na pasta"));
       sched.analysis = await AI.analyzeSchedule(rec, file, todayISO());
       sched.analyzed_at = nowISO();
       this.touch(rec);
-      this.log("projects.analyzed", rid, `Master schedule de ${rid} analisada: ${sched.name}`);
+      this.log("projects.analyzed", rid, "Master schedule de {id} analisada: {file}", { id: rid, file: sched.name });
       return rec;
     }
     if (col === "projects" && action === "actions") {
       if (body.id) {
         const act = rec.actions.find((a) => a.id === body.id);
-        if (!act) throw new ApiError("Ação não encontrada");
+        if (!act) throw new ApiError(t("Ação não encontrada"));
         Object.assign(act, body);
       } else {
         rec.actions.push({ ...body, id: this.nextId("actions"), status: body.status || "Aberta", created_at: nowISO() });
       }
       rec.last_monitored = todayISO();
       this.touch(rec);
-      this.log("projects.action", rid, `Portfólio ${rid}: ação ${body.id || rec.actions.at(-1).id} ${body.status || "criada"}`);
+      if (body.id) this.log("projects.action", rid, "Portfólio {id}: ação {act} → {status}", { id: rid, act: body.id, status: [body.status || ""] });
+      else this.log("projects.action", rid, "Portfólio {id}: ação {act} criada", { id: rid, act: rec.actions.at(-1).id });
       return rec;
     }
     if (["risks", "meetings", "items"].includes(col) && action === "upload") {
       const rel = await Store.writeUnique(this.folderFor(col, rid), body.file.name, body.file);
       this.touch(rec);
-      this.log(`${col}.upload`, rid, `Documento anexado a ${rid}: ${rel.split("/").pop()}`);
+      this.log(`${col}.upload`, rid, "Documento anexado a {id}: {file}", { id: rid, file: rel.split("/").pop() });
       return rec;
     }
     if (action === "files" && method === "GET") return Store.list(rec.folder || this.folderFor(col, rid));
     if (col === "risks" && action === "analyze") {
       rec.analysis = await AI.analyzeRisk(db, rec, await this.filesText(rec.folder));
       this.touch(rec);
-      this.log("risks.analyzed", rid, `Risco ${rid} analisado`);
+      this.log("risks.analyzed", rid, "Risco {id} analisado", { id: rid });
       return rec;
     }
     if (col === "meetings" && action === "extract") {
@@ -456,6 +464,6 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       this.touch(rec);
       return rec;
     }
-    throw new ApiError("Rota desconhecida");
+    throw new ApiError("Unknown route");
   },
 };

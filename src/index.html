@@ -8,23 +8,27 @@
 </head>
 <body>
 <header class="top">
-  <div class="brand">Governança <span>IA</span></div>
+  <div class="brand"><span data-t="Governança">Governança</span> <span class="ai">IA</span></div>
   <nav id="nav">
-    <a href="#painel">Painel</a>
-    <a href="#entradas">Entradas</a>
-    <a href="#lista">Lista geral</a>
-    <a href="#projetos">Projetos</a>
-    <a href="#reunioes">Reuniões</a>
-    <a href="#riscos">Riscos</a>
-    <a href="#summaries">Summaries</a>
-    <a href="#config">Config.</a>
+    <a href="#painel" data-t="Painel">Painel</a>
+    <a href="#entradas" data-t="Entradas">Entradas</a>
+    <a href="#lista" data-t="Lista geral">Lista geral</a>
+    <a href="#projetos" data-t="Projetos">Projetos</a>
+    <a href="#reunioes" data-t="Reuniões">Reuniões</a>
+    <a href="#riscos" data-t="Riscos">Riscos</a>
+    <a href="#summaries" data-t="Summaries">Summaries</a>
+    <a href="#config" data-t="Config.">Config.</a>
   </nav>
+  <select id="lang" class="lang" onchange="setLang(this.value)" aria-label="Idioma / Language / 语言">
+    <option value="pt">Português</option><option value="en">English</option><option value="zh">中文</option>
+  </select>
   <div id="ai-badge" class="badge"></div>
 </header>
 <main id="view"><p class="muted">Carregando…</p></main>
 <div id="modal" class="modal hidden"><div class="modal-box"><button class="close" onclick="closeModal()">×</button><div id="modal-body"></div></div></div>
 <div id="toast" class="toast hidden"></div>
 <script src="store.js"></script>
+<script src="i18n.js"></script>
 <script src="xlsx.js"></script>
 <script src="ai.js"></script>
 <script src="core.js"></script>

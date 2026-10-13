@@ -20,7 +20,7 @@
 body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
 .top { display: flex; align-items: center; gap: 20px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
 .brand { font-weight: 700; font-size: 18px; color: var(--brand); }
-.brand span { background: var(--brand); color: var(--panel); border-radius: 4px; padding: 0 5px; margin-left: 2px; }
+.brand .ai { background: var(--brand); color: var(--panel); border-radius: 4px; padding: 0 5px; margin-left: 2px; }
 nav { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
 nav a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
 nav a.active, nav a:hover { background: var(--soft); color: var(--brand); }
@@ -74,21 +74,25 @@ button:disabled { opacity: .5; cursor: wait; }
 .summary-doc h2 { border-bottom: 2px solid var(--brand); padding-bottom: 4px; margin-top: 22px; }
 @media print { .top, .no-print { display: none !important; } main { padding: 0; } .summary-doc { border: 0; } }
 .badge:empty { display: none; }
+.lang { width: auto; padding: 4px 8px; font-size: 13px; }
 </style>
 </head>
 <body>
 <header class="top">
-  <div class="brand">Governança <span>IA</span></div>
+  <div class="brand"><span data-t="Governança">Governança</span> <span class="ai">IA</span></div>
   <nav id="nav">
-    <a href="#painel">Painel</a>
-    <a href="#entradas">Entradas</a>
-    <a href="#lista">Lista geral</a>
-    <a href="#projetos">Projetos</a>
-    <a href="#reunioes">Reuniões</a>
-    <a href="#riscos">Riscos</a>
-    <a href="#summaries">Summaries</a>
-    <a href="#config">Config.</a>
+    <a href="#painel" data-t="Painel">Painel</a>
+    <a href="#entradas" data-t="Entradas">Entradas</a>
+    <a href="#lista" data-t="Lista geral">Lista geral</a>
+    <a href="#projetos" data-t="Projetos">Projetos</a>
+    <a href="#reunioes" data-t="Reuniões">Reuniões</a>
+    <a href="#riscos" data-t="Riscos">Riscos</a>
+    <a href="#summaries" data-t="Summaries">Summaries</a>
+    <a href="#config" data-t="Config.">Config.</a>
   </nav>
+  <select id="lang" class="lang" onchange="setLang(this.value)" aria-label="Idioma / Language / 语言">
+    <option value="pt">Português</option><option value="en">English</option><option value="zh">中文</option>
+  </select>
   <div id="ai-badge" class="badge"></div>
 </header>
 <main id="view"><p class="muted">Carregando…</p></main>
@@ -209,6 +213,438 @@ const Store = {
     await this.write(rel, data);
     return rel;
   },
+};
+</script>
+<script>
+/* Idiomas da plataforma: português (pt), inglês (en) e chinês simplificado (zh).
+ *
+ * A chave de cada texto é o próprio texto em português. Valores guardados nos dados (status,
+ * prioridade, origem, impactos…) também são chaves em português e só são traduzidos na tela.
+ * Parâmetros {x} são substituídos; parâmetros que são listas têm cada item traduzido. */
+const I18N = {
+  lang: "pt",
+  LANGS: { pt: "Português", en: "English", zh: "中文" },
+
+  async init() {
+    let l = null;
+    try { l = await KV.get("lang"); } catch { /* sem IndexedDB */ }
+    if (!l) { const nav = (navigator.language || "pt").toLowerCase(); l = nav.startsWith("zh") ? "zh" : nav.startsWith("en") ? "en" : "pt"; }
+    this.lang = this.LANGS[l] ? l : "pt";
+  },
+  async set(l) {
+    this.lang = this.LANGS[l] ? l : "pt";
+    try { await KV.set("lang", this.lang); } catch { /* sem IndexedDB */ }
+  },
+  htmlLang() { return { pt: "pt-BR", en: "en", zh: "zh-CN" }[this.lang]; },
+  /** Nome do idioma para instruir a IA. */
+  aiLanguage() { return { pt: "português do Brasil", en: "inglês (English)", zh: "chinês simplificado (简体中文)" }[this.lang]; },
+
+  /** Preenche {params} num modelo já traduzido. */
+  fill(tpl, params = {}, tr = (x) => x) {
+    return String(tpl).replace(/\{(\w+)\}/g, (m, k) => {
+      const v = params[k];
+      if (v === undefined || v === null) return "";
+      return Array.isArray(v) ? v.map(tr).join(", ") : String(v);
+    });
+  },
+  t(key, params) {
+    const e = D[key];
+    const tpl = e ? (this.lang === "pt" ? e[2] ?? key : this.lang === "en" ? e[0] : e[1]) : key;
+    return params ? this.fill(tpl, params, (x) => I18N.t(x)) : tpl;
+  },
+};
+const t = (key, params) => I18N.t(key, params);
+
+/* D[chave em português] = [inglês, chinês, (português, quando a chave é um código)] */
+const D = {
+  // ---- navegação / geral
+  "Painel": ["Dashboard", "仪表板"],
+  "Entradas": ["Inputs", "输入"],
+  "Lista geral": ["General list", "总清单"],
+  "Projetos": ["Projects", "项目"],
+  "Reuniões": ["Meetings", "会议"],
+  "Riscos": ["Risks", "风险"],
+  "Summaries": ["Summaries", "摘要"],
+  "Config.": ["Settings", "设置"],
+  "Idioma": ["Language", "语言"],
+  "Processando…": ["Processing…", "处理中…"],
+  "Erro: ": ["Error: ", "错误："],
+  "Escolha um arquivo.": ["Choose a file.", "请选择文件。"],
+  "Arquivo não encontrado na pasta.": ["File not found in the folder.", "文件夹中未找到该文件。"],
+  "lista_governanca": ["governance_list", "治理清单"],
+  "Itens": ["Items", "事项"],
+  "Item": ["Item", "事项"],
+  "Projeto": ["Project", "项目"],
+  "Risco": ["Risk", "风险"],
+  "Reunião": ["Meeting", "会议"],
+  "items": ["items", "事项"], "projects": ["projects", "项目"], "risks": ["risks", "风险"], "meetings": ["meetings", "会议"], "inputs": ["inputs", "输入"],
+  "sem vínculos": ["no links", "无关联"],
+  "ID (ex.: GOV003)": ["ID (e.g. GOV003)", "ID（例如 GOV003）"],
+  "Vincular": ["Link", "关联"],
+  "Vínculo criado": ["Link created", "已创建关联"],
+  "IA: ": ["AI: ", "AI："],
+  "IA offline (heurística)": ["AI offline (heuristic)", "AI 离线（启发式）"],
+  "sem chave do Claude (configure em Config.)": ["no Claude key (set it in Settings)", "未设置 Claude 密钥（请在设置中配置）"],
+  "Salvar": ["Save", "保存"],
+  "Salvo": ["Saved", "已保存"],
+  "Excluir": ["Delete", "删除"],
+  "Upload": ["Upload", "上传"],
+  "Histórico": ["History", "历史"],
+  "Status": ["Status", "状态"],
+  "Origem": ["Source", "来源"],
+  "Responsável": ["Owner", "负责人"],
+  "Prazo": ["Due date", "截止日期"],
+  "Prioridade": ["Priority", "优先级"],
+  "Urgência": ["Urgency", "紧急程度"],
+  "Impactos": ["Impacts", "影响"],
+  "Impacto": ["Impact", "影响"],
+  "Definição": ["Definition", "定义"],
+  "Vínculos": ["Links", "关联"],
+  "Descrição": ["Description", "描述"],
+  "Título": ["Title", "标题"],
+  "Nome": ["Name", "名称"],
+  "Data": ["Date", "日期"],
+  "Arquivo": ["File", "文件"],
+  "Modo": ["Mode", "模式"],
+  "Prob.": ["Prob.", "可能性"],
+  "Probabilidade": ["Probability", "可能性"],
+  "Análise": ["Analysis", "分析"],
+  "heuristica": ["heuristic", "启发式", "heurística"],
+  "erro": ["error", "错误", "erro"],
+  "Não foi possível iniciar:": ["Could not start:", "无法启动："],
+
+  // ---- valores-código (status, níveis, origens…)
+  "Diretora": ["Director", "总监"],
+  "Departamento": ["Department", "部门"],
+  "HQ": ["HQ", "总部"],
+  "Outro": ["Other", "其他"],
+  "Pedido pontual": ["One-off request", "临时请求"],
+  "Direcionamento / estratégia (reclamação, opinião)": ["Direction / strategy (complaint, opinion)", "方向 / 战略（投诉、意见）"],
+  "Nova solicitação do HQ": ["New request from HQ", "总部新要求"],
+  "Decisão conjunta entre departamentos": ["Joint decision between departments", "跨部门共同决策"],
+  "Atualização de item existente": ["Update to an existing item", "现有事项更新"],
+  "Aberto": ["Open", "未结"],
+  "Em andamento": ["In progress", "进行中"],
+  "Aguardando": ["Waiting", "等待中"],
+  "Concluído": ["Done", "已完成"],
+  "Em risco": ["At risk", "有风险"],
+  "Pausado": ["Paused", "已暂停"],
+  "Cancelado": ["Cancelled", "已取消"],
+  "Aberta": ["Open", "未结"],
+  "Concluída": ["Done", "已完成"],
+  "Alta": ["High", "高"], "Média": ["Medium", "中"], "Baixa": ["Low", "低"],
+  "Alto": ["High", "高"], "Médio": ["Medium", "中"], "Baixo": ["Low", "低"],
+  "Monitorar": ["Monitor", "监控"], "Investigar": ["Investigate", "调查"],
+  "Em tratamento": ["Being handled", "处理中"], "Fechado": ["Closed", "已关闭"],
+  "Novo": ["New", "新建"], "Em avaliação": ["Under assessment", "评估中"], "Registrado": ["Registered", "已登记"],
+  "Custo": ["Cost", "成本"], "Eficiência": ["Efficiency", "效率"], "Operação": ["Operations", "运营"], "Compliance": ["Compliance", "合规"], "People": ["People", "人员"],
+  "Risco a monitorar": ["Risk to monitor", "需监控的风险"],
+  "Risco a investigar": ["Risk to investigate", "需调查的风险"],
+  "Info a ser reportada": ["Information to report", "需汇报的信息"],
+  "Criação de um novo projeto": ["Create a new project", "创建新项目"],
+  "Ação dentro de um projeto": ["Action within a project", "项目内行动"],
+  "Ação geral": ["General action", "一般行动"],
+  "Summary diário": ["Daily summary", "每日摘要"],
+  "Summary semanal": ["Weekly summary", "每周摘要"],
+
+  // ---- painel
+  "Painel de governança": ["Governance dashboard", "治理仪表板"],
+  "Entradas pendentes": ["Pending inputs", "待处理输入"],
+  "Itens em aberto": ["Open items", "未结事项"],
+  "Alta prioridade": ["High priority", "高优先级"],
+  "Vencidos": ["Overdue", "已逾期"],
+  "Projetos ativos": ["Active projects", "进行中项目"],
+  "Riscos abertos": ["Open risks", "未结风险"],
+  "Alertas": ["Alerts", "提醒"],
+  "Nenhum alerta.": ["No alerts.", "暂无提醒。"],
+  "Atividade recente": ["Recent activity", "最近动态"],
+  "+ Nova entrada": ["+ New input", "+ 新输入"],
+  "Gerar summary do dia": ["Generate today's summary", "生成今日摘要"],
+
+  // ---- entradas
+  "Inputs management": ["Inputs management", "输入管理"],
+  "1. Entrada da informação": ["1. Information input", "1. 信息录入"],
+  "2. Assessment (relação + classificação)": ["2. Assessment (relation + classification)", "2. 评估（关联 + 分类）"],
+  "3. Definição": ["3. Definition", "3. 定义"],
+  "4. Lista geral + módulos": ["4. General list + modules", "4. 总清单 + 模块"],
+  "Nova entrada": ["New input", "新输入"],
+  "Registrar e avaliar com IA": ["Register and assess with AI", "登记并用 AI 评估"],
+  "Entrada": ["Input", "输入"],
+  "Nenhuma entrada.": ["No inputs.", "暂无输入。"],
+  "Tipo": ["Type", "类型"],
+  "Título / assunto": ["Title / subject", "标题 / 主题"],
+  "Descrição do input": ["Input description", "输入描述"],
+  "Background / contexto": ["Background / context", "背景 / 情况"],
+  "De onde a demanda veio (pessoa / fórum)": ["Where the demand came from (person / forum)", "需求来源（人员 / 会议）"],
+  "Área principal": ["Main area", "主要部门"],
+  "Áreas impactadas": ["Impacted areas", "受影响部门"],
+  "Áreas que impactam": ["Areas that impact it", "产生影响的部门"],
+  "Informe o título.": ["Please enter a title.", "请填写标题。"],
+  "veio de": ["came from", "来自"],
+  "Contexto:": ["Context:", "背景："],
+  "Sugestão da IA": ["AI suggestion", "AI 建议"],
+  "Gaps:": ["Gaps:", "缺口："],
+  "Relação:": ["Relation:", "关联："],
+  "Pedir sugestão da IA": ["Ask AI for a suggestion", "请求 AI 建议"],
+  "2. Assessment": ["2. Assessment", "2. 评估"],
+  "2.1 Tem relação com item já levantado?": ["2.1 Is it related to an item already raised?", "2.1 是否与已提出的事项相关？"],
+  "Relação": ["Relation", "关联"],
+  "Não / relação só em impacto → criar item novo": ["No / related only by impact → create a new item", "否 / 仅影响相关 → 新建事项"],
+  "Sim, relação direta → incluir no item on going": ["Yes, directly related → add to the ongoing item", "是，直接相关 → 并入进行中的事项"],
+  "Item on going (relação direta)": ["Ongoing item (direct relation)", "进行中事项（直接相关）"],
+  "Itens relacionados (vincular)": ["Related items (link)", "相关事项（关联）"],
+  "Lista geral vazia.": ["General list is empty.", "总清单为空。"],
+  "2.2 Classificação": ["2.2 Classification", "2.2 分类"],
+  "Escopo — o que é?": ["Scope — what is it?", "范围 — 是什么？"],
+  "O que deve ser feito com isso?": ["What should be done with it?", "应如何处理？"],
+  "De onde a demanda veio": ["Where the demand came from", "需求来源"],
+  "Riscos e urgência — explique o porquê": ["Risks and urgency — explain why", "风险与紧急程度 — 请说明原因"],
+  "Impactos em quais projetos / operações, por quê": ["Impacts on which projects / operations, and why", "影响哪些项目 / 运营，原因"],
+  "Gaps (por que não foi previsto antes?)": ["Gaps (why wasn't this foreseen earlier?)", "缺口（为何之前未预见？）"],
+  "3. Definição (pode ser mais de uma)": ["3. Definition (can be more than one)", "3. 定义（可多选）"],
+  'Projeto (para "Ação dentro de um projeto")': ['Project (for "Action within a project")', "项目（用于“项目内行动”）"],
+  'Nome do novo projeto (se "Criação de um novo projeto")': ['New project name (if "Create a new project")', "新项目名称（如选择“创建新项目”）"],
+  "Registrado em": ["Registered in", "已登记于"],
+  "Abrir item": ["Open item", "打开事项"],
+  "Confirmar e registrar na lista geral": ["Confirm and register in the general list", "确认并登记到总清单"],
+  "Excluir entrada?": ["Delete this input?", "删除此输入？"],
+  "Ao confirmar, a IA guarda a sua decisão (vs. a sugestão) para aprender os critérios de classificação.": ["When you confirm, the AI stores your decision (vs. its suggestion) to learn your classification criteria.", "确认后，AI 会保存您的决定（与其建议对比），以学习您的分类标准。"],
+  "Escolha ao menos uma definição.": ["Choose at least one definition.", "请至少选择一个定义。"],
+  "Selecione o item on going.": ["Select the ongoing item.", "请选择进行中的事项。"],
+  "projeto": ["project", "项目"],
+  "ação": ["action", "行动"],
+  "Relação direta (alta similaridade) com item on going.": ["Direct relation (high similarity) with an ongoing item.", "与进行中事项直接相关（高度相似）。"],
+  "Relacionado em impacto, mas não diretamente: criar item novo e vincular.": ["Related by impact but not directly: create a new item and link it.", "影响相关但非直接相关：新建事项并关联。"],
+  "Nenhum item relacionado encontrado.": ["No related item found.", "未找到相关事项。"],
+  "similaridade": ["similarity", "相似度"],
+  "Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores.": ["Heuristic suggestion (AI offline): keywords, similarity with history and past decisions.", "启发式建议（AI 离线）：基于关键词、历史相似度和以往决定。"],
+  "Baseado na decisão anterior em {ref}.": ["Based on the previous decision in {ref}.", "参考了 {ref} 中的以往决定。"],
+  "Claude falhou:": ["Claude failed:", "Claude 调用失败："],
+  "HEUR_LEARNED": ["Heuristic suggestion (AI offline): keywords, similarity with history and past decisions. Based on the previous decision in {ref}.",
+    "启发式建议（AI 离线）：基于关键词、历史相似度和以往决定。参考了 {ref} 中的以往决定。",
+    "Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores. Baseado na decisão anterior em {ref}."],
+  "Governança": ["Governance", "治理"],
+
+  // ---- lista geral
+  "Lista geral de governança": ["General governance list", "治理总清单"],
+  "Buscar…": ["Search…", "搜索…"],
+  "Baixar planilha (CSV)": ["Download spreadsheet (CSV)", "下载表格（CSV）"],
+  "Emitido": ["Issued", "提出日期"],
+  "Nenhum item.": ["No items.", "暂无事项。"],
+  "Escopo": ["Scope", "范围"],
+  "Áreas": ["Areas", "部门"],
+  "Riscos / urgência": ["Risks / urgency", "风险 / 紧急程度"],
+  "Gaps": ["Gaps", "缺口"],
+  "Registrar atualização": ["Log an update", "记录更新"],
+  "O que aconteceu? (entra no histórico e no summary)": ["What happened? (goes into history and the summary)", "发生了什么？（记入历史和摘要）"],
+  "Info a ser reportada (entra no summary)": ["Information to report (goes into the summary)", "需汇报的信息（记入摘要）"],
+  "Item atualizado": ["Item updated", "事项已更新"],
+
+  // ---- projetos
+  "Gerenciamento de projetos": ["Project management", "项目管理"],
+  "Ações abertas": ["Open actions", "未结行动"],
+  "Últ. monitoramento": ["Last monitored", "最近跟进"],
+  "Próx. reunião": ["Next meeting", "下次会议"],
+  "Nenhum projeto.": ["No projects.", "暂无项目。"],
+  "Novo projeto": ["New project", "新项目"],
+  "Criar projeto e pasta local": ["Create project and local folder", "创建项目及本地文件夹"],
+  "Projeto não encontrado.": ["Project not found.", "未找到项目。"],
+  "Pasta local:": ["Local folder:", "本地文件夹："],
+  "Dados": ["Details", "信息"],
+  "Próxima reunião": ["Next meeting", "下次会议"],
+  "Atualização / monitoramento": ["Update / monitoring", "更新 / 跟进"],
+  "Projeto atualizado": ["Project updated", "项目已更新"],
+  "Salvar (marca monitoramento)": ["Save (marks as monitored)", "保存（标记为已跟进）"],
+  "Registrar reunião": ["Log a meeting", "记录会议"],
+  "Master schedules": ["Master schedules", "总进度计划"],
+  "MS_HELP": ["Files are stored in the local master_schedule folder. You can copy them straight into that folder and click \"Sync folder\", or upload them here. Files that can be analysed: .xlsx, .csv, .pdf (MS Project: export to .xlsx/.pdf).",
+    "文件保存在本地 master_schedule 文件夹中。您可以直接复制到该文件夹后点击“同步文件夹”，或在此上传。可分析的格式：.xlsx、.csv、.pdf（MS Project 请导出为 .xlsx/.pdf）。",
+    "Os arquivos ficam na pasta local master_schedule. Você pode copiá-los direto para a pasta e clicar em \"Sincronizar pasta\", ou fazer upload aqui. Formatos analisáveis: .xlsx, .csv, .pdf (MS Project: exporte para .xlsx/.pdf)."],
+  "Sincronizar pasta": ["Sync folder", "同步文件夹"],
+  "Organizar com IA": ["Organise with AI", "用 AI 整理"],
+  "Nenhum cronograma.": ["No schedules.", "暂无进度计划。"],
+  "Portfólio de ações": ["Action portfolio", "行动组合"],
+  "Ação": ["Action", "行动"],
+  "Gap (por que não foi prevista)": ["Gap (why it wasn't planned)", "缺口（为何未预先计划）"],
+  "Sem ações.": ["No actions.", "暂无行动。"],
+  "Nova ação": ["New action", "新行动"],
+  "Gap": ["Gap", "缺口"],
+  "Adicionar ação": ["Add action", "添加行动"],
+  "Itens da lista geral vinculados": ["Linked general-list items", "关联的总清单事项"],
+  "Fases / marcos": ["Phases / milestones", "阶段 / 里程碑"],
+  "Atrasadas": ["Late", "已延误"],
+  "Próximas entregas": ["Upcoming deliveries", "即将交付"],
+  "Pontos críticos": ["Critical points", "关键点"],
+  "Ações sugeridas": ["Suggested actions", "建议行动"],
+  "Arquivo armazenado. Formato sem leitura automática (envie .xlsx/.csv/.pdf para análise).": ["File stored. This format can't be read automatically (upload .xlsx/.csv/.pdf for analysis).", "文件已保存。该格式无法自动读取（请上传 .xlsx/.csv/.pdf 进行分析）。"],
+  "{n} atividades lidas; {done} concluídas; {late} atrasadas.": ["{n} activities read; {done} done; {late} late.", "已读取 {n} 项活动；{done} 项完成；{late} 项延误。"],
+  "Cronograma não encontrado na pasta": ["Schedule not found in the folder", "文件夹中未找到进度计划"],
+  "Ação não encontrada": ["Action not found", "未找到行动"],
+  "Selecione o projeto para 'Ação dentro de um projeto'.": ["Select the project for 'Action within a project'.", "请为“项目内行动”选择项目。"],
+
+  // ---- reuniões
+  "Gerenciamento de reuniões": ["Meeting management", "会议管理"],
+  "Nenhuma reunião.": ["No meetings.", "暂无会议。"],
+  "Nova ata / anotação": ["New minutes / notes", "新会议纪要 / 笔记"],
+  "Participantes": ["Participants", "参会人"],
+  "Departamentos": ["Departments", "部门"],
+  "Projeto (acompanhamento)": ["Project (follow-up)", "项目（跟进）"],
+  "Ata": ["Minutes", "会议纪要"],
+  "Anotações pessoais": ["Personal notes", "个人笔记"],
+  "Anotações": ["Notes", "笔记"],
+  "Anexos": ["Attachments", "附件"],
+  "MINUTES_HINT": ["Paste the minutes. Tip: lines like 'Action: ... owner: Name 2026-10-20' and 'Decision: ...' help the extraction.",
+    "粘贴会议纪要。提示：类似“行动：… 负责人：姓名 2026-10-20”和“决定：…”的行有助于提取。",
+    "Cole a ata. Dica: linhas como 'Ação: ... resp: Nome 2026-10-20' e 'Decisão: ...' ajudam a extração."],
+  "EXTRACT_HINT": ["AI offline: write lines like 'Action: ... owner: Name 2026-10-20' for automatic extraction.",
+    "AI 离线：请按“行动：… 负责人：姓名 2026-10-20”的格式书写，以便自动提取。",
+    "IA offline: marque linhas como 'Ação: ... resp: Nome 2026-10-20' para extração automática."],
+  "Salvar e extrair demandas com IA": ["Save and extract demands with AI", "保存并用 AI 提取需求"],
+  "Reunião não encontrada.": ["Meeting not found.", "未找到会议。"],
+  "Salvar e reprocessar": ["Save and reprocess", "保存并重新处理"],
+  "Anexado": ["Attached", "已附加"],
+  "Extração": ["Extraction", "提取"],
+  "Decisões": ["Decisions", "决定"],
+  "Demandas identificadas → Inputs management": ["Identified demands → Inputs management", "识别出的需求 → 输入管理"],
+  "rel.": ["rel.", "关联"],
+  "Enviar para entradas": ["Send to inputs", "发送到输入"],
+  "Nenhuma demanda extraída.": ["No demands extracted.", "未提取到需求。"],
+
+  // ---- riscos
+  "Gerenciamento de riscos": ["Risk management", "风险管理"],
+  "Nenhum risco.": ["No risks.", "暂无风险。"],
+  "Novo risco": ["New risk", "新风险"],
+  "Normalmente nasce pela definição de uma entrada; aqui é o cadastro direto.": ["Usually created from an input's definition; this is direct registration.", "通常由输入的定义生成；此处为直接登记。"],
+  "Criar risco e pasta": ["Create risk and folder", "创建风险及文件夹"],
+  "Risco não encontrado.": ["Risk not found.", "未找到风险。"],
+  "Pasta vazia": ["Empty folder", "文件夹为空"],
+  "Pasta:": ["Folder:", "文件夹："],
+  "Notas / informações": ["Notes / information", "备注 / 信息"],
+  "Risco atualizado": ["Risk updated", "风险已更新"],
+  "Documentos da pasta": ["Folder documents", "文件夹文档"],
+  "carregando…": ["loading…", "加载中…"],
+  "Compilar e analisar com IA": ["Compile and analyse with AI", "用 AI 汇总分析"],
+  "confirme antes de reportar": ["confirm before reporting", "汇报前请确认"],
+  "Causas": ["Causes", "原因"], "Consequências": ["Consequences", "后果"], "Mitigações": ["Mitigations", "缓解措施"], "Pontos para reporte": ["Points to report", "汇报要点"],
+  "IA offline — análise automática indisponível. Preencha manualmente.": ["AI offline — automatic analysis unavailable. Please fill in manually.", "AI 离线 — 无法自动分析，请手动填写。"],
+  "Falha na análise:": ["Analysis failed:", "分析失败："],
+
+  // ---- summaries
+  "Diário": ["Daily", "每日"], "Semanal": ["Weekly", "每周"],
+  "Gerar summary": ["Generate summary", "生成摘要"],
+  "Imprimir / PDF": ["Print / PDF", "打印 / PDF"],
+  "Escolha o tipo e a data. O summary também é salvo como HTML na pasta local SUMMARIES.": ["Choose the type and date. The summary is also saved as HTML in the local SUMMARIES folder.", "请选择类型和日期。摘要也会以 HTML 格式保存到本地 SUMMARIES 文件夹。"],
+  "Gerados anteriormente": ["Previously generated", "历史摘要"],
+  "Período": ["Period", "期间"],
+  "gerado": ["generated", "生成于"],
+  "Destaques": ["Highlights", "要点"],
+  "Indicadores": ["Indicators", "指标"],
+  "Novas demandas": ["New demands", "新需求"],
+  "Itens criados": ["Items created", "新建事项"],
+  "Itens atualizados": ["Items updated", "更新事项"],
+  "Em aberto": ["Open", "未结"],
+  "Novas demandas por origem": ["New demands by source", "按来源划分的新需求"],
+  "Demanda": ["Demand", "需求"],
+  "Nenhuma nova demanda.": ["No new demands.", "暂无新需求。"],
+  "Itens críticos (alta prioridade)": ["Critical items (high priority)", "关键事项（高优先级）"],
+  "Prazos — vencidos e próximos 7 dias": ["Deadlines — overdue and next 7 days", "截止日期 — 已逾期及未来 7 天"],
+  "Reuniões e decisões": ["Meetings and decisions", "会议与决定"],
+  "Sem decisões registradas": ["No decisions recorded", "无记录的决定"],
+  "Nenhuma reunião no período.": ["No meetings in this period.", "本期间无会议。"],
+  "Infos a reportar": ["Information to report", "需汇报的信息"],
+  "Linha do tempo": ["Timeline", "时间线"],
+  "NARRATIVE_BASIC": ["{new_inputs} new demands, {items_created} items created and {items_updated} updated. {overdue} overdue items and {high_priority_open} open high-priority items. {meetings} meetings recorded. {alerts} active alerts.",
+    "新需求 {new_inputs} 项，新建事项 {items_created} 项，更新 {items_updated} 项。逾期事项 {overdue} 项，未结高优先级事项 {high_priority_open} 项。记录会议 {meetings} 次。当前提醒 {alerts} 条。",
+    "{new_inputs} novas demandas, {items_created} itens criados e {items_updated} atualizados. {overdue} itens vencidos e {high_priority_open} de alta prioridade em aberto. {meetings} reuniões registradas. {alerts} alertas ativos."],
+  "Destaques da IA indisponíveis:": ["AI highlights unavailable:", "AI 要点不可用："],
+
+  // ---- config
+  "Configurações": ["Settings", "设置"],
+  "IA (Claude)": ["AI (Claude)", "AI（Claude）"],
+  "Sem chave, a plataforma usa sugestões heurísticas locais. A chave fica guardada só neste navegador (não vai para a pasta).": ["Without a key, the platform uses local heuristic suggestions. The key is stored only in this browser (not in the folder).", "未设置密钥时，平台使用本地启发式建议。密钥仅保存在此浏览器中（不会写入文件夹）。"],
+  "Chave da API da Anthropic": ["Anthropic API key", "Anthropic API 密钥"],
+  "Modelo": ["Model", "模型"],
+  "Salvar e testar": ["Save and test", "保存并测试"],
+  "IA ativa —": ["AI active —", "AI 已启用 —"],
+  "IA offline": ["AI offline", "AI 离线"],
+  "Pasta de trabalho": ["Working folder", "工作文件夹"],
+  "Pasta atual:": ["Current folder:", "当前文件夹："],
+  "FOLDER_HELP": ["This computer folder holds db.json, the master schedules (PROJECTS), the risks (RISKS) and the summaries (SUMMARIES).",
+    "此电脑文件夹中保存 db.json、总进度计划（PROJECTS）、风险（RISKS）和摘要（SUMMARIES）。",
+    "É nesta pasta do computador que ficam o db.json, as master schedules (PROJECTS), os riscos (RISKS) e os summaries (SUMMARIES)."],
+  "Trocar de pasta": ["Change folder", "更换文件夹"],
+  "Regras": ["Rules", "规则"],
+  "Alerta: dias sem atualização": ["Alert: days without update", "提醒：未更新天数"],
+  "Cadência de reunião de projeto (dias)": ["Project meeting cadence (days)", "项目会议周期（天）"],
+  "Nº de vínculos para sugerir projeto": ["No. of links to suggest a project", "建议立项的关联数量"],
+  "Áreas (separadas por vírgula)": ["Areas (comma-separated)", "部门（用逗号分隔）"],
+  "IA conectada:": ["AI connected:", "AI 已连接："],
+  "Chave salva, mas o teste falhou:": ["Key saved, but the test failed:", "密钥已保存，但测试失败："],
+  "IA desativada (sem chave)": ["AI disabled (no key)", "AI 已停用（无密钥）"],
+  "IA sem chave configurada": ["AI key not configured", "未配置 AI 密钥"],
+  "Sem conexão com a API do Claude (rede/proxy bloqueado?)": ["Cannot reach the Claude API (network/proxy blocked?)", "无法连接 Claude API（网络 / 代理被阻止？）"],
+  "Chave da IA inválida (401)": ["Invalid AI key (401)", "AI 密钥无效（401）"],
+  "Limite de requisições atingido; tente novamente em instantes": ["Rate limit reached; try again shortly", "已达请求上限，请稍后重试"],
+  "Erro da API do Claude ({status}): {msg}": ["Claude API error ({status}): {msg}", "Claude API 错误（{status}）：{msg}"],
+  "O modelo recusou a solicitação": ["The model declined the request", "模型拒绝了该请求"],
+  "Resposta da IA em formato inválido": ["AI response in an invalid format", "AI 返回格式无效"],
+
+  // ---- inicialização
+  "Plataforma de Governança": ["Governance Platform", "治理平台"],
+  "ZIP_WARNING": ["It looks like you opened this file <b>from inside the .zip</b>. It works, but Windows deletes this temporary copy later. To keep using it, right-click the .zip → <b>Extract All…</b> and open the <code>index.html</code> in the extracted folder.",
+    "您似乎是<b>直接在 .zip 内</b>打开了此文件。可以使用，但 Windows 之后会删除这个临时副本。若要长期使用，请右键点击 .zip → <b>全部解压缩…</b>，然后打开解压后文件夹中的 <code>index.html</code>。",
+    "Parece que você abriu este arquivo <b>de dentro do .zip</b>. Funciona, mas o Windows apaga essa cópia temporária depois. Para usar sempre, clique com o botão direito no .zip → <b>Extrair tudo…</b> e abra o <code>index.html</code> da pasta extraída."],
+  "WELCOME_1": ["Choose the <b>folder on your computer</b> where the platform will keep the database, master schedules, risk documents and summaries. It can be a new empty folder, or a synced OneDrive/SharePoint folder.",
+    "请选择<b>电脑上的一个文件夹</b>，平台将在其中保存数据库、总进度计划、风险文档和摘要。可以是新建的空文件夹，也可以是已同步的 OneDrive/SharePoint 文件夹。",
+    "Escolha a <b>pasta do seu computador</b> onde a plataforma vai guardar a base de dados, as master schedules, os documentos de riscos e os summaries. Pode ser uma pasta nova e vazia, ou uma pasta do OneDrive/SharePoint sincronizada."],
+  "WELCOME_2": ["The browser will ask for permission to \"view and edit files\" in that folder. Each time you reopen the platform, just click \"Continue\" to grant access again.",
+    "浏览器会请求“查看和编辑文件”的权限。之后每次重新打开平台，只需点击“继续”即可再次授权。",
+    "O navegador vai pedir permissão para \"ver e editar arquivos\" dessa pasta. Sempre que você reabrir a plataforma, basta clicar em \"Continuar\" para liberar o acesso de novo."],
+  'Continuar com a pasta "{name}"': ['Continue with folder "{name}"', "继续使用文件夹“{name}”"],
+  "Escolher outra pasta": ["Choose another folder", "选择其他文件夹"],
+  "Escolher pasta de trabalho": ["Choose working folder", "选择工作文件夹"],
+  "Este navegador não permite acessar pastas do computador.": ["This browser can't access folders on your computer.", "此浏览器无法访问电脑上的文件夹。"],
+  "Abra este arquivo no Microsoft Edge ou no Google Chrome.": ["Open this file in Microsoft Edge or Google Chrome.", "请使用 Microsoft Edge 或 Google Chrome 打开此文件。"],
+  "Permissão negada para a pasta.": ["Permission to the folder was denied.", "文件夹访问权限被拒绝。"],
+  "db.json corrompido na pasta escolhida": ["db.json in the chosen folder is corrupted", "所选文件夹中的 db.json 已损坏"],
+
+  // ---- eventos, histórico e alertas (guardados como chave + parâmetros)
+  "{id} criado: {label}": ["{id} created: {label}", "已创建 {id}：{label}"],
+  "Nova entrada {inp} ({source}): {title}": ["New input {inp} ({source}): {title}", "新输入 {inp}（{source}）：{title}"],
+  "{id} atualizado com a entrada {inp}": ["{id} updated with input {inp}", "{id} 已根据输入 {inp} 更新"],
+  "Nova entrada {inp}: {title}": ["New input {inp}: {title}", "新输入 {inp}：{title}"],
+  "Ação {act} incluída no portfólio de {id}: {title}": ["Action {act} added to the portfolio of {id}: {title}", "行动 {act} 已加入 {id} 的行动组合：{title}"],
+  "{inp} classificado e registrado em {item} ({defs})": ["{inp} classified and registered in {item} ({defs})", "{inp} 已分类并登记到 {item}（{defs}）"],
+  "{id} atualizado": ["{id} updated", "{id} 已更新"],
+  "{id} atualizado: {note}": ["{id} updated: {note}", "{id} 已更新：{note}"],
+  "{id} removido (a pasta local foi mantida)": ["{id} removed (the local folder was kept)", "{id} 已删除（本地文件夹已保留）"],
+  "{id} não encontrado": ["{id} not found", "未找到 {id}"],
+  "{a} vinculado a {b}": ["{a} linked to {b}", "{a} 已关联到 {b}"],
+  "Upload em {id}: {file}": ["Upload to {id}: {file}", "已上传到 {id}：{file}"],
+  "Master schedule de {id} analisada: {file}": ["Master schedule of {id} analysed: {file}", "{id} 的总进度计划已分析：{file}"],
+  "Portfólio {id}: ação {act} → {status}": ["Portfolio {id}: action {act} → {status}", "行动组合 {id}：行动 {act} → {status}"],
+  "Portfólio {id}: ação {act} criada": ["Portfolio {id}: action {act} created", "行动组合 {id}：已创建行动 {act}"],
+  "Documento anexado a {id}: {file}": ["Document attached to {id}: {file}", "已向 {id} 附加文档：{file}"],
+  "Risco {id} analisado": ["Risk {id} analysed", "风险 {id} 已分析"],
+  "Projeto {id} — {name}: {d} dias sem monitoramento/atualização.": ["Project {id} — {name}: {d} days without monitoring/update.", "项目 {id} — {name}：已 {d} 天未跟进 / 更新。"],
+  "Reunião de acompanhamento de {id} prevista para {date}.": ["Follow-up meeting for {id} due on {date}.", "{id} 的跟进会议计划于 {date}。"],
+  "{id} está interligado a {n} itens: avaliar criação de um projeto com overview maior.": ["{id} is linked to {n} items: consider creating a project with a broader overview.", "{id} 已关联 {n} 个事项：建议创建一个覆盖面更广的项目。"],
+  "{id} — {title}: prazo vencido em {date}.": ["{id} — {title}: overdue since {date}.", "{id} — {title}：已于 {date} 逾期。"],
+  "{id} recebeu {n} entradas: tema recorrente.": ["{id} received {n} inputs: recurring topic.", "{id} 已收到 {n} 条输入：重复出现的议题。"],
+  "Risco {id} sem atualização há {d} dias.": ["Risk {id} not updated for {d} days.", "风险 {id} 已 {d} 天未更新。"],
+  "{n} entradas aguardando classificação.": ["{n} inputs waiting for classification.", "{n} 条输入等待分类。"],
+
+  // ---- planilha (CSV)
+  "Detalhe origem": ["Source detail", "来源详情"],
+  "De onde veio": ["Came from", "来自"],
+  "Data emitida": ["Issue date", "提出日期"],
+  "Escopo (o que é)": ["Scope (what it is)", "范围（是什么）"],
+  "O que fazer": ["What to do", "处理方式"],
+  "Justificativa risco": ["Risk rationale", "风险理由"],
+  "Detalhe impactos": ["Impact details", "影响详情"],
+  "Definições": ["Definitions", "定义"],
+  "Itens relacionados": ["Related items", "相关事项"],
+  "Atualizado em": ["Updated at", "更新时间"],
 };
 </script>
 <script>
@@ -339,15 +775,16 @@ const AI = {
     acao_geral: "Ação geral",
   },
 
-  SYSTEM_PROMPT: `Você é o assistente de governança corporativa de uma diretoria.
+  get SYSTEM_PROMPT() { return `Você é o assistente de governança corporativa de uma diretoria.
 Você recebe demandas vindas da diretora, de reuniões, de departamentos ou do HQ e ajuda a fazer o
 "demand management": verificar relação com itens já levantados, classificar (escopo, prioridade,
 impactos) e sugerir a definição (risco, info a reportar, novo projeto, ação em projeto, ação geral).
 Use a lógica de Hoshin Kanri para alinhar demandas à estratégia: conecte cada demanda aos objetivos
 e projetos existentes, destaque desdobramentos e interfaces entre áreas, e aponte gaps (por que algo
-não foi previsto antes). Responda sempre em português do Brasil, de forma objetiva.
+não foi previsto antes). Responda sempre em ${I18N.aiLanguage()}, de forma objetiva (todos os textos livres
+do JSON também nesse idioma; os valores de enum ficam exatamente como definidos no schema).
 O usuário sempre confirma ou corrige suas sugestões; trate os exemplos de decisões anteriores como
-critério da organização e siga-os quando aplicáveis.`,
+critério da organização e siga-os quando aplicáveis.`; },
 
   async init() {
     this.key = (await KV.get("api_key").catch(() => "")) || "";
@@ -362,12 +799,12 @@ critério da organização e siga-os quando aplicáveis.`,
   enabled() { return !!this.key; },
   status() {
     return this.enabled() ? { enabled: true, model: this.model, detail: null }
-      : { enabled: false, model: null, detail: "sem chave do Claude (configure em Config.)" };
+      : { enabled: false, model: null, detail: "sem chave do Claude (configure em Config.)" };  // traduzido na exibição
   },
 
   /** Chama o Claude. Retorna objeto (se schema) ou texto. Lança Error em falha. */
   async call(content, schema = null, effort = "medium", maxTokens = 16000) {
-    if (!this.key) throw new Error("IA sem chave configurada");
+    if (!this.key) throw new Error(t("IA sem chave configurada"));
     const body = {
       model: this.model,
       max_tokens: maxTokens,
@@ -392,19 +829,19 @@ critério da organização e siga-os quando aplicáveis.`,
         body: JSON.stringify(body),
       });
     } catch (e) {
-      throw new Error("Sem conexão com a API do Claude (rede/proxy bloqueado?)");
+      throw new Error(t("Sem conexão com a API do Claude (rede/proxy bloqueado?)"));
     }
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
       const msg = data?.error?.message || r.statusText;
-      if (r.status === 401) throw new Error("Chave da IA inválida (401)");
-      if (r.status === 429) throw new Error("Limite de requisições atingido; tente novamente em instantes");
-      throw new Error(`Erro da API do Claude (${r.status}): ${msg}`);
+      if (r.status === 401) throw new Error(t("Chave da IA inválida (401)"));
+      if (r.status === 429) throw new Error(t("Limite de requisições atingido; tente novamente em instantes"));
+      throw new Error(t("Erro da API do Claude ({status}): {msg}", { status: r.status, msg }));
     }
-    if (data.stop_reason === "refusal") throw new Error("O modelo recusou a solicitação");
+    if (data.stop_reason === "refusal") throw new Error(t("O modelo recusou a solicitação"));
     const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
     if (!schema) return text;
-    try { return JSON.parse(text); } catch { throw new Error("Resposta da IA em formato inválido"); }
+    try { return JSON.parse(text); } catch { throw new Error(t("Resposta da IA em formato inválido")); }
   },
 
   // ---------------------------------------------------------------- utilidades de texto
@@ -483,19 +920,21 @@ critério da organização e siga-os quando aplicáveis.`,
     if (!defs.length) defs.push("acao_geral");
     const mode = related.length && related[0].score >= 0.55 ? "incluir_existente" : "novo";
     const out = {
-      related: related.map((r) => ({ id: r.id, relation: `similaridade ${r.score}` })),
+      related: related.map((r) => ({ id: r.id, relation: `${t("similaridade")} ${r.score}` })),
       relation_mode: mode,
       include_in: mode === "incluir_existente" ? related[0].id : "",
       relation_explanation: mode === "incluir_existente" ? "Relação direta (alta similaridade) com item on going."
         : related.length ? "Relacionado em impacto, mas não diretamente: criar item novo e vincular." : "Nenhum item relacionado encontrado.",
       scope: inp.title || "", scope_action: "", priority, urgency: priority, risk_reason: "", impacts, impact_details: "",
       definitions: defs, project_id: project, gap_analysis: "",
-      rationale: "Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores.",
+      rationale: t("Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores."),
     };
+    out.msg = ["Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores.", {}];
     if (learned.length) {
       const fin = learned[0].final || {};
       for (const k of ["priority", "urgency", "impacts", "definitions"]) if (fin[k] && (!Array.isArray(fin[k]) || fin[k].length)) out[k] = fin[k];
-      out.rationale += ` Baseado na decisão anterior em ${learned[0].ref}.`;
+      out.rationale += " " + t("Baseado na decisão anterior em {ref}.", { ref: learned[0].ref });
+      out.msg = ["HEUR_LEARNED", { ref: learned[0].ref }];
     }
     return out;
   },
@@ -532,7 +971,8 @@ critério da organização e siga-os quando aplicáveis.`,
       return out;
     } catch (e) {
       const out = { ...this.heuristicAssess(db, inp, related), engine: "heuristica" };
-      out.rationale += ` (Claude falhou: ${e.message})`;
+      out.rationale += ` (${t("Claude falhou:")} ${e.message})`;
+      delete out.msg;
       return out;
     }
   },
@@ -554,21 +994,22 @@ critério da organização e siga-os quando aplicáveis.`,
   async extractMeeting(db, m) {
     const text = `${m.minutes || ""}\n${m.notes || ""}`;
     if (!this.enabled()) {
-      const KW = /^(a[cç][aã]o|action|todo|pend[eê]ncia|demanda|tarefa)\s*[:\-]\s*/i;
+      const KW = /^(a[cç][aã]o|action|to-?do|task|pend[eê]ncia|demanda|tarefa|行动|待办|任务)\s*[:：\-]\s*/i;
       const demands = [];
       for (const line of text.split(/\r?\n/)) {
         const l = line.replace(/^[\s\-•*]+|[\s\-•*]+$/g, "");
         if (!KW.test(l)) continue;
         let title = l.replace(KW, "");
-        const owner = (l.match(/resp(?:ons[aá]vel)?\s*[:\-]\s*([^\d,;]+)/i) || [, ""])[1].trim();
+        const OWNER = /\s*(?:resp(?:ons[aá]vel)?|owner|负责人)\s*[:：\-]\s*/i;
+        const owner = (l.match(new RegExp(OWNER.source + "([^\\d,;，；]+)", "i")) || [, ""])[1].trim();
         const due = (l.match(/(\d{4}-\d{2}-\d{2})/) || [, ""])[1];
-        title = title.replace(/\s*resp(?:ons[aá]vel)?\s*[:\-].*$/i, "").trim() || title;
+        title = title.replace(new RegExp(OWNER.source + ".*$", "i"), "").trim() || title;
         const rel = this.relatedItems(db, title, 1, 0.4);
         demands.push({ title: title.slice(0, 120), description: l, owner, due_date: due, area_main: "", related_item: rel[0]?.id || "" });
       }
-      const decisions = text.split(/\r?\n/).filter((l) => /^\s*[-•*]?\s*decis/i.test(l)).map((l) => l.replace(/^[\s\-•*]+/, ""));
+      const decisions = text.split(/\r?\n/).filter((l) => /^\s*[-•*]?\s*(decis|决定|决策)/i.test(l)).map((l) => l.replace(/^[\s\-•*]+/, ""));
       return { summary: text.slice(0, 400), decisions, demands, engine: "heuristica",
-        hint: "IA offline: marque linhas como 'Ação: ... resp: Nome 2026-10-20' para extração automática." };
+        hint: "EXTRACT_HINT" };
     }
     const items = db.items.slice(-120).map((it) => ({ id: it.id, title: it.title }));
     const prompt = `Reunião: ${m.title} em ${m.date} — participantes: ${m.participants || ""}\nAta / anotações:\n${text}\n\n`
@@ -584,7 +1025,7 @@ critério da organização e siga-os quando aplicáveis.`,
 
   // ---------------------------------------------------------------- master schedule
   heuristicSchedule(rows, ref) {
-    if (!rows || !rows.length) return { overview: "Arquivo armazenado. Formato sem leitura automática (envie .xlsx/.csv/.pdf para análise).", tasks_count: 0 };
+    if (!rows || !rows.length) return { overview: t("Arquivo armazenado. Formato sem leitura automática (envie .xlsx/.csv/.pdf para análise)."), tasks_count: 0 };
     let hi = rows.slice(0, 15).findIndex((r) => /tarefa|task|atividade|activity/.test(this.norm(r.join(" "))));
     if (hi < 0) hi = 0;
     const head = rows[hi].map((h) => this.norm(h));
@@ -606,7 +1047,8 @@ critério da organização e siga-os quando aplicáveis.`,
     const late = tasks.filter((t) => t.finish && t.finish < ref && t.progress < 100);
     const upcoming = tasks.filter((t) => t.finish && t.finish >= ref && t.progress < 100).sort((a, b) => a.finish.localeCompare(b.finish)).slice(0, 10);
     const done = tasks.filter((t) => t.progress >= 100).length;
-    return { overview: `${tasks.length} atividades lidas; ${done} concluídas; ${late.length} atrasadas.`, late: late.slice(0, 20), upcoming, tasks_count: tasks.length };
+    const p = { n: tasks.length, done, late: late.length };
+    return { overview: t("{n} atividades lidas; {done} concluídas; {late} atrasadas.", p), msg: ["{n} atividades lidas; {done} concluídas; {late} atrasadas.", p], late: late.slice(0, 20), upcoming, tasks_count: tasks.length };
   },
 
   SCHEDULE_SCHEMA: (() => {
@@ -641,7 +1083,8 @@ critério da organização e siga-os quando aplicáveis.`,
       return { ...(await this.call(content, this.SCHEDULE_SCHEMA, "medium")), engine: this.model };
     } catch (e) {
       const out = { ...this.heuristicSchedule(rows, ref), engine: "heuristica" };
-      out.overview += ` (Claude falhou: ${e.message})`;
+      out.overview += ` (${t("Claude falhou:")} ${e.message})`;
+      delete out.msg;
       return out;
     }
   },
@@ -660,7 +1103,7 @@ critério da organização e siga-os quando aplicáveis.`,
 
   async analyzeRisk(db, risk, filesText) {
     const empty = { causes: [], consequences: [], mitigations: [], report_points: [] };
-    if (!this.enabled()) return { summary: "IA offline — análise automática indisponível. Preencha manualmente.",
+    if (!this.enabled()) return { summary: t("IA offline — análise automática indisponível. Preencha manualmente."),
       probability: risk.probability || "Média", impact: risk.impact || "Médio", ...empty, engine: "heuristica" };
     const linked = db.items.filter((it) => (risk.links?.items || []).includes(it.id)).map((i) => ({ id: i.id, title: i.title, risk_reason: i.risk_reason }));
     const prompt = `Risco ${risk.id}: ${risk.title} (${risk.mode})\nDescrição: ${risk.description || ""}\n`
@@ -669,22 +1112,20 @@ critério da organização e siga-os quando aplicáveis.`,
     try {
       return { ...(await this.call(prompt, this.RISK_SCHEMA, "medium")), engine: this.model };
     } catch (e) {
-      return { summary: `Falha na análise: ${e.message}`, probability: "Média", impact: "Médio", ...empty, engine: "erro" };
+      return { summary: `${t("Falha na análise:")} ${e.message}`, probability: "Média", impact: "Médio", ...empty, engine: "erro" };
     }
   },
 
   // ---------------------------------------------------------------- summaries
   async narrative(summary) {
     const k = summary.kpis;
-    const basic = `${k.new_inputs} novas demandas, ${k.items_created} itens criados e ${k.items_updated} atualizados. `
-      + `${k.overdue} itens vencidos e ${k.high_priority_open} de alta prioridade em aberto. `
-      + `${k.meetings} reuniões registradas. ${summary.alerts.length} alertas ativos.`;
+    const basic = t("NARRATIVE_BASIC", { ...k, alerts: summary.alerts.length });
     if (!this.enabled()) return basic;
-    const prompt = `Escreva os DESTAQUES deste summary de governança (${summary.type}) em até 8 bullets curtos: `
+    const prompt = `Escreva os DESTAQUES deste summary de governança (${summary.type}) em até 8 bullets curtos, em ${I18N.aiLanguage()}: `
       + "o que mudou, o que exige atenção da diretoria, riscos, decisões e próximos passos. Use Hoshin Kanri "
       + "para conectar com os objetivos estratégicos. Dados:\n" + JSON.stringify(summary).slice(0, 80000);
     try { return await this.call(prompt, null, "low", 4000); }
-    catch (e) { return `${basic}\n(Destaques da IA indisponíveis: ${e.message})`; }
+    catch (e) { return `${basic}\n(${t("Destaques da IA indisponíveis:")} ${e.message})`; }
   },
 };
 
@@ -730,7 +1171,7 @@ const Core = {
     const base = emptyDb();
     let db = base;
     if (f) {
-      try { db = JSON.parse(await f.text()); } catch { throw new Error("db.json corrompido na pasta escolhida"); }
+      try { db = JSON.parse(await f.text()); } catch { throw new Error(t("db.json corrompido na pasta escolhida")); }
       for (const [k, v] of Object.entries(base)) if (db[k] === undefined) db[k] = v;
       for (const c of COLLECTIONS) db.seq[c] ??= 0;
       db.settings = { ...base.settings, ...db.settings };
@@ -747,7 +1188,9 @@ const Core = {
 
   nextId(col) { this.db.seq[col] += 1; return `${PREFIX[col]}${String(this.db.seq[col]).padStart(3, "0")}`; },
   find(col, id) { return this.db[col].find((r) => r.id === id) || null; },
-  log(type, ref, text) { this.db.events.push({ ts: nowISO(), date: todayISO(), type, ref, text }); },
+  /** Eventos guardam a chave da mensagem + parâmetros, para serem exibidos no idioma atual. */
+  log(type, ref, key, params = {}) { this.db.events.push({ ts: nowISO(), date: todayISO(), type, ref, msg: [key, params], text: I18N.fill(key, params) }); },
+  hist(rec, key, params = {}) { (rec.history ??= []).push({ date: nowISO(), msg: [key, params], text: I18N.fill(key, params) }); },
   touch(rec) { rec.updated_at = nowISO(); },
   /** Vínculo bidirecional entre dois registros (ex.: item <-> projeto). */
   link(aCol, aId, bCol, bId) {
@@ -791,7 +1234,7 @@ const Core = {
       rec.status ??= "Aberto";
     }
     db[col].push(rec);
-    this.log(`${col}.created`, rec.id, `${rec.id} criado: ${rec.title || rec.name || ""}`);
+    this.log(`${col}.created`, rec.id, "{id} criado: {label}", { id: rec.id, label: rec.title || rec.name || "" });
     return rec;
   },
 
@@ -803,13 +1246,13 @@ const Core = {
     const included = !!item;
     if (item) {
       const order = { Baixa: 0, Média: 1, Alta: 2 };
-      item.history.push({ date: nowISO(), text: `Nova entrada ${inp.id} (${inp.source}): ${inp.title}` });
+      this.hist(item, "Nova entrada {inp} ({source}): {title}", { inp: inp.id, source: [inp.source], title: inp.title });
       for (const k of ["priority", "urgency"]) if ((order[a[k]] ?? -1) > (order[item[k]] ?? -1)) item[k] = a[k];
       item.impacts = [...new Set([...(item.impacts || []), ...(a.impacts || [])])].sort();
       item.definitions = [...new Set([...(item.definitions || []), ...defs])].sort();
       if (item.status === "Concluído") item.status = "Em andamento";
       this.touch(item);
-      this.log("items.updated", item.id, `${item.id} atualizado com a entrada ${inp.id}`);
+      this.log("items.updated", item.id, "{id} atualizado com a entrada {inp}", { id: item.id, inp: inp.id });
     } else {
       item = await this.createRecord("items", {
         title: inp.title, description: inp.description, background: inp.background, source: inp.source, source_detail: inp.source_detail,
@@ -829,7 +1272,7 @@ const Core = {
       if ((d === "risco_monitorar" || d === "risco_investigar") && included && openRisks.length) {
         // item on going já tem risco aberto: registra a nova informação nele em vez de duplicar
         for (const r of openRisks) {
-          (r.history ??= []).push({ date: nowISO(), text: `Nova entrada ${inp.id}: ${inp.title}` });
+          this.hist(r, "Nova entrada {inp}: {title}", { inp: inp.id, title: inp.title });
           if (d === "risco_investigar") r.mode = "Investigar";
           this.touch(r);
         }
@@ -849,13 +1292,13 @@ const Core = {
         created.project = proj.id;
       } else if (d === "acao_projeto") {
         const proj = this.find("projects", body.project_id || "");
-        if (!proj) throw new ApiError("Selecione o projeto para 'Ação dentro de um projeto'.");
+        if (!proj) throw new ApiError(t("Selecione o projeto para 'Ação dentro de um projeto'."));
         const actId = this.nextId("actions");
         proj.actions.push({ id: actId, text: inp.title, item_id: item.id, owner: inp.owner, due: inp.due_date, status: "Aberta",
           gap_reason: body.gap_reason || a.gap_analysis || "", created_at: nowISO() });
         this.touch(proj);
         this.link("items", item.id, "projects", proj.id);
-        this.log("projects.action", proj.id, `Ação ${actId} incluída no portfólio de ${proj.id}: ${inp.title}`);
+        this.log("projects.action", proj.id, "Ação {act} incluída no portfólio de {id}: {title}", { act: actId, id: proj.id, title: inp.title });
         created.action = actId;
       } else if (d === "info_reportar") {
         item.report = true;
@@ -865,32 +1308,33 @@ const Core = {
     this.db.feedback.push({ date: nowISO(), ref: inp.id, text: AI.inputText(inp), ai: inp.ai_suggestion || null, final: { ...a, definitions: defs, relation_mode: mode } });
     Object.assign(inp, { status: "Registrado", item_id: item.id, assessment: a, definitions: defs });
     this.touch(inp);
-    this.log("inputs.committed", inp.id, `${inp.id} classificado e registrado em ${item.id} (${defs.map((d) => AI.DEFINITIONS[d] || d).join(", ")})`);
+    this.log("inputs.committed", inp.id, "{inp} classificado e registrado em {item} ({defs})", { inp: inp.id, item: item.id, defs: defs.map((d) => AI.DEFINITIONS[d] || d) });
     return created;
   },
 
   alerts() {
     const db = this.db, s = db.settings, out = [], today = todayISO();
+    const add = (level, ref, key, params) => out.push({ level, ref, msg: [key, params], text: I18N.fill(key, params) });
     const limit = +s.alert_days_without_update || 15, n = +s.links_for_project_alert || 3;
     for (const p of db.projects) {
       if (["Concluído", "Cancelado"].includes(p.status)) continue;
       const d = daysSince(p.last_monitored || p.updated_at);
-      if (d >= limit) out.push({ level: "alta", ref: p.id, text: `Projeto ${p.id} — ${p.name}: ${d} dias sem monitoramento/atualização.` });
-      if (p.next_meeting && p.next_meeting <= today) out.push({ level: "media", ref: p.id, text: `Reunião de acompanhamento de ${p.id} prevista para ${p.next_meeting}.` });
+      if (d >= limit) add("alta", p.id, "Projeto {id} — {name}: {d} dias sem monitoramento/atualização.", { id: p.id, name: p.name, d });
+      if (p.next_meeting && p.next_meeting <= today) add("media", p.id, "Reunião de acompanhamento de {id} prevista para {date}.", { id: p.id, date: p.next_meeting });
     }
     for (const it of db.items) {
       if (it.status === "Concluído") continue;
       const L = it.links || {};
       if ((L.items || []).length >= n && !(L.projects || []).length)
-        out.push({ level: "alta", ref: it.id, text: `${it.id} está interligado a ${L.items.length} itens: avaliar criação de um projeto com overview maior.` });
-      if (it.due_date && it.due_date < today) out.push({ level: "alta", ref: it.id, text: `${it.id} — ${it.title}: prazo vencido em ${it.due_date}.` });
-      if ((L.inputs || []).length >= n) out.push({ level: "media", ref: it.id, text: `${it.id} recebeu ${L.inputs.length} entradas: tema recorrente.` });
+        add("alta", it.id, "{id} está interligado a {n} itens: avaliar criação de um projeto com overview maior.", { id: it.id, n: L.items.length });
+      if (it.due_date && it.due_date < today) add("alta", it.id, "{id} — {title}: prazo vencido em {date}.", { id: it.id, title: it.title, date: it.due_date });
+      if ((L.inputs || []).length >= n) add("media", it.id, "{id} recebeu {n} entradas: tema recorrente.", { id: it.id, n: L.inputs.length });
     }
     for (const r of db.risks) {
-      if (r.status !== "Fechado" && daysSince(r.updated_at) >= limit) out.push({ level: "media", ref: r.id, text: `Risco ${r.id} sem atualização há ${daysSince(r.updated_at)} dias.` });
+      if (r.status !== "Fechado" && daysSince(r.updated_at) >= limit) add("media", r.id, "Risco {id} sem atualização há {d} dias.", { id: r.id, d: daysSince(r.updated_at) });
     }
     const pending = db.inputs.filter((i) => i.status !== "Registrado").length;
-    if (pending) out.push({ level: "baixa", ref: "inputs", text: `${pending} entradas aguardando classificação.` });
+    if (pending) add("baixa", "inputs", "{n} entradas aguardando classificação.", { n: pending });
     return out;
   },
 
@@ -935,7 +1379,7 @@ const Core = {
       risks: openR.map((r) => ({ id: r.id, title: r.title, mode: r.mode, probability: r.probability, impact: r.impact, status: r.status })),
       meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title, date: m.date, decisions: m.decisions || [], items: m.links?.items || [] })),
       report_items: open.filter((i) => i.report).map(brief),
-      activity: events.slice(-200).map((ev) => ({ ts: ev.ts, text: ev.text })),
+      activity: events.slice(-200).map((ev) => ({ ts: ev.ts, msg: ev.msg, text: ev.text })),
       alerts: this.alerts(),
     };
     if (kind === "weekly") {
@@ -947,14 +1391,15 @@ const Core = {
 
   exportCsv() {
     const q = (v) => { v = Array.isArray(v) ? v.join(", ") : String(v ?? ""); return /[;"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+    const tv = (v) => (Array.isArray(v) ? v.map((x) => t(x)) : v ? t(v) : "");
     const lines = [["ID", "Título", "Status", "Origem", "Detalhe origem", "De onde veio", "Responsável", "Data emitida", "Prazo",
       "Escopo (o que é)", "O que fazer", "Prioridade", "Urgência", "Justificativa risco", "Impactos", "Detalhe impactos",
-      "Área principal", "Áreas impactadas", "Definições", "Projetos", "Riscos", "Reuniões", "Itens relacionados", "Atualizado em"]];
+      "Área principal", "Áreas impactadas", "Definições", "Projetos", "Riscos", "Reuniões", "Itens relacionados", "Atualizado em"].map((h) => (h === "ID" ? h : t(h)))];
     for (const i of this.db.items) {
       const L = i.links || {};
-      lines.push([i.id, i.title, i.status, i.source, i.source_detail, i.origin, i.owner, i.emitted_at || (i.created_at || "").slice(0, 10), i.due_date,
-        i.scope, i.scope_action, i.priority, i.urgency, i.risk_reason, i.impacts || [], i.impact_details, i.area_main, i.areas_impacted,
-        (i.definitions || []).map((d) => AI.DEFINITIONS[d] || d), L.projects || [], L.risks || [], L.meetings || [], L.items || [], i.updated_at]);
+      lines.push([i.id, i.title, tv(i.status), tv(i.source), tv(i.source_detail), i.origin, i.owner, i.emitted_at || (i.created_at || "").slice(0, 10), i.due_date,
+        i.scope, i.scope_action, tv(i.priority), tv(i.urgency), i.risk_reason, tv(i.impacts || []), i.impact_details, i.area_main, i.areas_impacted,
+        tv((i.definitions || []).map((d) => AI.DEFINITIONS[d] || d)), L.projects || [], L.risks || [], L.meetings || [], L.items || [], i.updated_at]);
     }
     return "﻿" + lines.map((r) => r.map(q).join(";")).join("\r\n");
   },
@@ -977,8 +1422,8 @@ const Core = {
       if (/\.(txt|md|csv)$/.test(n) && f.size < 500000) parts.push(`--- ${f.name} ---\n${await file.text()}`);
       else if (/\.xlsx?$/.test(n)) {
         try { parts.push(`--- ${f.name} ---\n` + ((await Sheet.table(file)) || []).slice(0, 300).map((r) => r.join(" | ")).join("\n")); }
-        catch { parts.push(`--- ${f.name} (não foi possível ler) ---`); }
-      } else parts.push(`--- ${f.name} (arquivo binário, ${f.size} bytes) ---`);
+        catch { parts.push(`--- ${f.name} (unreadable) ---`); }
+      } else parts.push(`--- ${f.name} (binary file, ${f.size} bytes) ---`);
     }
     return parts.join("\n");
   },
@@ -986,25 +1431,27 @@ const Core = {
   /** Versão do summary salva na pasta local SUMMARIES (abre no navegador / imprime em PDF). */
   summaryHtml(s, text) {
     const esc = (x) => String(x ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const rows = (lst, cols) => lst.map((r) => "<tr>" + cols.map((c) => `<td>${esc(r[c])}</td>`).join("") + "</tr>").join("") || `<tr><td colspan=${cols.length}>—</td></tr>`;
-    const th = (hs) => "<tr>" + hs.map((h) => `<th>${h}</th>`).join("") + "</tr>";
+    const coded = ["status", "mode", "probability", "impact", "priority"];
+    const rows = (lst, cols) => lst.map((r) => "<tr>" + cols.map((c) => `<td>${esc(coded.includes(c) && r[c] ? t(r[c]) : r[c])}</td>`).join("") + "</tr>").join("") || `<tr><td colspan=${cols.length}>—</td></tr>`;
+    const th = (hs) => "<tr>" + hs.map((h) => `<th>${esc(h === "ID" ? h : t(h))}</th>`).join("") + "</tr>";
     const k = s.kpis;
-    const kp = [["novas demandas", k.new_inputs], ["itens criados", k.items_created], ["itens atualizados", k.items_updated], ["em aberto", k.open_items],
-      ["alta prioridade", k.high_priority_open], ["vencidos", k.overdue], ["reuniões", k.meetings], ["riscos abertos", k.open_risks], ["projetos ativos", k.active_projects]];
-    return `<!doctype html><meta charset="utf-8"><title>${esc(s.type)} ${esc(s.period.start)}</title>
+    const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Em aberto", k.open_items],
+      ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
+    const msgOf = (a) => (a.msg ? t(a.msg[0], a.msg[1]) : a.text);
+    return `<!doctype html><html lang="${I18N.htmlLang()}"><meta charset="utf-8"><title>${esc(t(s.type))} ${esc(s.period.start)}</title>
 <style>body{font:14px system-ui;margin:32px;color:#1f2937}h1{margin:0}h2{border-bottom:2px solid #1e3a8a;padding-bottom:4px;margin-top:28px}
 table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding:4px 8px;text-align:left}.k{display:inline-block;margin:6px 12px 6px 0;padding:8px 12px;background:#eef2ff;border-radius:8px}</style>
-<h1>${esc(s.type)}</h1><p>Período: ${esc(s.period.start)} a ${esc(s.period.end)} · gerado em ${esc(s.generated_at)}</p>
-<h2>1. Destaques</h2><div style="white-space:pre-wrap">${esc(text)}</div>
-<h2>2. Indicadores</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${n}</span>`).join("")}
-<h2>3. Novas demandas por origem</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(src)}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
-<h2>4. Itens críticos (alta prioridade)</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
-<h2>5. Prazos (vencidos e próximos 7 dias)</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
-<h2>6. Projetos</h2><table>${th(["ID", "Projeto", "Status", "Ações abertas", "Próx. reunião"])}${rows(s.projects, ["id", "name", "status", "open_actions", "next_meeting"])}</table>
-<h2>7. Riscos</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
-<h2>8. Reuniões e decisões</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)})<br>${m.decisions.map(esc).join("<br>") || "Sem decisões registradas"}</p>`).join("") || "<p>—</p>"}
-<h2>9. Infos a reportar</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
-<h2>10. Alertas</h2><ul>${s.alerts.map((a) => `<li>${esc(a.text)}</li>`).join("") || "<li>—</li>"}</ul>`;
+<h1>${esc(t(s.type))}</h1><p>${esc(t("Período"))}: ${esc(s.period.start)} – ${esc(s.period.end)} · ${esc(t("gerado"))} ${esc(s.generated_at)}</p>
+<h2>1. ${esc(t("Destaques"))}</h2><div style="white-space:pre-wrap">${esc(text)}</div>
+<h2>2. ${esc(t("Indicadores"))}</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${esc(t(n))}</span>`).join("")}
+<h2>3. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
+<h2>4. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
+<h2>5. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
+<h2>6. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "Ações abertas", "Próx. reunião"])}${rows(s.projects, ["id", "name", "status", "open_actions", "next_meeting"])}</table>
+<h2>7. ${esc(t("Riscos"))}</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
+<h2>8. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}</p>`).join("") || "<p>—</p>"}
+<h2>9. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
+<h2>10. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
   },
 
   // ------------------------------------------------------------ roteador local
@@ -1032,14 +1479,14 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       const kind = body.type || "daily";
       const summary = this.buildSummary(kind, body.date || todayISO());
       const text = body.narrative === false ? "" : await AI.narrative(summary);
-      const file = `SUMMARIES/${kind === "weekly" ? "semanal" : "diario"}_${summary.period.start}.html`;
+      const file = `SUMMARIES/${kind === "weekly" ? "semanal" : "diario"}_${summary.period.start}_${I18N.lang}.html`;
       await Store.write(file, this.summaryHtml(summary, text));
       db.summaries = db.summaries.filter((x) => x.file !== file);
       db.summaries.push({ type: kind, period: summary.period, file, generated_at: nowISO() });
       return { summary, narrative: text, file };
     }
 
-    if (!COLLECTIONS.includes(head) || head === "actions") throw new ApiError("Rota desconhecida");
+    if (!COLLECTIONS.includes(head) || head === "actions") throw new ApiError("Unknown route");
     const col = head;
 
     if (method === "POST" && !rid) {
@@ -1060,7 +1507,7 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
     }
 
     const rec = rid ? this.find(col, rid) : null;
-    if (rid && !rec) throw new ApiError(`${rid} não encontrado`);
+    if (rid && !rec) throw new ApiError(t("{id} não encontrado", { id: rid }));
 
     if (method === "GET" && rec && !action) return rec;
     if (method === "PATCH" && rec && !action) {
@@ -1069,10 +1516,11 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       const note = data._note;
       delete data._note;
       Object.assign(rec, data);
-      if (note) (rec.history ??= []).push({ date: nowISO(), text: note });
+      if (note) (rec.history ??= []).push({ date: nowISO(), text: note });  // texto do usuário: não traduzido
       if (col === "projects") rec.last_monitored = todayISO();
       this.touch(rec);
-      this.log(`${col}.updated`, rid, `${rid} atualizado` + (note ? `: ${note}` : ""));
+      if (note) this.log(`${col}.updated`, rid, "{id} atualizado: {note}", { id: rid, note });
+      else this.log(`${col}.updated`, rid, "{id} atualizado", { id: rid });
       return rec;
     }
     if (method === "DELETE" && rec) {
@@ -1081,15 +1529,15 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
         const lst = r.links?.[col];
         if (lst?.includes(rid)) lst.splice(lst.indexOf(rid), 1);
       }
-      this.log(`${col}.deleted`, rid, `${rid} removido (a pasta local foi mantida)`);
+      this.log(`${col}.deleted`, rid, "{id} removido (a pasta local foi mantida)", { id: rid });
       return { ok: true };
     }
 
     // ---- ações específicas
     if (method === "POST" && action === "link") {
-      if (!this.find(body.collection, body.id)) throw new ApiError(`${body.id} não encontrado`);
+      if (!this.find(body.collection, body.id)) throw new ApiError(t("{id} não encontrado", { id: body.id }));
       this.link(col, rid, body.collection, body.id);
-      this.log("link", rid, `${rid} vinculado a ${body.id}`);
+      this.log("link", rid, "{a} vinculado a {b}", { a: rid, b: body.id });
       return rec;
     }
     if (col === "inputs" && action === "suggest") {
@@ -1105,43 +1553,44 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       await this.syncSchedules(rec);
       rec.last_monitored = todayISO();
       this.touch(rec);
-      this.log("projects.upload", rid, `Upload em ${rid}: ${rel.split("/").pop()}`);
+      this.log("projects.upload", rid, "Upload em {id}: {file}", { id: rid, file: rel.split("/").pop() });
       return rec;
     }
     if (col === "projects" && action === "analyze") {
       const sched = rec.schedules.find((s) => s.rel === body.rel);
       const file = sched && (await Store.read(sched.rel));
-      if (!file) throw new ApiError("Cronograma não encontrado na pasta");
+      if (!file) throw new ApiError(t("Cronograma não encontrado na pasta"));
       sched.analysis = await AI.analyzeSchedule(rec, file, todayISO());
       sched.analyzed_at = nowISO();
       this.touch(rec);
-      this.log("projects.analyzed", rid, `Master schedule de ${rid} analisada: ${sched.name}`);
+      this.log("projects.analyzed", rid, "Master schedule de {id} analisada: {file}", { id: rid, file: sched.name });
       return rec;
     }
     if (col === "projects" && action === "actions") {
       if (body.id) {
         const act = rec.actions.find((a) => a.id === body.id);
-        if (!act) throw new ApiError("Ação não encontrada");
+        if (!act) throw new ApiError(t("Ação não encontrada"));
         Object.assign(act, body);
       } else {
         rec.actions.push({ ...body, id: this.nextId("actions"), status: body.status || "Aberta", created_at: nowISO() });
       }
       rec.last_monitored = todayISO();
       this.touch(rec);
-      this.log("projects.action", rid, `Portfólio ${rid}: ação ${body.id || rec.actions.at(-1).id} ${body.status || "criada"}`);
+      if (body.id) this.log("projects.action", rid, "Portfólio {id}: ação {act} → {status}", { id: rid, act: body.id, status: [body.status || ""] });
+      else this.log("projects.action", rid, "Portfólio {id}: ação {act} criada", { id: rid, act: rec.actions.at(-1).id });
       return rec;
     }
     if (["risks", "meetings", "items"].includes(col) && action === "upload") {
       const rel = await Store.writeUnique(this.folderFor(col, rid), body.file.name, body.file);
       this.touch(rec);
-      this.log(`${col}.upload`, rid, `Documento anexado a ${rid}: ${rel.split("/").pop()}`);
+      this.log(`${col}.upload`, rid, "Documento anexado a {id}: {file}", { id: rid, file: rel.split("/").pop() });
       return rec;
     }
     if (action === "files" && method === "GET") return Store.list(rec.folder || this.folderFor(col, rid));
     if (col === "risks" && action === "analyze") {
       rec.analysis = await AI.analyzeRisk(db, rec, await this.filesText(rec.folder));
       this.touch(rec);
-      this.log("risks.analyzed", rid, `Risco ${rid} analisado`);
+      this.log("risks.analyzed", rid, "Risco {id} analisado", { id: rid });
       return rec;
     }
     if (col === "meetings" && action === "extract") {
@@ -1151,47 +1600,55 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding
       this.touch(rec);
       return rec;
     }
-    throw new ApiError("Rota desconhecida");
+    throw new ApiError("Unknown route");
   },
 };
 </script>
 <script>
-/* Plataforma de Governança — front-end (sem build, JS puro). */
-let S = null; // estado vindo de /api/state
+/* Plataforma de Governança — interface (JS puro, sem build).
+ * Textos de tela passam por t() (i18n.js). Valores guardados nos dados (status, prioridade, origem…)
+ * ficam como códigos fixos em português e são traduzidos só na exibição, com tv(). */
+let S = null; // estado vindo de Core.api("state")
 
 const SOURCES = ["Diretora", "Reunião", "Departamento", "HQ", "Outro"];
 const INPUT_KIND = ["Pedido pontual", "Direcionamento / estratégia (reclamação, opinião)", "Nova solicitação do HQ", "Decisão conjunta entre departamentos", "Atualização de item existente", "Outro"];
 const STATUS_ITEM = ["Aberto", "Em andamento", "Aguardando", "Concluído"];
+const LEVELS = ["Alta", "Média", "Baixa"];
 
 // ------------------------------------------------------------------ utilidades
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const pill = (t, cls = "") => (t ? `<span class="pill ${esc(cls)}">${esc(t)}</span>` : "");
-const prio = (p) => pill(p, "p-" + p);
-const opts = (list, sel) => list.map((o) => `<option ${o === sel ? "selected" : ""}>${esc(o)}</option>`).join("");
+const pill = (txt, cls = "") => (txt ? `<span class="pill ${esc(cls)}">${esc(txt)}</span>` : "");
+const tv = (v) => (v ? t(v) : "");
+const prio = (p) => pill(tv(p), "p-" + p);
+const opts = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? "selected" : ""}>${esc(t(o))}</option>`).join("");
+const msg = (r) => (r.msg ? t(r.msg[0], r.msg[1]) : r.text || "");
 const byId = (col, id) => (S.db[col] || []).find((r) => r.id === id);
-const defLabel = (d) => S.definitions[d] || d;
+const defLabel = (d) => t(S.definitions[d] || d);
 const fmt = (iso) => (iso ? iso.replace("T", " ").slice(0, 16) : "");
+const th = (heads) => `<tr>${heads.map((h) => `<th>${h === "ID" ? "ID" : esc(t(h))}</th>`).join("")}</tr>`;
+const L = (text) => `<label>${esc(t(text))}</label>`;
+const timeline = (list) => list.map((h) => `<li><span class="muted">${fmt(h.date || h.ts)}</span> ${esc(msg(h))}</li>`).join("") || '<li class="muted">—</li>';
 
 const api = (path, method = "GET", body) => Core.api(path, method, body);
-function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden");
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add("hidden"), 3500);
+function toast(text) {
+  const el = $("#toast"); el.textContent = text; el.classList.remove("hidden");
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.add("hidden"), 3500);
 }
 async function busy(btn, fn) {
-  const old = btn.textContent; btn.disabled = true; btn.textContent = "Processando…";
-  try { await fn(); } catch (e) { toast("Erro: " + e.message); } finally { btn.disabled = false; btn.textContent = old; }
+  const old = btn.textContent; btn.disabled = true; btn.textContent = t("Processando…");
+  try { await fn(); } catch (e) { toast(t("Erro: ") + t(e.message)); } finally { btn.disabled = false; btn.textContent = old; }
 }
 function openModal(html) { $("#modal-body").innerHTML = html; $("#modal").classList.remove("hidden"); }
 function closeModal() { $("#modal").classList.add("hidden"); }
 async function uploadFiles(path, input, extra = {}) {
-  if (!input.files.length) throw new Error("Escolha um arquivo.");
+  if (!input.files.length) throw new Error(t("Escolha um arquivo."));
   for (const f of input.files) await api(path, "POST", { file: f, ...extra });
 }
 /** Abre um arquivo da pasta local numa nova aba. */
 async function openFile(rel) {
   const f = await Store.read(rel);
-  if (!f) return toast("Arquivo não encontrado na pasta.");
+  if (!f) return toast(t("Arquivo não encontrado na pasta."));
   const type = rel.toLowerCase().endsWith(".html") ? "text/html" : f.type || "application/octet-stream";
   const url = URL.createObjectURL(new Blob([f], { type }));
   if (/\.(html|pdf|png|jpe?g|gif|txt|csv)$/i.test(rel)) window.open(url, "_blank");
@@ -1202,23 +1659,36 @@ function download(url, name) { const a = document.createElement("a"); a.href = u
 function fileLink(rel, label) { return `<a href="#" data-rel="${esc(rel)}" onclick="openFile(this.dataset.rel);return false">${esc(label)}</a>`; }
 function exportCsv() {
   const url = URL.createObjectURL(new Blob([Core.exportCsv()], { type: "text/csv;charset=utf-8" }));
-  download(url, `lista_governanca_${S.today}.csv`);
+  download(url, `${t("lista_governanca")}_${S.today}.csv`);
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 function linksHtml(rec) {
-  const L = rec.links || {}, names = { items: "Itens", projects: "Projetos", risks: "Riscos", meetings: "Reuniões", inputs: "Entradas" };
+  const names = { items: "Itens", projects: "Projetos", risks: "Riscos", meetings: "Reuniões", inputs: "Entradas" };
   const views = { items: "lista", projects: "projetos", risks: "riscos", meetings: "reunioes", inputs: "entradas" };
-  const parts = Object.entries(L).filter(([, v]) => v.length).map(([k, v]) =>
-    `<b>${names[k] || k}:</b> ` + v.map((id) => `<a href="#${views[k]}/${id}" onclick="closeModal()">${esc(id)}</a>`).join(", "));
-  return parts.join(" · ") || '<span class="muted">sem vínculos</span>';
+  const parts = Object.entries(rec.links || {}).filter(([, v]) => v.length).map(([k, v]) =>
+    `<b>${esc(t(names[k] || k))}:</b> ` + v.map((id) => `<a href="#${views[k]}/${id}" onclick="closeModal()">${esc(id)}</a>`).join(", "));
+  return parts.join(" · ") || `<span class="muted">${t("sem vínculos")}</span>`;
 }
 function linkForm(col, id) {
-  return `<div class="toolbar"><select id="lk-col"><option value="items">Item</option><option value="projects">Projeto</option><option value="risks">Risco</option><option value="meetings">Reunião</option></select>
-    <input id="lk-id" placeholder="ID (ex.: GOV003)"><button class="ghost small" onclick="addLink('${col}','${id}')">Vincular</button></div>`;
+  return `<div class="toolbar"><select id="lk-col"><option value="items">${t("Item")}</option><option value="projects">${t("Projeto")}</option><option value="risks">${t("Risco")}</option><option value="meetings">${t("Reunião")}</option></select>
+    <input id="lk-id" placeholder="${esc(t("ID (ex.: GOV003)"))}"><button class="ghost small" onclick="addLink('${col}','${id}')">${t("Vincular")}</button></div>`;
 }
 async function addLink(col, id) {
-  try { await api(`${col}/${id}/link`, "POST", { collection: $("#lk-col").value, id: $("#lk-id").value.trim().toUpperCase() }); toast("Vínculo criado"); await refresh(); }
-  catch (e) { toast(e.message); }
+  try { await api(`${col}/${id}/link`, "POST", { collection: $("#lk-col").value, id: $("#lk-id").value.trim().toUpperCase() }); toast(t("Vínculo criado")); await refresh(); }
+  catch (e) { toast(t(e.message)); }
+}
+
+// ------------------------------------------------------------------ idioma
+function applyStaticTexts() {
+  document.documentElement.lang = { pt: "pt-BR", en: "en", zh: "zh-CN" }[I18N.lang];
+  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+  const sel = $("#lang");
+  if (sel) sel.value = I18N.lang;
+}
+async function setLang(l) {
+  await I18N.set(l);
+  applyStaticTexts();
+  if (S) await refresh(); else welcome(await Store.remembered());
 }
 
 // ------------------------------------------------------------------ roteamento
@@ -1229,8 +1699,9 @@ function render() {
   document.querySelectorAll("nav a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + view));
   const b = $("#ai-badge");
   b.className = "badge" + (S.ai.enabled ? " on" : "");
-  b.textContent = S.ai.enabled ? "IA: " + S.ai.model : "IA offline (heurística)";
-  b.title = S.ai.detail || "";
+  document.querySelector(".brand .ai").textContent = I18N.lang === "pt" ? "IA" : "AI";
+  b.textContent = S.ai.enabled ? t("IA: ") + S.ai.model : t("IA offline (heurística)");
+  b.title = S.ai.detail ? t(S.ai.detail) : "";
   const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, reunioes: viewReunioes, riscos: viewRiscos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
   $("#view").innerHTML = V(id);
   if (V === viewEntradas && id) openTriage(id);
@@ -1240,7 +1711,7 @@ window.addEventListener("hashchange", render);
 
 // ------------------------------------------------------------------ painel
 function viewPainel() {
-  const items = S.db.items, open = items.filter((i) => i.status !== "Concluído");
+  const open = S.db.items.filter((i) => i.status !== "Concluído");
   const k = [
     ["Entradas pendentes", S.db.inputs.filter((i) => i.status !== "Registrado").length],
     ["Itens em aberto", open.length],
@@ -1249,42 +1720,42 @@ function viewPainel() {
     ["Projetos ativos", S.db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).length],
     ["Riscos abertos", S.db.risks.filter((r) => r.status !== "Fechado").length],
   ];
-  return `<h1>Painel de governança</h1>
-  <div class="kpis">${k.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${n}</span></div>`).join("")}</div>
+  return `<h1>${t("Painel de governança")}</h1>
+  <div class="kpis">${k.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${t(n)}</span></div>`).join("")}</div>
   <div class="grid">
-    <div class="card"><h2>Alertas</h2>${S.alerts.map((a) => `<div class="alert lv-${a.level}">${esc(a.text)}</div>`).join("") || '<p class="muted">Nenhum alerta.</p>'}</div>
-    <div class="card"><h2>Atividade recente</h2><ul class="tl">${S.events.slice().reverse().slice(0, 15).map((e) => `<li><span class="muted">${fmt(e.ts)}</span> ${esc(e.text)}</li>`).join("") || '<li class="muted">Sem atividade.</li>'}</ul></div>
+    <div class="card"><h2>${t("Alertas")}</h2>${S.alerts.map((a) => `<div class="alert lv-${a.level}">${esc(msg(a))}</div>`).join("") || `<p class="muted">${t("Nenhum alerta.")}</p>`}</div>
+    <div class="card"><h2>${t("Atividade recente")}</h2><ul class="tl">${timeline(S.events.slice().reverse().slice(0, 15))}</ul></div>
   </div>
-  <div class="actions"><a class="btn" href="#entradas">+ Nova entrada</a><a class="btn ghost" href="#summaries">Gerar summary do dia</a></div>`;
+  <div class="actions"><a class="btn" href="#entradas">${t("+ Nova entrada")}</a><a class="btn ghost" href="#summaries">${t("Gerar summary do dia")}</a></div>`;
 }
 
 // ------------------------------------------------------------------ entradas (demand management)
 function viewEntradas() {
-  const pend = S.db.inputs.slice().reverse();
-  return `<h1>Inputs management</h1>
-  <div class="steps"><span class="step on">1. Entrada da informação</span><span class="step">2. Assessment (relação + classificação)</span><span class="step">3. Definição</span><span class="step">4. Lista geral + módulos</span></div>
+  const list = S.db.inputs.slice().reverse();
+  return `<h1>${t("Inputs management")}</h1>
+  <div class="steps"><span class="step on">${t("1. Entrada da informação")}</span><span class="step">${t("2. Assessment (relação + classificação)")}</span><span class="step">${t("3. Definição")}</span><span class="step">${t("4. Lista geral + módulos")}</span></div>
   <div class="grid" style="grid-template-columns: minmax(320px, 1.1fr) minmax(300px, 1fr)">
-  <div class="card"><h2>Nova entrada</h2>${inputForm()}
-    <div class="actions"><button onclick="busy(this, saveInput)">Registrar e avaliar com IA</button></div></div>
-  <div class="card"><h2>Entradas</h2><table><tr><th>ID</th><th>Entrada</th><th>Origem</th><th>Status</th></tr>
-    ${pend.map((i) => `<tr class="click" onclick="location.hash='entradas/${i.id}'"><td>${i.id}</td><td>${esc(i.title)}</td><td>${esc(i.source)}</td>
-      <td>${pill(i.status, i.status === "Registrado" ? "p-Baixa" : "p-Média")} ${i.item_id ? pill(i.item_id) : ""}</td></tr>`).join("") || '<tr><td colspan=4 class="muted">Nenhuma entrada.</td></tr>'}
+  <div class="card"><h2>${t("Nova entrada")}</h2>${inputForm()}
+    <div class="actions"><button onclick="busy(this, saveInput)">${t("Registrar e avaliar com IA")}</button></div></div>
+  <div class="card"><h2>${t("Entradas")}</h2><table>${th(["ID", "Entrada", "Origem", "Status"])}
+    ${list.map((i) => `<tr class="click" onclick="location.hash='entradas/${i.id}'"><td>${i.id}</td><td>${esc(i.title)}</td><td>${esc(tv(i.source))}</td>
+      <td>${pill(tv(i.status), i.status === "Registrado" ? "p-Baixa" : "p-Média")} ${i.item_id ? pill(i.item_id) : ""}</td></tr>`).join("") || `<tr><td colspan=4 class="muted">${t("Nenhuma entrada.")}</td></tr>`}
   </table></div></div>`;
 }
 function inputForm(pre = {}) {
   const meetings = S.db.meetings.slice().reverse();
-  return `<div class="row"><div><label>Origem</label><select id="f-source">${opts(SOURCES, pre.source || "Diretora")}</select></div>
-    <div><label>Tipo</label><select id="f-kind">${opts(INPUT_KIND, pre.kind)}</select></div></div>
-  <label>Título / assunto</label><input id="f-title" value="${esc(pre.title)}">
-  <label>Descrição do input</label><textarea id="f-desc">${esc(pre.description)}</textarea>
-  <label>Background / contexto</label><textarea id="f-bg" style="min-height:60px">${esc(pre.background)}</textarea>
-  <div class="row"><div><label>De onde a demanda veio (pessoa / fórum)</label><input id="f-origin" value="${esc(pre.origin)}"></div>
-    <div><label>Reunião</label><select id="f-meeting"><option value="">—</option>${meetings.map((m) => `<option value="${m.id}" ${m.id === pre.meeting_id ? "selected" : ""}>${m.id} · ${esc(m.title)}</option>`).join("")}</select></div></div>
-  <div class="row"><div><label>Área principal</label><input id="f-area" list="areas" value="${esc(pre.area_main)}"></div>
-    <div><label>Áreas impactadas</label><input id="f-areas-imp" value="${esc(pre.areas_impacted)}"></div>
-    <div><label>Áreas que impactam</label><input id="f-areas-by" value="${esc(pre.areas_impacting)}"></div></div>
+  return `<div class="row"><div>${L("Origem")}<select id="f-source">${opts(SOURCES, pre.source || "Diretora")}</select></div>
+    <div>${L("Tipo")}<select id="f-kind">${opts(INPUT_KIND, pre.kind)}</select></div></div>
+  ${L("Título / assunto")}<input id="f-title" value="${esc(pre.title)}">
+  ${L("Descrição do input")}<textarea id="f-desc">${esc(pre.description)}</textarea>
+  ${L("Background / contexto")}<textarea id="f-bg" style="min-height:60px">${esc(pre.background)}</textarea>
+  <div class="row"><div>${L("De onde a demanda veio (pessoa / fórum)")}<input id="f-origin" value="${esc(pre.origin)}"></div>
+    <div>${L("Reunião")}<select id="f-meeting"><option value="">—</option>${meetings.map((m) => `<option value="${m.id}" ${m.id === pre.meeting_id ? "selected" : ""}>${m.id} · ${esc(m.title)}</option>`).join("")}</select></div></div>
+  <div class="row"><div>${L("Área principal")}<input id="f-area" list="areas" value="${esc(pre.area_main)}"></div>
+    <div>${L("Áreas impactadas")}<input id="f-areas-imp" value="${esc(pre.areas_impacted)}"></div>
+    <div>${L("Áreas que impactam")}<input id="f-areas-by" value="${esc(pre.areas_impacting)}"></div></div>
   <datalist id="areas">${(S.db.settings.areas || []).map((a) => `<option>${esc(a)}</option>`).join("")}</datalist>
-  <div class="row"><div><label>Responsável</label><input id="f-owner" value="${esc(pre.owner)}"></div><div><label>Prazo</label><input id="f-due" type="date" value="${esc(pre.due_date)}"></div></div>`;
+  <div class="row"><div>${L("Responsável")}<input id="f-owner" value="${esc(pre.owner)}"></div><div>${L("Prazo")}<input id="f-due" type="date" value="${esc(pre.due_date)}"></div></div>`;
 }
 function readInputForm() {
   return { source: $("#f-source").value, source_detail: $("#f-kind").value, title: $("#f-title").value.trim(), description: $("#f-desc").value,
@@ -1293,7 +1764,7 @@ function readInputForm() {
 }
 async function saveInput() {
   const data = readInputForm();
-  if (!data.title) throw new Error("Informe o título.");
+  if (!data.title) throw new Error(t("Informe o título."));
   const rec = await api("inputs", "POST", data);
   await api(`inputs/${rec.id}/suggest`, "POST");
   await refresh();
@@ -1303,55 +1774,53 @@ async function saveInput() {
 function openTriage(id) {
   const inp = byId("inputs", id);
   if (!inp) return;
-  const sug = inp.ai_suggestion, fin = inp.assessment;
-  const a = fin || sug || {};
+  const sug = inp.ai_suggestion, a = inp.assessment || sug || {};
   const defs = inp.definitions || a.definitions || [];
   const done = inp.status === "Registrado";
   const items = S.db.items, projects = S.db.projects;
-  const relatedIds = (a.related || []).map((r) => r.id);
+  const rel = (iid) => (a.related || []).find((r) => r.id === iid);
   openModal(`<h2>${inp.id} · ${esc(inp.title)}</h2>
-  <p class="muted">${esc(inp.source)} · ${esc(inp.source_detail)} · ${fmt(inp.created_at)} ${inp.origin ? "· veio de " + esc(inp.origin) : ""}</p>
-  <p>${esc(inp.description)}</p>${inp.background ? `<p class="muted"><b>Contexto:</b> ${esc(inp.background)}</p>` : ""}
-  ${sug ? `<div class="ai-box"><b>Sugestão da IA</b> (${esc(sug.engine)}): ${esc(sug.rationale)}${sug.gap_analysis ? "\nGaps: " + esc(sug.gap_analysis) : ""}${sug.relation_explanation ? "\nRelação: " + esc(sug.relation_explanation) : ""}</div>`
-        : `<div class="actions"><button onclick="busy(this, async()=>{await api('inputs/${id}/suggest','POST'); await refresh();})">Pedir sugestão da IA</button></div>`}
-  <div class="steps"><span class="step on">2. Assessment</span></div>
-  <h3>2.1 Tem relação com item já levantado?</h3>
-  <div class="row"><div><label>Relação</label><select id="t-mode">
-    <option value="novo" ${a.relation_mode !== "incluir_existente" ? "selected" : ""}>Não / relação só em impacto → criar item novo</option>
-    <option value="incluir_existente" ${a.relation_mode === "incluir_existente" ? "selected" : ""}>Sim, relação direta → incluir no item on going</option></select></div>
-    <div><label>Item on going (relação direta)</label><select id="t-include"><option value="">—</option>${items.map((i) => `<option value="${i.id}" ${i.id === a.include_in ? "selected" : ""}>${i.id} · ${esc(i.title)}</option>`).join("")}</select></div></div>
-  <label>Itens relacionados (vincular)</label><div class="checks" style="max-height:140px;overflow:auto">${items.map((i) => `<label><input type="checkbox" class="t-rel" value="${i.id}" ${relatedIds.includes(i.id) ? "checked" : ""}> ${i.id} · ${esc(i.title)} ${(a.related || []).find((r) => r.id === i.id) ? `<span class="muted">(${esc((a.related.find((r) => r.id === i.id) || {}).relation)})</span>` : ""}</label>`).join("") || '<span class="muted">Lista geral vazia.</span>'}</div>
-  <h3>2.2 Classificação</h3>
-  <div class="row"><div><label>Escopo — o que é?</label><input id="t-scope" value="${esc(a.scope)}"></div><div><label>O que deve ser feito com isso?</label><input id="t-scope-act" value="${esc(a.scope_action)}"></div></div>
-  <div class="row"><div><label>Prioridade</label><select id="t-prio">${opts(["Alta", "Média", "Baixa"], a.priority || "Média")}</select></div>
-    <div><label>Urgência</label><select id="t-urg">${opts(["Alta", "Média", "Baixa"], a.urgency || "Média")}</select></div>
-    <div><label>De onde a demanda veio</label><input id="t-origin" value="${esc(a.origin || inp.origin || inp.source)}"></div></div>
-  <label>Riscos e urgência — explique o porquê</label><textarea id="t-risk" style="min-height:50px">${esc(a.risk_reason)}</textarea>
-  <label>Impactos</label><div class="checks" style="display:flex;gap:16px;flex-wrap:wrap">${S.impact_types.map((t) => `<label><input type="checkbox" class="t-imp" value="${t}" ${(a.impacts || []).includes(t) ? "checked" : ""}> ${t}</label>`).join("")}</div>
-  <label>Impactos em quais projetos / operações, por quê</label><textarea id="t-impd" style="min-height:50px">${esc(a.impact_details)}</textarea>
-  <label>Gaps (por que não foi previsto antes?)</label><textarea id="t-gap" style="min-height:50px">${esc(a.gap_analysis)}</textarea>
-  <div class="steps" style="margin-top:14px"><span class="step on">3. Definição (pode ser mais de uma)</span></div>
-  <div class="checks">${Object.entries(S.definitions).map(([k, v]) => `<label><input type="checkbox" class="t-def" value="${k}" ${defs.includes(k) ? "checked" : ""}> ${v}</label>`).join("")}</div>
-  <div class="row"><div><label>Projeto (para "Ação dentro de um projeto")</label><select id="t-proj"><option value="">—</option>${projects.map((p) => `<option value="${p.id}" ${p.id === a.project_id ? "selected" : ""}>${p.id} · ${esc(p.name)}</option>`).join("")}</select></div>
-    <div><label>Nome do novo projeto (se "Criação de um novo projeto")</label><input id="t-newproj" value="${esc(inp.title)}"></div></div>
-  <div class="actions">${done ? `<span class="pill p-Baixa">Registrado em ${inp.item_id}</span> <a class="btn ghost" href="#lista/${inp.item_id}">Abrir item</a>` : `<button onclick="busy(this, ()=>commitTriage('${id}'))">Confirmar e registrar na lista geral</button>`}
-    <button class="ghost" onclick="if(confirm('Excluir entrada?')) api('inputs/${id}','DELETE').then(()=>{closeModal();location.hash='entradas';refresh();})">Excluir</button></div>
-  <p class="muted">Ao confirmar, a IA guarda a sua decisão (vs. a sugestão) para aprender os critérios de classificação.</p>`);
+  <p class="muted">${[tv(inp.source), tv(inp.source_detail), fmt(inp.created_at), inp.origin ? t("veio de") + " " + inp.origin : ""].filter(Boolean).map(esc).join(" · ")}</p>
+  <p>${esc(inp.description)}</p>${inp.background ? `<p class="muted"><b>${t("Contexto:")}</b> ${esc(inp.background)}</p>` : ""}
+  ${sug ? `<div class="ai-box"><b>${t("Sugestão da IA")}</b> (${esc(tv(sug.engine))}): ${esc(sug.msg ? msg(sug) : sug.rationale)}${sug.gap_analysis ? "\n" + t("Gaps:") + " " + esc(sug.gap_analysis) : ""}${sug.relation_explanation ? "\n" + t("Relação:") + " " + esc(t(sug.relation_explanation)) : ""}</div>`
+        : `<div class="actions"><button onclick="busy(this, async()=>{await api('inputs/${id}/suggest','POST'); await refresh();})">${t("Pedir sugestão da IA")}</button></div>`}
+  <div class="steps"><span class="step on">${t("2. Assessment")}</span></div>
+  <h3>${t("2.1 Tem relação com item já levantado?")}</h3>
+  <div class="row"><div>${L("Relação")}<select id="t-mode">
+    <option value="novo" ${a.relation_mode !== "incluir_existente" ? "selected" : ""}>${t("Não / relação só em impacto → criar item novo")}</option>
+    <option value="incluir_existente" ${a.relation_mode === "incluir_existente" ? "selected" : ""}>${t("Sim, relação direta → incluir no item on going")}</option></select></div>
+    <div>${L("Item on going (relação direta)")}<select id="t-include"><option value="">—</option>${items.map((i) => `<option value="${i.id}" ${i.id === a.include_in ? "selected" : ""}>${i.id} · ${esc(i.title)}</option>`).join("")}</select></div></div>
+  ${L("Itens relacionados (vincular)")}<div class="checks" style="max-height:140px;overflow:auto">${items.map((i) => `<label><input type="checkbox" class="t-rel" value="${i.id}" ${rel(i.id) ? "checked" : ""}> ${i.id} · ${esc(i.title)} ${rel(i.id) ? `<span class="muted">(${esc(rel(i.id).relation)})</span>` : ""}</label>`).join("") || `<span class="muted">${t("Lista geral vazia.")}</span>`}</div>
+  <h3>${t("2.2 Classificação")}</h3>
+  <div class="row"><div>${L("Escopo — o que é?")}<input id="t-scope" value="${esc(a.scope)}"></div><div>${L("O que deve ser feito com isso?")}<input id="t-scope-act" value="${esc(a.scope_action)}"></div></div>
+  <div class="row"><div>${L("Prioridade")}<select id="t-prio">${opts(LEVELS, a.priority || "Média")}</select></div>
+    <div>${L("Urgência")}<select id="t-urg">${opts(LEVELS, a.urgency || "Média")}</select></div>
+    <div>${L("De onde a demanda veio")}<input id="t-origin" value="${esc(a.origin || inp.origin || tv(inp.source))}"></div></div>
+  ${L("Riscos e urgência — explique o porquê")}<textarea id="t-risk" style="min-height:50px">${esc(a.risk_reason)}</textarea>
+  ${L("Impactos")}<div class="checks" style="display:flex;gap:16px;flex-wrap:wrap">${S.impact_types.map((x) => `<label><input type="checkbox" class="t-imp" value="${x}" ${(a.impacts || []).includes(x) ? "checked" : ""}> ${esc(t(x))}</label>`).join("")}</div>
+  ${L("Impactos em quais projetos / operações, por quê")}<textarea id="t-impd" style="min-height:50px">${esc(a.impact_details)}</textarea>
+  ${L("Gaps (por que não foi previsto antes?)")}<textarea id="t-gap" style="min-height:50px">${esc(a.gap_analysis)}</textarea>
+  <div class="steps" style="margin-top:14px"><span class="step on">${t("3. Definição (pode ser mais de uma)")}</span></div>
+  <div class="checks">${Object.entries(S.definitions).map(([k, v]) => `<label><input type="checkbox" class="t-def" value="${k}" ${defs.includes(k) ? "checked" : ""}> ${esc(t(v))}</label>`).join("")}</div>
+  <div class="row"><div>${L('Projeto (para "Ação dentro de um projeto")')}<select id="t-proj"><option value="">—</option>${projects.map((p) => `<option value="${p.id}" ${p.id === a.project_id ? "selected" : ""}>${p.id} · ${esc(p.name)}</option>`).join("")}</select></div>
+    <div>${L('Nome do novo projeto (se "Criação de um novo projeto")')}<input id="t-newproj" value="${esc(inp.title)}"></div></div>
+  <div class="actions">${done ? `<span class="pill p-Baixa">${t("Registrado em")} ${inp.item_id}</span> <a class="btn ghost" href="#lista/${inp.item_id}">${t("Abrir item")}</a>` : `<button onclick="busy(this, ()=>commitTriage('${id}'))">${t("Confirmar e registrar na lista geral")}</button>`}
+    <button class="ghost" onclick="if(confirm(t('Excluir entrada?'))) api('inputs/${id}','DELETE').then(()=>{closeModal();location.hash='entradas';refresh();})">${t("Excluir")}</button></div>
+  <p class="muted">${t("Ao confirmar, a IA guarda a sua decisão (vs. a sugestão) para aprender os critérios de classificação.")}</p>`);
 }
 async function commitTriage(id) {
   const vals = (cls) => [...document.querySelectorAll("." + cls)].filter((c) => c.checked).map((c) => c.value);
   const definitions = vals("t-def");
-  if (!definitions.length) throw new Error("Escolha ao menos uma definição.");
+  if (!definitions.length) throw new Error(t("Escolha ao menos uma definição."));
   const body = {
     relation_mode: $("#t-mode").value, include_in: $("#t-include").value, related: vals("t-rel"), definitions,
     project_id: $("#t-proj").value, new_project_name: $("#t-newproj").value,
     assessment: { scope: $("#t-scope").value, scope_action: $("#t-scope-act").value, priority: $("#t-prio").value, urgency: $("#t-urg").value,
       origin: $("#t-origin").value, risk_reason: $("#t-risk").value, impacts: vals("t-imp"), impact_details: $("#t-impd").value, gap_analysis: $("#t-gap").value },
   };
-  if (body.relation_mode === "incluir_existente" && !body.include_in) throw new Error("Selecione o item on going.");
-  const r = await api(`inputs/${id}/commit`, "POST", body);
-  const c = r.created;
-  toast(`Registrado em ${c.item}` + (c.project ? ` · projeto ${c.project}` : "") + (c.risks ? ` · ${c.risks.join(", ")}` : "") + (c.action ? ` · ação ${c.action}` : ""));
+  if (body.relation_mode === "incluir_existente" && !body.include_in) throw new Error(t("Selecione o item on going."));
+  const c = (await api(`inputs/${id}/commit`, "POST", body)).created;
+  toast(`${t("Registrado em")} ${c.item}` + (c.project ? ` · ${t("projeto")} ${c.project}` : "") + (c.risks ? ` · ${c.risks.join(", ")}` : "") + (c.action ? ` · ${t("ação")} ${c.action}` : ""));
   closeModal();
   location.hash = "lista";
   await refresh();
@@ -1362,129 +1831,128 @@ let F = { q: "", status: "", prio: "", src: "", def: "" };
 function viewLista() {
   const rows = S.db.items.filter((i) => (!F.status || i.status === F.status) && (!F.prio || i.priority === F.prio) && (!F.src || i.source === F.src)
     && (!F.def || (i.definitions || []).includes(F.def)) && (!F.q || JSON.stringify(i).toLowerCase().includes(F.q.toLowerCase()))).reverse();
-  return `<h1>Lista geral de governança</h1>
-  <div class="toolbar"><input placeholder="Buscar…" value="${esc(F.q)}" onchange="F.q=this.value;render()">
-    <select onchange="F.status=this.value;render()"><option value="">Status</option>${opts(STATUS_ITEM, F.status)}</select>
-    <select onchange="F.prio=this.value;render()"><option value="">Prioridade</option>${opts(["Alta", "Média", "Baixa"], F.prio)}</select>
-    <select onchange="F.src=this.value;render()"><option value="">Origem</option>${opts(SOURCES, F.src)}</select>
-    <select onchange="F.def=this.value;render()"><option value="">Definição</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${v}</option>`).join("")}</select>
-    <button class="ghost" onclick="exportCsv()">Baixar planilha (CSV)</button></div>
-  <div class="card" style="overflow:auto"><table><tr><th>ID</th><th>Item</th><th>Origem</th><th>Responsável</th><th>Emitido</th><th>Prazo</th><th>Prioridade</th><th>Impactos</th><th>Definição</th><th>Vínculos</th><th>Status</th></tr>
-  ${rows.map((i) => `<tr class="click" onclick="location.hash='lista/${i.id}'"><td>${i.id}</td><td>${esc(i.title)}</td><td>${esc(i.source)}</td><td>${esc(i.owner)}</td>
+  return `<h1>${t("Lista geral de governança")}</h1>
+  <div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(F.q)}" onchange="F.q=this.value;render()">
+    <select onchange="F.status=this.value;render()"><option value="">${t("Status")}</option>${opts(STATUS_ITEM, F.status)}</select>
+    <select onchange="F.prio=this.value;render()"><option value="">${t("Prioridade")}</option>${opts(LEVELS, F.prio)}</select>
+    <select onchange="F.src=this.value;render()"><option value="">${t("Origem")}</option>${opts(SOURCES, F.src)}</select>
+    <select onchange="F.def=this.value;render()"><option value="">${t("Definição")}</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${esc(t(v))}</option>`).join("")}</select>
+    <button class="ghost" onclick="exportCsv()">${t("Baixar planilha (CSV)")}</button></div>
+  <div class="card" style="overflow:auto"><table>${th(["ID", "Item", "Origem", "Responsável", "Emitido", "Prazo", "Prioridade", "Impactos", "Definição", "Vínculos", "Status"])}
+  ${rows.map((i) => `<tr class="click" onclick="location.hash='lista/${i.id}'"><td>${i.id}</td><td>${esc(i.title)}</td><td>${esc(tv(i.source))}</td><td>${esc(i.owner)}</td>
     <td>${esc(i.emitted_at || (i.created_at || "").slice(0, 10))}</td><td>${i.due_date && i.due_date < S.today && i.status !== "Concluído" ? pill(i.due_date, "p-Alta") : esc(i.due_date)}</td>
-    <td>${prio(i.priority)}</td><td>${(i.impacts || []).map((x) => pill(x)).join("")}</td><td>${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}</td>
-    <td class="muted">${Object.entries(i.links || {}).filter(([, v]) => v.length).map(([k, v]) => v.length + " " + k).join(", ")}</td><td>${esc(i.status)}</td></tr>`).join("") || '<tr><td colspan=11 class="muted">Nenhum item.</td></tr>'}
+    <td>${prio(i.priority)}</td><td>${(i.impacts || []).map((x) => pill(t(x))).join("")}</td><td>${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}</td>
+    <td class="muted">${Object.entries(i.links || {}).filter(([, v]) => v.length).map(([k, v]) => v.length + " " + t(k)).join(", ")}</td><td>${esc(tv(i.status))}</td></tr>`).join("") || `<tr><td colspan=11 class="muted">${t("Nenhum item.")}</td></tr>`}
   </table></div>`;
 }
 function openItem(id) {
   const i = byId("items", id);
   if (!i) return;
   openModal(`<h2>${i.id} · ${esc(i.title)}</h2>
-  <p>${prio(i.priority)} ${pill("Urgência " + (i.urgency || "—"))} ${(i.impacts || []).map((x) => pill(x)).join("")} ${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}</p>
+  <p>${prio(i.priority)} ${pill(t("Urgência") + " " + (tv(i.urgency) || "—"))} ${(i.impacts || []).map((x) => pill(t(x))).join("")} ${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}</p>
   <p>${esc(i.description)}</p>
-  <div class="row"><div><label>Escopo</label>${esc(i.scope)}<br><span class="muted">${esc(i.scope_action)}</span></div><div><label>Origem</label>${esc(i.source)} · ${esc(i.origin)}</div><div><label>Áreas</label>${esc(i.area_main)} ${i.areas_impacted ? "→ " + esc(i.areas_impacted) : ""}</div></div>
-  ${i.risk_reason ? `<label>Riscos / urgência</label>${esc(i.risk_reason)}` : ""}${i.impact_details ? `<label>Impactos</label>${esc(i.impact_details)}` : ""}${i.gap_analysis ? `<label>Gaps</label>${esc(i.gap_analysis)}` : ""}
-  <label>Vínculos</label><div>${linksHtml(i)}</div>${linkForm("items", i.id)}
-  <div class="row"><div><label>Status</label><select id="i-status">${opts(STATUS_ITEM, i.status)}</select></div><div><label>Responsável</label><input id="i-owner" value="${esc(i.owner)}"></div>
-    <div><label>Prazo</label><input type="date" id="i-due" value="${esc(i.due_date)}"></div><div><label>Prioridade</label><select id="i-prio">${opts(["Alta", "Média", "Baixa"], i.priority)}</select></div></div>
-  <label>Registrar atualização</label><textarea id="i-note" style="min-height:50px" placeholder="O que aconteceu? (entra no histórico e no summary)"></textarea>
-  <div class="checks"><label><input type="checkbox" id="i-report" ${i.report ? "checked" : ""}> Info a ser reportada (entra no summary)</label></div>
-  <div class="actions"><button onclick="busy(this, ()=>saveItem('${i.id}'))">Salvar</button></div>
-  <h3>Histórico</h3><ul class="tl">${(i.history || []).slice().reverse().map((h) => `<li><span class="muted">${fmt(h.date)}</span> ${esc(h.text)}</li>`).join("") || '<li class="muted">—</li>'}</ul>`);
+  <div class="row"><div>${L("Escopo")}${esc(i.scope)}<br><span class="muted">${esc(i.scope_action)}</span></div><div>${L("Origem")}${esc(tv(i.source))} · ${esc(i.origin)}</div><div>${L("Áreas")}${esc(i.area_main)} ${i.areas_impacted ? "→ " + esc(i.areas_impacted) : ""}</div></div>
+  ${i.risk_reason ? L("Riscos / urgência") + esc(i.risk_reason) : ""}${i.impact_details ? L("Impactos") + esc(i.impact_details) : ""}${i.gap_analysis ? L("Gaps") + esc(i.gap_analysis) : ""}
+  ${L("Vínculos")}<div>${linksHtml(i)}</div>${linkForm("items", i.id)}
+  <div class="row"><div>${L("Status")}<select id="i-status">${opts(STATUS_ITEM, i.status)}</select></div><div>${L("Responsável")}<input id="i-owner" value="${esc(i.owner)}"></div>
+    <div>${L("Prazo")}<input type="date" id="i-due" value="${esc(i.due_date)}"></div><div>${L("Prioridade")}<select id="i-prio">${opts(LEVELS, i.priority)}</select></div></div>
+  ${L("Registrar atualização")}<textarea id="i-note" style="min-height:50px" placeholder="${esc(t("O que aconteceu? (entra no histórico e no summary)"))}"></textarea>
+  <div class="checks"><label><input type="checkbox" id="i-report" ${i.report ? "checked" : ""}> ${t("Info a ser reportada (entra no summary)")}</label></div>
+  <div class="actions"><button onclick="busy(this, ()=>saveItem('${i.id}'))">${t("Salvar")}</button></div>
+  <h3>${t("Histórico")}</h3><ul class="tl">${timeline((i.history || []).slice().reverse())}</ul>`);
 }
 async function saveItem(id) {
   await api("items/" + id, "PATCH", { status: $("#i-status").value, owner: $("#i-owner").value, due_date: $("#i-due").value, priority: $("#i-prio").value,
     report: $("#i-report").checked, _note: $("#i-note").value.trim() || undefined });
-  toast("Item atualizado"); closeModal(); location.hash = "lista"; await refresh();
+  toast(t("Item atualizado")); closeModal(); location.hash = "lista"; await refresh();
 }
 
 // ------------------------------------------------------------------ projetos
 function viewProjetos(id) {
   if (id) return projectDetail(byId("projects", id));
-  return `<h1>Gerenciamento de projetos</h1>
+  return `<h1>${t("Gerenciamento de projetos")}</h1>
   <div class="grid" style="grid-template-columns: minmax(300px,2fr) minmax(280px,1fr)">
-  <div class="card"><table><tr><th>ID</th><th>Projeto</th><th>Responsável</th><th>Ações abertas</th><th>Últ. monitoramento</th><th>Próx. reunião</th><th>Status</th></tr>
+  <div class="card"><table>${th(["ID", "Projeto", "Responsável", "Ações abertas", "Últ. monitoramento", "Próx. reunião", "Status"])}
   ${S.db.projects.map((p) => `<tr class="click" onclick="location.hash='projetos/${p.id}'"><td>${p.id}</td><td>${esc(p.name)}</td><td>${esc(p.owner)}</td>
-    <td>${(p.actions || []).filter((a) => a.status !== "Concluída").length}</td><td>${esc(p.last_monitored)}</td><td>${p.next_meeting <= S.today ? pill(p.next_meeting, "p-Alta") : esc(p.next_meeting)}</td><td>${esc(p.status)}</td></tr>`).join("") || '<tr><td colspan=7 class="muted">Nenhum projeto.</td></tr>'}
+    <td>${(p.actions || []).filter((a) => a.status !== "Concluída").length}</td><td>${esc(p.last_monitored)}</td><td>${p.next_meeting <= S.today ? pill(p.next_meeting, "p-Alta") : esc(p.next_meeting)}</td><td>${esc(tv(p.status))}</td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Nenhum projeto.")}</td></tr>`}
   </table></div>
-  <div class="card"><h2>Novo projeto</h2><label>Nome</label><input id="p-name"><label>Descrição</label><textarea id="p-desc"></textarea><label>Responsável</label><input id="p-owner">
-    <div class="actions"><button onclick="busy(this, async()=>{const r=await api('projects','POST',{name:$('#p-name').value,description:$('#p-desc').value,owner:$('#p-owner').value}); await refresh(); location.hash='projetos/'+r.id;})">Criar projeto e pasta local</button></div></div></div>`;
+  <div class="card"><h2>${t("Novo projeto")}</h2>${L("Nome")}<input id="p-name">${L("Descrição")}<textarea id="p-desc"></textarea>${L("Responsável")}<input id="p-owner">
+    <div class="actions"><button onclick="busy(this, async()=>{const r=await api('projects','POST',{name:$('#p-name').value,description:$('#p-desc').value,owner:$('#p-owner').value}); await refresh(); location.hash='projetos/'+r.id;})">${t("Criar projeto e pasta local")}</button></div></div></div>`;
 }
 function projectDetail(p) {
-  if (!p) return "<p>Projeto não encontrado.</p>";
+  if (!p) return `<p>${t("Projeto não encontrado.")}</p>`;
   const items = S.db.items.filter((i) => (p.links.items || []).includes(i.id));
-  return `<p><a href="#projetos">← Projetos</a></p><h1>${p.id} · ${esc(p.name)}</h1>
-  <p class="muted">Pasta local: <code>${esc(S.workspace)}/${esc(p.folder)}</code></p>
+  return `<p><a href="#projetos">← ${t("Projetos")}</a></p><h1>${p.id} · ${esc(p.name)}</h1>
+  <p class="muted">${t("Pasta local:")} <code>${esc(S.workspace)}/${esc(p.folder)}</code></p>
   <div class="grid">
-  <div class="card"><h2>Dados</h2><label>Descrição</label><textarea id="pd-desc">${esc(p.description)}</textarea>
-    <div class="row"><div><label>Responsável</label><input id="pd-owner" value="${esc(p.owner)}"></div><div><label>Status</label><select id="pd-status">${opts(["Em andamento", "Em risco", "Pausado", "Concluído", "Cancelado"], p.status)}</select></div><div><label>Próxima reunião</label><input type="date" id="pd-next" value="${esc(p.next_meeting)}"></div></div>
-    <label>Atualização / monitoramento</label><textarea id="pd-note" style="min-height:50px"></textarea>
-    <div class="actions"><button onclick="busy(this, async()=>{await api('projects/${p.id}','PATCH',{description:$('#pd-desc').value,owner:$('#pd-owner').value,status:$('#pd-status').value,next_meeting:$('#pd-next').value,_note:$('#pd-note').value.trim()||undefined}); toast('Projeto atualizado'); await refresh();})">Salvar (marca monitoramento)</button>
-    <a class="btn ghost" href="#reunioes" onclick="window._newMeetingProject='${p.id}'">Registrar reunião</a></div>
-    <label>Vínculos</label><div>${linksHtml(p)}</div>${linkForm("projects", p.id)}</div>
-  <div class="card"><h2>Master schedules</h2>
-    <p class="muted">Os arquivos ficam na pasta local <code>master_schedule</code>. Você pode copiá-los direto para a pasta e clicar em "Sincronizar", ou fazer upload aqui. Formatos analisáveis: .xlsx, .csv, .pdf (MS Project: exporte para .xlsx/.pdf).</p>
-    <div class="toolbar"><input type="file" id="pd-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('projects/${p.id}/upload', $('#pd-file')); await refresh();})">Upload</button><button class="ghost small" onclick="refresh()">Sincronizar pasta</button></div>
-    <table><tr><th>Arquivo</th><th>Data</th><th></th></tr>${(p.schedules || []).map((s, k) => `<tr><td class="files">${fileLink(s.rel, s.name)}</td><td>${fmt(s.uploaded_at)}</td>
-      <td><button class="small" onclick="busy(this, async()=>{await api('projects/${p.id}/analyze','POST',{rel:byId('projects','${p.id}').schedules[${k}].rel}); await refresh();})">Organizar com IA</button></td></tr>
-      ${s.analysis ? `<tr><td colspan=3>${scheduleAnalysis(s.analysis)}</td></tr>` : ""}`).join("") || '<tr><td colspan=3 class="muted">Nenhum cronograma.</td></tr>'}</table></div>
+  <div class="card"><h2>${t("Dados")}</h2>${L("Descrição")}<textarea id="pd-desc">${esc(p.description)}</textarea>
+    <div class="row"><div>${L("Responsável")}<input id="pd-owner" value="${esc(p.owner)}"></div><div>${L("Status")}<select id="pd-status">${opts(["Em andamento", "Em risco", "Pausado", "Concluído", "Cancelado"], p.status)}</select></div><div>${L("Próxima reunião")}<input type="date" id="pd-next" value="${esc(p.next_meeting)}"></div></div>
+    ${L("Atualização / monitoramento")}<textarea id="pd-note" style="min-height:50px"></textarea>
+    <div class="actions"><button onclick="busy(this, async()=>{await api('projects/${p.id}','PATCH',{description:$('#pd-desc').value,owner:$('#pd-owner').value,status:$('#pd-status').value,next_meeting:$('#pd-next').value,_note:$('#pd-note').value.trim()||undefined}); toast(t('Projeto atualizado')); await refresh();})">${t("Salvar (marca monitoramento)")}</button>
+    <a class="btn ghost" href="#reunioes" onclick="window._newMeetingProject='${p.id}'">${t("Registrar reunião")}</a></div>
+    ${L("Vínculos")}<div>${linksHtml(p)}</div>${linkForm("projects", p.id)}</div>
+  <div class="card"><h2>${t("Master schedules")}</h2>
+    <p class="muted">${t("MS_HELP")}</p>
+    <div class="toolbar"><input type="file" id="pd-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('projects/${p.id}/upload', $('#pd-file')); await refresh();})">${t("Upload")}</button><button class="ghost small" onclick="refresh()">${t("Sincronizar pasta")}</button></div>
+    <table>${th(["Arquivo", "Data", ""])}${(p.schedules || []).map((s, k) => `<tr><td class="files">${fileLink(s.rel, s.name)}</td><td>${fmt(s.uploaded_at)}</td>
+      <td><button class="small" onclick="busy(this, async()=>{await api('projects/${p.id}/analyze','POST',{rel:byId('projects','${p.id}').schedules[${k}].rel}); await refresh();})">${t("Organizar com IA")}</button></td></tr>
+      ${s.analysis ? `<tr><td colspan=3>${scheduleAnalysis(s.analysis)}</td></tr>` : ""}`).join("") || `<tr><td colspan=3 class="muted">${t("Nenhum cronograma.")}</td></tr>`}</table></div>
   </div>
-  <div class="card" style="margin-top:14px"><h2>Portfólio de ações</h2>
-    <table><tr><th>ID</th><th>Ação</th><th>Item</th><th>Responsável</th><th>Prazo</th><th>Gap (por que não foi prevista)</th><th>Status</th></tr>
+  <div class="card" style="margin-top:14px"><h2>${t("Portfólio de ações")}</h2>
+    <table>${th(["ID", "Ação", "Item", "Responsável", "Prazo", "Gap (por que não foi prevista)", "Status"])}
     ${(p.actions || []).map((a) => `<tr><td>${a.id}</td><td>${esc(a.text)}</td><td>${a.item_id ? `<a href="#lista/${a.item_id}">${a.item_id}</a>` : ""}</td><td>${esc(a.owner)}</td><td>${esc(a.due)}</td><td>${esc(a.gap_reason)}</td>
-      <td><select onchange="api('projects/${p.id}/actions','POST',{id:'${a.id}',status:this.value}).then(refresh)">${opts(["Aberta", "Em andamento", "Concluída"], a.status)}</select></td></tr>`).join("") || '<tr><td colspan=7 class="muted">Sem ações.</td></tr>'}</table>
-    <div class="row"><div><label>Nova ação</label><input id="pa-text"></div><div><label>Responsável</label><input id="pa-owner"></div><div><label>Prazo</label><input type="date" id="pa-due"></div><div><label>Gap</label><input id="pa-gap"></div></div>
-    <div class="actions"><button class="small" onclick="busy(this, async()=>{await api('projects/${p.id}/actions','POST',{text:$('#pa-text').value,owner:$('#pa-owner').value,due:$('#pa-due').value,gap_reason:$('#pa-gap').value}); await refresh();})">Adicionar ação</button></div>
-    <h3>Itens da lista geral vinculados</h3>${items.map((i) => `<div><a href="#lista/${i.id}">${i.id}</a> ${esc(i.title)} ${prio(i.priority)} <span class="muted">${esc(i.status)}</span></div>`).join("") || '<p class="muted">—</p>'}
-    <h3>Histórico</h3><ul class="tl">${(p.history || []).slice().reverse().map((h) => `<li><span class="muted">${fmt(h.date)}</span> ${esc(h.text)}</li>`).join("") || '<li class="muted">—</li>'}</ul></div>`;
+      <td><select onchange="api('projects/${p.id}/actions','POST',{id:'${a.id}',status:this.value}).then(refresh)">${opts(["Aberta", "Em andamento", "Concluída"], a.status)}</select></td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Sem ações.")}</td></tr>`}</table>
+    <div class="row"><div>${L("Nova ação")}<input id="pa-text"></div><div>${L("Responsável")}<input id="pa-owner"></div><div>${L("Prazo")}<input type="date" id="pa-due"></div><div>${L("Gap")}<input id="pa-gap"></div></div>
+    <div class="actions"><button class="small" onclick="busy(this, async()=>{await api('projects/${p.id}/actions','POST',{text:$('#pa-text').value,owner:$('#pa-owner').value,due:$('#pa-due').value,gap_reason:$('#pa-gap').value}); await refresh();})">${t("Adicionar ação")}</button></div>
+    <h3>${t("Itens da lista geral vinculados")}</h3>${items.map((i) => `<div><a href="#lista/${i.id}">${i.id}</a> ${esc(i.title)} ${prio(i.priority)} <span class="muted">${esc(tv(i.status))}</span></div>`).join("") || '<p class="muted">—</p>'}
+    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((p.history || []).slice().reverse())}</ul></div>`;
 }
 function scheduleAnalysis(a) {
-  const list = (arr) => (arr || []).map((t) => `<li>${esc(typeof t === "string" ? t : `${t.task || t.name} — ${t.finish || ""} ${t.progress != null ? "(" + t.progress + "%)" : ""} ${t.status || ""}`)}</li>`).join("");
-  return `<div class="ai-box" style="white-space:normal"><b>Análise (${esc(a.engine)})</b><p>${esc(a.overview)}</p>
-    ${a.phases?.length ? `<b>Fases / marcos</b><ul>${list(a.phases)}</ul>` : ""}${a.late?.length ? `<b>Atrasadas</b><ul>${list(a.late)}</ul>` : ""}
-    ${a.upcoming?.length ? `<b>Próximas entregas</b><ul>${list(a.upcoming)}</ul>` : ""}${a.critical_points?.length ? `<b>Pontos críticos</b><ul>${list(a.critical_points)}</ul>` : ""}
-    ${a.suggested_actions?.length ? `<b>Ações sugeridas</b><ul>${list(a.suggested_actions)}</ul>` : ""}</div>`;
+  const list = (arr) => (arr || []).map((x) => `<li>${esc(typeof x === "string" ? x : `${x.task || x.name} — ${x.finish || ""} ${x.progress != null ? "(" + x.progress + "%)" : ""} ${x.status || ""}`)}</li>`).join("");
+  const sec = (key, title) => (a[key]?.length ? `<b>${t(title)}</b><ul>${list(a[key])}</ul>` : "");
+  return `<div class="ai-box" style="white-space:normal"><b>${t("Análise")} (${esc(tv(a.engine))})</b><p>${esc(a.msg ? msg(a) : a.overview)}</p>
+    ${sec("phases", "Fases / marcos")}${sec("late", "Atrasadas")}${sec("upcoming", "Próximas entregas")}${sec("critical_points", "Pontos críticos")}${sec("suggested_actions", "Ações sugeridas")}</div>`;
 }
 
 // ------------------------------------------------------------------ reuniões
 function viewReunioes(id) {
   if (id) return meetingDetail(byId("meetings", id));
   const pre = window._newMeetingProject || ""; window._newMeetingProject = "";
-  return `<h1>Gerenciamento de reuniões</h1>
+  return `<h1>${t("Gerenciamento de reuniões")}</h1>
   <div class="grid" style="grid-template-columns: minmax(300px,1fr) minmax(300px,1.3fr)">
-  <div class="card"><table><tr><th>ID</th><th>Reunião</th><th>Data</th><th>Itens</th></tr>
-  ${S.db.meetings.slice().reverse().map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(m.title)}</td><td>${esc(m.date)}</td><td>${(m.links.items || []).length + (m.links.inputs || []).length}</td></tr>`).join("") || '<tr><td colspan=4 class="muted">Nenhuma reunião.</td></tr>'}
+  <div class="card"><table>${th(["ID", "Reunião", "Data", "Itens"])}
+  ${S.db.meetings.slice().reverse().map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(m.title)}</td><td>${esc(m.date)}</td><td>${(m.links.items || []).length + (m.links.inputs || []).length}</td></tr>`).join("") || `<tr><td colspan=4 class="muted">${t("Nenhuma reunião.")}</td></tr>`}
   </table></div>
-  <div class="card"><h2>Nova ata / anotação</h2>
-    <div class="row"><div><label>Título</label><input id="m-title"></div><div><label>Data</label><input type="date" id="m-date" value="${S.today}"></div></div>
-    <div class="row"><div><label>Participantes</label><input id="m-part"></div><div><label>Departamentos</label><input id="m-dept"></div>
-      <div><label>Projeto (acompanhamento)</label><select id="m-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}" ${p.id === pre ? "selected" : ""}>${p.id} · ${esc(p.name)}</option>`).join("")}</select></div></div>
-    <label>Ata</label><textarea id="m-min" style="min-height:140px" placeholder="Cole a ata. Dica: linhas como 'Ação: ... resp: Nome 2026-10-20' e 'Decisão: ...' ajudam a extração."></textarea>
-    <label>Anotações pessoais</label><textarea id="m-notes"></textarea>
-    <div class="actions"><button onclick="busy(this, saveMeeting)">Salvar e extrair demandas com IA</button></div></div></div>`;
+  <div class="card"><h2>${t("Nova ata / anotação")}</h2>
+    <div class="row"><div>${L("Título")}<input id="m-title"></div><div>${L("Data")}<input type="date" id="m-date" value="${S.today}"></div></div>
+    <div class="row"><div>${L("Participantes")}<input id="m-part"></div><div>${L("Departamentos")}<input id="m-dept"></div>
+      <div>${L("Projeto (acompanhamento)")}<select id="m-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}" ${p.id === pre ? "selected" : ""}>${p.id} · ${esc(p.name)}</option>`).join("")}</select></div></div>
+    ${L("Ata")}<textarea id="m-min" style="min-height:140px" placeholder="${esc(t("MINUTES_HINT"))}"></textarea>
+    ${L("Anotações pessoais")}<textarea id="m-notes"></textarea>
+    <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>`;
 }
 async function saveMeeting() {
-  const r = await api("meetings", "POST", { title: $("#m-title").value || "Reunião", date: $("#m-date").value, participants: $("#m-part").value,
+  const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, participants: $("#m-part").value,
     departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value });
   await api(`meetings/${r.id}/extract`, "POST");
   await refresh(); location.hash = "reunioes/" + r.id;
 }
 function meetingDetail(m) {
-  if (!m) return "<p>Reunião não encontrada.</p>";
+  if (!m) return `<p>${t("Reunião não encontrada.")}</p>`;
   const ex = m.extraction;
   window._demands = ex?.demands || [];
-  return `<p><a href="#reunioes">← Reuniões</a></p><h1>${m.id} · ${esc(m.title)}</h1><p class="muted">${esc(m.date)} · ${esc(m.participants)} ${m.departments ? "· " + esc(m.departments) : ""}</p>
+  return `<p><a href="#reunioes">← ${t("Reuniões")}</a></p><h1>${m.id} · ${esc(m.title)}</h1><p class="muted">${esc(m.date)} · ${esc(m.participants)} ${m.departments ? "· " + esc(m.departments) : ""}</p>
   <div class="grid">
-  <div class="card"><h2>Ata</h2><textarea id="md-min" style="min-height:200px">${esc(m.minutes)}</textarea><label>Anotações</label><textarea id="md-notes">${esc(m.notes)}</textarea>
-    <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{minutes:$('#md-min').value,notes:$('#md-notes').value}); await api('meetings/${m.id}/extract','POST'); await refresh();})">Salvar e reprocessar</button></div>
-    <label>Anexos</label><div class="toolbar"><input type="file" id="md-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('meetings/${m.id}/upload', $('#md-file')); toast('Anexado'); await refresh();})">Upload</button></div>
-    <label>Vínculos</label><div>${linksHtml(m)}</div></div>
-  <div class="card"><h2>Extração (${esc(ex?.engine || "—")})</h2>${ex?.hint ? `<p class="muted">${esc(ex.hint)}</p>` : ""}
+  <div class="card"><h2>${t("Ata")}</h2><textarea id="md-min" style="min-height:200px">${esc(m.minutes)}</textarea>${L("Anotações")}<textarea id="md-notes">${esc(m.notes)}</textarea>
+    <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{minutes:$('#md-min').value,notes:$('#md-notes').value}); await api('meetings/${m.id}/extract','POST'); await refresh();})">${t("Salvar e reprocessar")}</button></div>
+    ${L("Anexos")}<div class="toolbar"><input type="file" id="md-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('meetings/${m.id}/upload', $('#md-file')); toast(t('Anexado')); await refresh();})">${t("Upload")}</button></div>
+    ${L("Vínculos")}<div>${linksHtml(m)}</div></div>
+  <div class="card"><h2>${t("Extração")} (${esc(tv(ex?.engine) || "—")})</h2>${ex?.hint ? `<p class="muted">${esc(t(ex.hint))}</p>` : ""}
     ${ex?.summary ? `<div class="ai-box">${esc(ex.summary)}</div>` : ""}
-    <h3>Decisões</h3><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || '<li class="muted">—</li>'}</ul>
-    <h3>Demandas identificadas → Inputs management</h3>
-    ${(ex?.demands || []).map((d, k) => `<div class="alert" style="border:1px solid var(--line)"><b>${esc(d.title)}</b> ${d.related_item ? pill("rel. " + d.related_item) : ""}<br><span class="muted">${esc(d.owner)} ${esc(d.due_date)}</span> ${esc(d.description)}
-      <div class="actions" style="margin-top:6px"><button class="small" onclick="busy(this, ()=>demandToInput('${m.id}', ${k}))">Enviar para entradas</button></div></div>`).join("") || '<p class="muted">Nenhuma demanda extraída.</p>'}
+    <h3>${t("Decisões")}</h3><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || '<li class="muted">—</li>'}</ul>
+    <h3>${t("Demandas identificadas → Inputs management")}</h3>
+    ${(ex?.demands || []).map((d, k) => `<div class="alert" style="border:1px solid var(--line)"><b>${esc(d.title)}</b> ${d.related_item ? pill(t("rel.") + " " + d.related_item) : ""}<br><span class="muted">${esc(d.owner)} ${esc(d.due_date)}</span> ${esc(d.description)}
+      <div class="actions" style="margin-top:6px"><button class="small" onclick="busy(this, ()=>demandToInput('${m.id}', ${k}))">${t("Enviar para entradas")}</button></div></div>`).join("") || `<p class="muted">${t("Nenhuma demanda extraída.")}</p>`}
   </div></div>`;
 }
 async function demandToInput(mid, k) {
@@ -1498,42 +1966,44 @@ async function demandToInput(mid, k) {
 // ------------------------------------------------------------------ riscos
 function viewRiscos(id) {
   if (id) return riskDetail(byId("risks", id));
-  return `<h1>Gerenciamento de riscos</h1>
+  return `<h1>${t("Gerenciamento de riscos")}</h1>
   <div class="grid" style="grid-template-columns: minmax(300px,2fr) minmax(260px,1fr)">
-  <div class="card"><table><tr><th>ID</th><th>Risco</th><th>Modo</th><th>Prob.</th><th>Impacto</th><th>Responsável</th><th>Status</th></tr>
-  ${S.db.risks.map((r) => `<tr class="click" onclick="location.hash='riscos/${r.id}'"><td>${r.id}</td><td>${esc(r.title)}</td><td>${esc(r.mode)}</td><td>${prio(r.probability)}</td><td>${pill(r.impact, "p-" + r.impact)}</td><td>${esc(r.owner)}</td><td>${esc(r.status)}</td></tr>`).join("") || '<tr><td colspan=7 class="muted">Nenhum risco.</td></tr>'}
+  <div class="card"><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto", "Responsável", "Status"])}
+  ${S.db.risks.map((r) => `<tr class="click" onclick="location.hash='riscos/${r.id}'"><td>${r.id}</td><td>${esc(r.title)}</td><td>${esc(tv(r.mode))}</td><td>${prio(r.probability)}</td><td>${pill(tv(r.impact), "p-" + r.impact)}</td><td>${esc(r.owner)}</td><td>${esc(tv(r.status))}</td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Nenhum risco.")}</td></tr>`}
   </table></div>
-  <div class="card"><h2>Novo risco</h2><p class="muted">Normalmente nasce pela definição de uma entrada; aqui é o cadastro direto.</p><label>Título</label><input id="r-title"><label>Descrição</label><textarea id="r-desc"></textarea>
-    <div class="row"><div><label>Modo</label><select id="r-mode">${opts(["Monitorar", "Investigar"])}</select></div><div><label>Responsável</label><input id="r-owner"></div></div>
-    <div class="actions"><button onclick="busy(this, async()=>{const r=await api('risks','POST',{title:$('#r-title').value,description:$('#r-desc').value,mode:$('#r-mode').value,owner:$('#r-owner').value}); await refresh(); location.hash='riscos/'+r.id;})">Criar risco e pasta</button></div></div></div>`;
+  <div class="card"><h2>${t("Novo risco")}</h2><p class="muted">${t("Normalmente nasce pela definição de uma entrada; aqui é o cadastro direto.")}</p>${L("Título")}<input id="r-title">${L("Descrição")}<textarea id="r-desc"></textarea>
+    <div class="row"><div>${L("Modo")}<select id="r-mode">${opts(["Monitorar", "Investigar"])}</select></div><div>${L("Responsável")}<input id="r-owner"></div></div>
+    <div class="actions"><button onclick="busy(this, async()=>{const r=await api('risks','POST',{title:$('#r-title').value,description:$('#r-desc').value,mode:$('#r-mode').value,owner:$('#r-owner').value}); await refresh(); location.hash='riscos/'+r.id;})">${t("Criar risco e pasta")}</button></div></div></div>`;
 }
 function riskDetail(r) {
-  if (!r) return "<p>Risco não encontrado.</p>";
+  if (!r) return `<p>${t("Risco não encontrado.")}</p>`;
   const a = r.analysis;
-  setTimeout(() => api(`risks/${r.id}/files`).then((fs) => { const el = $("#rk-files"); if (el) el.innerHTML = fs.map((f) => `<li>${fileLink(f.rel, f.name)} <span class="muted">${fmt(f.modified)}</span></li>`).join("") || "<li class='muted'>Pasta vazia</li>"; }), 0);
-  return `<p><a href="#riscos">← Riscos</a></p><h1>${r.id} · ${esc(r.title)}</h1><p class="muted">Pasta: <code>${esc(S.workspace)}/${esc(r.folder)}</code></p>
+  setTimeout(() => api(`risks/${r.id}/files`).then((fs) => { const el = $("#rk-files"); if (el) el.innerHTML = fs.map((f) => `<li>${fileLink(f.rel, f.name)} <span class="muted">${fmt(f.modified)}</span></li>`).join("") || `<li class="muted">${t("Pasta vazia")}</li>`; }), 0);
+  const sections = { causes: "Causas", consequences: "Consequências", mitigations: "Mitigações", report_points: "Pontos para reporte" };
+  return `<p><a href="#riscos">← ${t("Riscos")}</a></p><h1>${r.id} · ${esc(r.title)}</h1><p class="muted">${t("Pasta:")} <code>${esc(S.workspace)}/${esc(r.folder)}</code></p>
   <div class="grid"><div class="card">
-    <div class="row"><div><label>Modo</label><select id="rd-mode">${opts(["Monitorar", "Investigar"], r.mode)}</select></div><div><label>Probabilidade</label><select id="rd-prob">${opts(["Alta", "Média", "Baixa"], r.probability)}</select></div>
-      <div><label>Impacto</label><select id="rd-imp">${opts(["Alto", "Médio", "Baixo"], r.impact)}</select></div><div><label>Status</label><select id="rd-status">${opts(["Aberto", "Em tratamento", "Fechado"], r.status)}</select></div></div>
-    <label>Descrição</label><textarea id="rd-desc">${esc(r.description)}</textarea><label>Notas / informações</label><textarea id="rd-notes">${esc(r.notes)}</textarea>
-    <div class="actions"><button onclick="busy(this, async()=>{await api('risks/${r.id}','PATCH',{mode:$('#rd-mode').value,probability:$('#rd-prob').value,impact:$('#rd-imp').value,status:$('#rd-status').value,description:$('#rd-desc').value,notes:$('#rd-notes').value}); toast('Risco atualizado'); await refresh();})">Salvar</button></div>
-    <label>Vínculos</label><div>${linksHtml(r)}</div>${linkForm("risks", r.id)}</div>
-  <div class="card"><h2>Documentos da pasta</h2><div class="toolbar"><input type="file" id="rd-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('risks/${r.id}/upload', $('#rd-file')); await refresh();})">Upload</button></div>
-    <ul id="rk-files" class="files"><li class="muted">carregando…</li></ul>
-    <div class="actions"><button onclick="busy(this, async()=>{await api('risks/${r.id}/analyze','POST'); await refresh();})">Compilar e analisar com IA</button></div>
-    ${a ? `<div class="ai-box" style="white-space:normal"><b>Análise (${esc(a.engine)}) — confirme antes de reportar</b><p>${esc(a.summary)}</p><p>Probabilidade: ${esc(a.probability)} · Impacto: ${esc(a.impact)}</p>
-      ${["causes", "consequences", "mitigations", "report_points"].map((k) => a[k]?.length ? `<b>${{ causes: "Causas", consequences: "Consequências", mitigations: "Mitigações", report_points: "Pontos para reporte" }[k]}</b><ul>${a[k].map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "").join("")}</div>` : ""}
+    <div class="row"><div>${L("Modo")}<select id="rd-mode">${opts(["Monitorar", "Investigar"], r.mode)}</select></div><div>${L("Probabilidade")}<select id="rd-prob">${opts(LEVELS, r.probability)}</select></div>
+      <div>${L("Impacto")}<select id="rd-imp">${opts(["Alto", "Médio", "Baixo"], r.impact)}</select></div><div>${L("Status")}<select id="rd-status">${opts(["Aberto", "Em tratamento", "Fechado"], r.status)}</select></div></div>
+    ${L("Descrição")}<textarea id="rd-desc">${esc(r.description)}</textarea>${L("Notas / informações")}<textarea id="rd-notes">${esc(r.notes)}</textarea>
+    <div class="actions"><button onclick="busy(this, async()=>{await api('risks/${r.id}','PATCH',{mode:$('#rd-mode').value,probability:$('#rd-prob').value,impact:$('#rd-imp').value,status:$('#rd-status').value,description:$('#rd-desc').value,notes:$('#rd-notes').value}); toast(t('Risco atualizado')); await refresh();})">${t("Salvar")}</button></div>
+    ${L("Vínculos")}<div>${linksHtml(r)}</div>${linkForm("risks", r.id)}
+    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((r.history || []).slice().reverse())}</ul></div>
+  <div class="card"><h2>${t("Documentos da pasta")}</h2><div class="toolbar"><input type="file" id="rd-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('risks/${r.id}/upload', $('#rd-file')); await refresh();})">${t("Upload")}</button></div>
+    <ul id="rk-files" class="files"><li class="muted">${t("carregando…")}</li></ul>
+    <div class="actions"><button onclick="busy(this, async()=>{await api('risks/${r.id}/analyze','POST'); await refresh();})">${t("Compilar e analisar com IA")}</button></div>
+    ${a ? `<div class="ai-box" style="white-space:normal"><b>${t("Análise")} (${esc(tv(a.engine))}) — ${t("confirme antes de reportar")}</b><p>${esc(a.msg ? msg(a) : a.summary)}</p><p>${t("Probabilidade")}: ${esc(tv(a.probability))} · ${t("Impacto")}: ${esc(tv(a.impact))}</p>
+      ${Object.entries(sections).map(([k, title]) => (a[k]?.length ? `<b>${t(title)}</b><ul>${a[k].map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "")).join("")}</div>` : ""}
   </div></div>`;
 }
 
 // ------------------------------------------------------------------ summaries
 let LAST_SUMMARY = null;
 function viewSummaries() {
-  return `<h1>Summaries</h1>
-  <div class="toolbar no-print"><select id="s-type"><option value="daily">Diário</option><option value="weekly">Semanal</option></select><input type="date" id="s-date" value="${S.today}">
-    <button onclick="busy(this, genSummary)">Gerar summary</button><button class="ghost" onclick="window.print()">Imprimir / PDF</button></div>
-  <div id="s-out">${LAST_SUMMARY ? summaryDoc(LAST_SUMMARY) : '<p class="muted">Escolha o tipo e a data. O summary também é salvo como HTML na pasta local SUMMARIES.</p>'}</div>
-  <div class="card no-print" style="margin-top:14px"><h2>Gerados anteriormente</h2><ul>${S.summaries.slice().reverse().map((s) => `<li>${fileLink(s.file, s.file)} <span class="muted">${fmt(s.generated_at)}</span></li>`).join("") || '<li class="muted">—</li>'}</ul></div>`;
+  return `<h1>${t("Summaries")}</h1>
+  <div class="toolbar no-print"><select id="s-type"><option value="daily">${t("Diário")}</option><option value="weekly">${t("Semanal")}</option></select><input type="date" id="s-date" value="${S.today}">
+    <button onclick="busy(this, genSummary)">${t("Gerar summary")}</button><button class="ghost" onclick="window.print()">${t("Imprimir / PDF")}</button></div>
+  <div id="s-out">${LAST_SUMMARY ? summaryDoc(LAST_SUMMARY) : `<p class="muted">${t("Escolha o tipo e a data. O summary também é salvo como HTML na pasta local SUMMARIES.")}</p>`}</div>
+  <div class="card no-print" style="margin-top:14px"><h2>${t("Gerados anteriormente")}</h2><ul>${S.summaries.slice().reverse().map((s) => `<li>${fileLink(s.file, s.file)} <span class="muted">${fmt(s.generated_at)}</span></li>`).join("") || '<li class="muted">—</li>'}</ul></div>`;
 }
 async function genSummary() {
   LAST_SUMMARY = await api("summary", "POST", { type: $("#s-type").value, date: $("#s-date").value });
@@ -1541,81 +2011,78 @@ async function genSummary() {
 }
 function summaryDoc({ summary: s, narrative }) {
   const k = s.kpis;
-  const tbl = (rows, cols, heads) => `<table><tr>${heads.map((h) => `<th>${h}</th>`).join("")}</tr>${rows.map((r) => `<tr>${cols.map((c) => `<td>${c === "priority" ? prio(r[c]) : esc(r[c])}</td>`).join("")}</tr>`).join("") || `<tr><td colspan=${cols.length} class="muted">—</td></tr>`}</table>`;
-  return `<div class="summary-doc"><h1>${esc(s.type)}</h1><p class="muted">Período ${esc(s.period.start)}${s.period.end !== s.period.start ? " a " + esc(s.period.end) : ""} · gerado ${fmt(s.generated_at)}</p>
-  <h2>1. Destaques</h2><div class="ai-box">${esc(narrative)}</div>
-  <h2>2. Indicadores</h2><div class="kpis">${[["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Em aberto", k.open_items], ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]].map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${n}</span></div>`).join("")}</div>
-  <h2>3. Novas demandas por origem</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(src)} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || '<p class="muted">Nenhuma nova demanda.</p>'}
-  <h2>4. Itens críticos (alta prioridade)</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
-  <h2>5. Prazos — vencidos e próximos 7 dias</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
-  <h2>6. Projetos</h2>${tbl(s.projects, ["id", "name", "status", "open_actions", "last_monitored", "next_meeting"], ["ID", "Projeto", "Status", "Ações abertas", "Últ. monitoramento", "Próx. reunião"])}
-  <h2>7. Riscos</h2>${tbl(s.risks, ["id", "title", "mode", "probability", "impact"], ["ID", "Risco", "Modo", "Prob.", "Impacto"])}
-  <h2>8. Reuniões e decisões</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)})</p><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || '<li class="muted">Sem decisões registradas</li>'}</ul>`).join("") || '<p class="muted">Nenhuma reunião no período.</p>'}
-  <h2>9. Infos a reportar</h2>${tbl(s.report_items, ["id", "title", "owner", "status"], ["ID", "Item", "Responsável", "Status"])}
-  <h2>10. Alertas</h2><ul>${s.alerts.map((a) => `<li>${esc(a.text)}</li>`).join("") || '<li class="muted">—</li>'}</ul>
-  <h2>11. Linha do tempo</h2><ul class="tl">${s.activity.map((e) => `<li><span class="muted">${fmt(e.ts)}</span> ${esc(e.text)}</li>`).join("") || '<li class="muted">—</li>'}</ul></div>`;
+  const tbl = (rows, cols, heads) => `<table>${th(heads)}${rows.map((r) => `<tr>${cols.map((c) => `<td>${c === "priority" ? prio(r[c]) : ["status", "mode", "probability", "impact"].includes(c) ? esc(tv(r[c])) : esc(r[c])}</td>`).join("")}</tr>`).join("") || `<tr><td colspan=${cols.length} class="muted">—</td></tr>`}</table>`;
+  const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Em aberto", k.open_items], ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
+  return `<div class="summary-doc"><h1>${esc(t(s.type))}</h1><p class="muted">${t("Período")} ${esc(s.period.start)}${s.period.end !== s.period.start ? " – " + esc(s.period.end) : ""} · ${t("gerado")} ${fmt(s.generated_at)}</p>
+  <h2>1. ${t("Destaques")}</h2><div class="ai-box">${esc(narrative)}</div>
+  <h2>2. ${t("Indicadores")}</h2><div class="kpis">${kp.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${t(n)}</span></div>`).join("")}</div>
+  <h2>3. ${t("Novas demandas por origem")}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(tv(src))} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || `<p class="muted">${t("Nenhuma nova demanda.")}</p>`}
+  <h2>4. ${t("Itens críticos (alta prioridade)")}</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
+  <h2>5. ${t("Prazos — vencidos e próximos 7 dias")}</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
+  <h2>6. ${t("Projetos")}</h2>${tbl(s.projects, ["id", "name", "status", "open_actions", "last_monitored", "next_meeting"], ["ID", "Projeto", "Status", "Ações abertas", "Últ. monitoramento", "Próx. reunião"])}
+  <h2>7. ${t("Riscos")}</h2>${tbl(s.risks, ["id", "title", "mode", "probability", "impact"], ["ID", "Risco", "Modo", "Prob.", "Impacto"])}
+  <h2>8. ${t("Reuniões e decisões")}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)})</p><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || `<li class="muted">${t("Sem decisões registradas")}</li>`}</ul>`).join("") || `<p class="muted">${t("Nenhuma reunião no período.")}</p>`}
+  <h2>9. ${t("Infos a reportar")}</h2>${tbl(s.report_items, ["id", "title", "owner", "status"], ["ID", "Item", "Responsável", "Status"])}
+  <h2>10. ${t("Alertas")}</h2><ul>${s.alerts.map((a) => `<li>${esc(msg(a))}</li>`).join("") || '<li class="muted">—</li>'}</ul>
+  <h2>11. ${t("Linha do tempo")}</h2><ul class="tl">${timeline(s.activity)}</ul></div>`;
 }
 
 // ------------------------------------------------------------------ config
 function viewConfig() {
   const st = S.db.settings;
-  return `<h1>Configurações</h1>
+  return `<h1>${t("Configurações")}</h1>
   <div class="grid">
-  <div class="card"><h2>IA (Claude)</h2>
-    <p class="muted">Sem chave, a plataforma usa sugestões heurísticas locais. A chave fica guardada só neste navegador (não vai para a pasta).</p>
-    <label>Chave da API da Anthropic</label><input id="c-key" type="password" placeholder="sk-ant-..." value="${esc(AI.key)}">
-    <label>Modelo</label><input id="c-model" value="${esc(AI.model)}">
-    <div class="actions"><button onclick="busy(this, saveAi)">Salvar e testar</button>
-      <span class="muted">${S.ai.enabled ? "IA ativa — " + esc(S.ai.model) : "IA offline"}</span></div></div>
-  <div class="card"><h2>Pasta de trabalho</h2>
-    <p>Pasta atual: <code>${esc(S.workspace)}</code></p>
-    <p class="muted">É nesta pasta do computador que ficam o <code>db.json</code>, as master schedules (PROJECTS), os riscos (RISKS) e os summaries (SUMMARIES).</p>
-    <div class="actions"><button class="ghost" onclick="busy(this, changeFolder)">Trocar de pasta</button></div></div>
+  <div class="card"><h2>${t("IA (Claude)")}</h2>
+    <p class="muted">${t("Sem chave, a plataforma usa sugestões heurísticas locais. A chave fica guardada só neste navegador (não vai para a pasta).")}</p>
+    ${L("Chave da API da Anthropic")}<input id="c-key" type="password" placeholder="sk-ant-..." value="${esc(AI.key)}">
+    ${L("Modelo")}<input id="c-model" value="${esc(AI.model)}">
+    <div class="actions"><button onclick="busy(this, saveAi)">${t("Salvar e testar")}</button>
+      <span class="muted">${S.ai.enabled ? t("IA ativa —") + " " + esc(S.ai.model) : t("IA offline")}</span></div></div>
+  <div class="card"><h2>${t("Pasta de trabalho")}</h2>
+    <p>${t("Pasta atual:")} <code>${esc(S.workspace)}</code></p>
+    <p class="muted">${t("FOLDER_HELP")}</p>
+    <div class="actions"><button class="ghost" onclick="busy(this, changeFolder)">${t("Trocar de pasta")}</button></div></div>
   </div>
-  <div class="card" style="margin-top:14px"><h2>Regras</h2>
-  <div class="row"><div><label>Alerta: dias sem atualização</label><input type="number" id="c-days" value="${st.alert_days_without_update}"></div>
-    <div><label>Cadência de reunião de projeto (dias)</label><input type="number" id="c-cad" value="${st.project_meeting_cadence_days}"></div>
-    <div><label>Nº de vínculos para sugerir projeto</label><input type="number" id="c-links" value="${st.links_for_project_alert}"></div></div>
-  <label>Áreas (separadas por vírgula)</label><input id="c-areas" value="${esc((st.areas || []).join(", "))}">
-  <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{alert_days_without_update:+$('#c-days').value,project_meeting_cadence_days:+$('#c-cad').value,links_for_project_alert:+$('#c-links').value,areas:$('#c-areas').value.split(',').map(s=>s.trim()).filter(Boolean)}); toast('Salvo'); await refresh();})">Salvar</button></div></div>`;
+  <div class="card" style="margin-top:14px"><h2>${t("Regras")}</h2>
+  <div class="row"><div>${L("Alerta: dias sem atualização")}<input type="number" id="c-days" value="${st.alert_days_without_update}"></div>
+    <div>${L("Cadência de reunião de projeto (dias)")}<input type="number" id="c-cad" value="${st.project_meeting_cadence_days}"></div>
+    <div>${L("Nº de vínculos para sugerir projeto")}<input type="number" id="c-links" value="${st.links_for_project_alert}"></div></div>
+  ${L("Áreas (separadas por vírgula)")}<input id="c-areas" value="${esc((st.areas || []).join(", "))}">
+  <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{alert_days_without_update:+$('#c-days').value,project_meeting_cadence_days:+$('#c-cad').value,links_for_project_alert:+$('#c-links').value,areas:$('#c-areas').value.split(',').map(s=>s.trim()).filter(Boolean)}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>`;
 }
 async function saveAi() {
   await AI.configure($("#c-key").value, $("#c-model").value);
   if (AI.enabled()) {
-    try { await AI.call("Responda apenas: OK", null, "low", 200); toast("IA conectada: " + AI.model); }
-    catch (e) { toast("Chave salva, mas o teste falhou: " + e.message); }
-  } else toast("IA desativada (sem chave)");
+    try { await AI.call("OK?", null, "low", 200); toast(t("IA conectada:") + " " + AI.model); }
+    catch (e) { toast(t("Chave salva, mas o teste falhou:") + " " + t(e.message)); }
+  } else toast(t("IA desativada (sem chave)"));
   await refresh();
 }
 async function changeFolder() {
   await Store.pick();
   await Core.load();
   await refresh();
-  toast("Pasta: " + Store.name);
+  toast(t("Pasta:") + " " + Store.name);
 }
 
 // ------------------------------------------------------------------ inicialização (escolha da pasta)
 function welcome(remembered) {
   document.querySelectorAll("nav a").forEach((a) => a.classList.remove("active"));
   const ok = Store.supported();
+  const fromZip = /\/(temp|tmp)\//i.test(decodeURI(location.href));
   $("#view").innerHTML = `<div class="card" style="max-width:640px;margin:40px auto">
-    <h1>Plataforma de Governança</h1>
-    ${/\/(temp|tmp)\//i.test(decodeURI(location.href)) ? `<div class="alert lv-media">Parece que você abriu este arquivo <b>de dentro do .zip</b>.
-      Funciona, mas o Windows apaga essa cópia temporária depois. Para usar sempre, clique com o botão direito no .zip →
-      <b>Extrair tudo…</b> e abra o <code>index.html</code> da pasta extraída.</div>` : ""}
-    ${ok ? `<p>Escolha a <b>pasta do seu computador</b> onde a plataforma vai guardar a base de dados, as master schedules,
-      os documentos de riscos e os summaries. Pode ser uma pasta nova e vazia, ou uma pasta do OneDrive/SharePoint sincronizada.</p>
-      <p class="muted">O navegador vai pedir permissão para "ver e editar arquivos" dessa pasta. Sempre que você reabrir a plataforma,
-      basta clicar em "Continuar" para liberar o acesso de novo.</p>
-      <div class="actions">${remembered ? `<button onclick="busy(this, ()=>reconnect())">Continuar com a pasta "${esc(remembered.name)}"</button>` : ""}
-        <button class="${remembered ? "ghost" : ""}" onclick="busy(this, startWithNewFolder)">${remembered ? "Escolher outra pasta" : "Escolher pasta de trabalho"}</button></div>`
-      : `<p><b>Este navegador não permite acessar pastas do computador.</b></p><p>Abra este arquivo no <b>Microsoft Edge</b> ou no <b>Google Chrome</b>.</p>`}
+    <h1>${t("Plataforma de Governança")}</h1>
+    ${fromZip ? `<div class="alert lv-media">${t("ZIP_WARNING")}</div>` : ""}
+    ${ok ? `<p>${t("WELCOME_1")}</p><p class="muted">${t("WELCOME_2")}</p>
+      <div class="actions">${remembered ? `<button onclick="busy(this, ()=>reconnect())">${esc(t("Continuar com a pasta \"{name}\"", { name: remembered.name }))}</button>` : ""}
+        <button class="${remembered ? "ghost" : ""}" onclick="busy(this, startWithNewFolder)">${t(remembered ? "Escolher outra pasta" : "Escolher pasta de trabalho")}</button></div>`
+      : `<p><b>${t("Este navegador não permite acessar pastas do computador.")}</b></p><p>${t("Abra este arquivo no Microsoft Edge ou no Google Chrome.")}</p>`}
   </div>`;
 }
 async function startWithNewFolder() { await Store.pick(); await boot(); }
 async function reconnect() {
   const h = await Store.remembered();
-  if (!h || !(await Store.requestPermission(h))) throw new Error("Permissão negada para a pasta.");
+  if (!h || !(await Store.requestPermission(h))) throw new Error(t("Permissão negada para a pasta."));
   await Store.use(h);
   await boot();
 }
@@ -1625,12 +2092,14 @@ async function boot() {
 }
 (async () => {
   try {
+    await I18N.init();
+    applyStaticTexts();
     await AI.init();
     const h = await Store.remembered();
     if (h && (await Store.hasPermission(h).catch(() => false))) { await Store.use(h); return boot(); }
     welcome(h);
   } catch (e) {
-    $("#view").innerHTML = `<p>Não foi possível iniciar: ${esc(e.message)}</p>`;
+    $("#view").innerHTML = `<p>${esc(t("Não foi possível iniciar:"))} ${esc(e.message)}</p>`;
   }
 })();
 </script>

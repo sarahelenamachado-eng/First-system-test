@@ -21,15 +21,16 @@ const AI = {
     acao_geral: "Ação geral",
   },
 
-  SYSTEM_PROMPT: `Você é o assistente de governança corporativa de uma diretoria.
+  get SYSTEM_PROMPT() { return `Você é o assistente de governança corporativa de uma diretoria.
 Você recebe demandas vindas da diretora, de reuniões, de departamentos ou do HQ e ajuda a fazer o
 "demand management": verificar relação com itens já levantados, classificar (escopo, prioridade,
 impactos) e sugerir a definição (risco, info a reportar, novo projeto, ação em projeto, ação geral).
 Use a lógica de Hoshin Kanri para alinhar demandas à estratégia: conecte cada demanda aos objetivos
 e projetos existentes, destaque desdobramentos e interfaces entre áreas, e aponte gaps (por que algo
-não foi previsto antes). Responda sempre em português do Brasil, de forma objetiva.
+não foi previsto antes). Responda sempre em ${I18N.aiLanguage()}, de forma objetiva (todos os textos livres
+do JSON também nesse idioma; os valores de enum ficam exatamente como definidos no schema).
 O usuário sempre confirma ou corrige suas sugestões; trate os exemplos de decisões anteriores como
-critério da organização e siga-os quando aplicáveis.`,
+critério da organização e siga-os quando aplicáveis.`; },
 
   async init() {
     this.key = (await KV.get("api_key").catch(() => "")) || "";
@@ -44,12 +45,12 @@ critério da organização e siga-os quando aplicáveis.`,
   enabled() { return !!this.key; },
   status() {
     return this.enabled() ? { enabled: true, model: this.model, detail: null }
-      : { enabled: false, model: null, detail: "sem chave do Claude (configure em Config.)" };
+      : { enabled: false, model: null, detail: "sem chave do Claude (configure em Config.)" };  // traduzido na exibição
   },
 
   /** Chama o Claude. Retorna objeto (se schema) ou texto. Lança Error em falha. */
   async call(content, schema = null, effort = "medium", maxTokens = 16000) {
-    if (!this.key) throw new Error("IA sem chave configurada");
+    if (!this.key) throw new Error(t("IA sem chave configurada"));
     const body = {
       model: this.model,
       max_tokens: maxTokens,
@@ -74,19 +75,19 @@ critério da organização e siga-os quando aplicáveis.`,
         body: JSON.stringify(body),
       });
     } catch (e) {
-      throw new Error("Sem conexão com a API do Claude (rede/proxy bloqueado?)");
+      throw new Error(t("Sem conexão com a API do Claude (rede/proxy bloqueado?)"));
     }
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
       const msg = data?.error?.message || r.statusText;
-      if (r.status === 401) throw new Error("Chave da IA inválida (401)");
-      if (r.status === 429) throw new Error("Limite de requisições atingido; tente novamente em instantes");
-      throw new Error(`Erro da API do Claude (${r.status}): ${msg}`);
+      if (r.status === 401) throw new Error(t("Chave da IA inválida (401)"));
+      if (r.status === 429) throw new Error(t("Limite de requisições atingido; tente novamente em instantes"));
+      throw new Error(t("Erro da API do Claude ({status}): {msg}", { status: r.status, msg }));
     }
-    if (data.stop_reason === "refusal") throw new Error("O modelo recusou a solicitação");
+    if (data.stop_reason === "refusal") throw new Error(t("O modelo recusou a solicitação"));
     const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
     if (!schema) return text;
-    try { return JSON.parse(text); } catch { throw new Error("Resposta da IA em formato inválido"); }
+    try { return JSON.parse(text); } catch { throw new Error(t("Resposta da IA em formato inválido")); }
   },
 
   // ---------------------------------------------------------------- utilidades de texto
@@ -165,19 +166,21 @@ critério da organização e siga-os quando aplicáveis.`,
     if (!defs.length) defs.push("acao_geral");
     const mode = related.length && related[0].score >= 0.55 ? "incluir_existente" : "novo";
     const out = {
-      related: related.map((r) => ({ id: r.id, relation: `similaridade ${r.score}` })),
+      related: related.map((r) => ({ id: r.id, relation: `${t("similaridade")} ${r.score}` })),
       relation_mode: mode,
       include_in: mode === "incluir_existente" ? related[0].id : "",
       relation_explanation: mode === "incluir_existente" ? "Relação direta (alta similaridade) com item on going."
         : related.length ? "Relacionado em impacto, mas não diretamente: criar item novo e vincular." : "Nenhum item relacionado encontrado.",
       scope: inp.title || "", scope_action: "", priority, urgency: priority, risk_reason: "", impacts, impact_details: "",
       definitions: defs, project_id: project, gap_analysis: "",
-      rationale: "Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores.",
+      rationale: t("Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores."),
     };
+    out.msg = ["Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores.", {}];
     if (learned.length) {
       const fin = learned[0].final || {};
       for (const k of ["priority", "urgency", "impacts", "definitions"]) if (fin[k] && (!Array.isArray(fin[k]) || fin[k].length)) out[k] = fin[k];
-      out.rationale += ` Baseado na decisão anterior em ${learned[0].ref}.`;
+      out.rationale += " " + t("Baseado na decisão anterior em {ref}.", { ref: learned[0].ref });
+      out.msg = ["HEUR_LEARNED", { ref: learned[0].ref }];
     }
     return out;
   },
@@ -214,7 +217,8 @@ critério da organização e siga-os quando aplicáveis.`,
       return out;
     } catch (e) {
       const out = { ...this.heuristicAssess(db, inp, related), engine: "heuristica" };
-      out.rationale += ` (Claude falhou: ${e.message})`;
+      out.rationale += ` (${t("Claude falhou:")} ${e.message})`;
+      delete out.msg;
       return out;
     }
   },
@@ -236,21 +240,22 @@ critério da organização e siga-os quando aplicáveis.`,
   async extractMeeting(db, m) {
     const text = `${m.minutes || ""}\n${m.notes || ""}`;
     if (!this.enabled()) {
-      const KW = /^(a[cç][aã]o|action|todo|pend[eê]ncia|demanda|tarefa)\s*[:\-]\s*/i;
+      const KW = /^(a[cç][aã]o|action|to-?do|task|pend[eê]ncia|demanda|tarefa|行动|待办|任务)\s*[:：\-]\s*/i;
       const demands = [];
       for (const line of text.split(/\r?\n/)) {
         const l = line.replace(/^[\s\-•*]+|[\s\-•*]+$/g, "");
         if (!KW.test(l)) continue;
         let title = l.replace(KW, "");
-        const owner = (l.match(/resp(?:ons[aá]vel)?\s*[:\-]\s*([^\d,;]+)/i) || [, ""])[1].trim();
+        const OWNER = /\s*(?:resp(?:ons[aá]vel)?|owner|负责人)\s*[:：\-]\s*/i;
+        const owner = (l.match(new RegExp(OWNER.source + "([^\\d,;，；]+)", "i")) || [, ""])[1].trim();
         const due = (l.match(/(\d{4}-\d{2}-\d{2})/) || [, ""])[1];
-        title = title.replace(/\s*resp(?:ons[aá]vel)?\s*[:\-].*$/i, "").trim() || title;
+        title = title.replace(new RegExp(OWNER.source + ".*$", "i"), "").trim() || title;
         const rel = this.relatedItems(db, title, 1, 0.4);
         demands.push({ title: title.slice(0, 120), description: l, owner, due_date: due, area_main: "", related_item: rel[0]?.id || "" });
       }
-      const decisions = text.split(/\r?\n/).filter((l) => /^\s*[-•*]?\s*decis/i.test(l)).map((l) => l.replace(/^[\s\-•*]+/, ""));
+      const decisions = text.split(/\r?\n/).filter((l) => /^\s*[-•*]?\s*(decis|决定|决策)/i.test(l)).map((l) => l.replace(/^[\s\-•*]+/, ""));
       return { summary: text.slice(0, 400), decisions, demands, engine: "heuristica",
-        hint: "IA offline: marque linhas como 'Ação: ... resp: Nome 2026-10-20' para extração automática." };
+        hint: "EXTRACT_HINT" };
     }
     const items = db.items.slice(-120).map((it) => ({ id: it.id, title: it.title }));
     const prompt = `Reunião: ${m.title} em ${m.date} — participantes: ${m.participants || ""}\nAta / anotações:\n${text}\n\n`
@@ -266,7 +271,7 @@ critério da organização e siga-os quando aplicáveis.`,
 
   // ---------------------------------------------------------------- master schedule
   heuristicSchedule(rows, ref) {
-    if (!rows || !rows.length) return { overview: "Arquivo armazenado. Formato sem leitura automática (envie .xlsx/.csv/.pdf para análise).", tasks_count: 0 };
+    if (!rows || !rows.length) return { overview: t("Arquivo armazenado. Formato sem leitura automática (envie .xlsx/.csv/.pdf para análise)."), tasks_count: 0 };
     let hi = rows.slice(0, 15).findIndex((r) => /tarefa|task|atividade|activity/.test(this.norm(r.join(" "))));
     if (hi < 0) hi = 0;
     const head = rows[hi].map((h) => this.norm(h));
@@ -288,7 +293,8 @@ critério da organização e siga-os quando aplicáveis.`,
     const late = tasks.filter((t) => t.finish && t.finish < ref && t.progress < 100);
     const upcoming = tasks.filter((t) => t.finish && t.finish >= ref && t.progress < 100).sort((a, b) => a.finish.localeCompare(b.finish)).slice(0, 10);
     const done = tasks.filter((t) => t.progress >= 100).length;
-    return { overview: `${tasks.length} atividades lidas; ${done} concluídas; ${late.length} atrasadas.`, late: late.slice(0, 20), upcoming, tasks_count: tasks.length };
+    const p = { n: tasks.length, done, late: late.length };
+    return { overview: t("{n} atividades lidas; {done} concluídas; {late} atrasadas.", p), msg: ["{n} atividades lidas; {done} concluídas; {late} atrasadas.", p], late: late.slice(0, 20), upcoming, tasks_count: tasks.length };
   },
 
   SCHEDULE_SCHEMA: (() => {
@@ -323,7 +329,8 @@ critério da organização e siga-os quando aplicáveis.`,
       return { ...(await this.call(content, this.SCHEDULE_SCHEMA, "medium")), engine: this.model };
     } catch (e) {
       const out = { ...this.heuristicSchedule(rows, ref), engine: "heuristica" };
-      out.overview += ` (Claude falhou: ${e.message})`;
+      out.overview += ` (${t("Claude falhou:")} ${e.message})`;
+      delete out.msg;
       return out;
     }
   },
@@ -342,7 +349,7 @@ critério da organização e siga-os quando aplicáveis.`,
 
   async analyzeRisk(db, risk, filesText) {
     const empty = { causes: [], consequences: [], mitigations: [], report_points: [] };
-    if (!this.enabled()) return { summary: "IA offline — análise automática indisponível. Preencha manualmente.",
+    if (!this.enabled()) return { summary: t("IA offline — análise automática indisponível. Preencha manualmente."),
       probability: risk.probability || "Média", impact: risk.impact || "Médio", ...empty, engine: "heuristica" };
     const linked = db.items.filter((it) => (risk.links?.items || []).includes(it.id)).map((i) => ({ id: i.id, title: i.title, risk_reason: i.risk_reason }));
     const prompt = `Risco ${risk.id}: ${risk.title} (${risk.mode})\nDescrição: ${risk.description || ""}\n`
@@ -351,22 +358,20 @@ critério da organização e siga-os quando aplicáveis.`,
     try {
       return { ...(await this.call(prompt, this.RISK_SCHEMA, "medium")), engine: this.model };
     } catch (e) {
-      return { summary: `Falha na análise: ${e.message}`, probability: "Média", impact: "Médio", ...empty, engine: "erro" };
+      return { summary: `${t("Falha na análise:")} ${e.message}`, probability: "Média", impact: "Médio", ...empty, engine: "erro" };
     }
   },
 
   // ---------------------------------------------------------------- summaries
   async narrative(summary) {
     const k = summary.kpis;
-    const basic = `${k.new_inputs} novas demandas, ${k.items_created} itens criados e ${k.items_updated} atualizados. `
-      + `${k.overdue} itens vencidos e ${k.high_priority_open} de alta prioridade em aberto. `
-      + `${k.meetings} reuniões registradas. ${summary.alerts.length} alertas ativos.`;
+    const basic = t("NARRATIVE_BASIC", { ...k, alerts: summary.alerts.length });
     if (!this.enabled()) return basic;
-    const prompt = `Escreva os DESTAQUES deste summary de governança (${summary.type}) em até 8 bullets curtos: `
+    const prompt = `Escreva os DESTAQUES deste summary de governança (${summary.type}) em até 8 bullets curtos, em ${I18N.aiLanguage()}: `
       + "o que mudou, o que exige atenção da diretoria, riscos, decisões e próximos passos. Use Hoshin Kanri "
       + "para conectar com os objetivos estratégicos. Dados:\n" + JSON.stringify(summary).slice(0, 80000);
     try { return await this.call(prompt, null, "low", 4000); }
-    catch (e) { return `${basic}\n(Destaques da IA indisponíveis: ${e.message})`; }
+    catch (e) { return `${basic}\n(${t("Destaques da IA indisponíveis:")} ${e.message})`; }
   },
 };
 

@@ -16,6 +16,10 @@ Plataforma local (navegador + pasta no computador) que implementa a lógica de g
 Sem chave da IA a plataforma funciona normalmente com sugestões heurísticas (palavras‑chave, similaridade
 com o histórico e decisões anteriores). O selo no canto superior direito mostra se a IA está ativa.
 
+**Idiomas:** português, inglês e chinês simplificado — escolha no seletor no canto superior direito.
+A interface, os alertas, o histórico, os summaries e as respostas da IA seguem o idioma escolhido.
+O que você digita (títulos, descrições, atas) fica como foi escrito.
+
 **Onde ficam as coisas**
 - Tudo (base `db.json`, pastas de projetos, riscos, reuniões e summaries) fica **na pasta que você escolheu**.
   Pode ser uma pasta do OneDrive/SharePoint sincronizada, para ter backup.
@@ -82,6 +86,7 @@ Cada summary é salvo também como HTML na pasta `SUMMARIES` (pode ser impresso 
 index.html        # abra este arquivo (gerado: contém todo o CSS/JS embutido, funciona sozinho)
 src/              # código-fonte — edite aqui e rode `node tools/build.mjs` para gerar o index.html
   index.html
+  i18n.js         # traduções (pt / en / zh)
   store.js        # acesso à pasta escolhida (File System Access API) e configurações do navegador
   xlsx.js         # leitura de .xlsx/.csv sem bibliotecas externas
   ai.js           # integração com Claude + heurísticas offline + aprendizado por feedback

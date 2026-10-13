@@ -12,7 +12,7 @@
 body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
 .top { display: flex; align-items: center; gap: 20px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
 .brand { font-weight: 700; font-size: 18px; color: var(--brand); }
-.brand span { background: var(--brand); color: var(--panel); border-radius: 4px; padding: 0 5px; margin-left: 2px; }
+.brand .ai { background: var(--brand); color: var(--panel); border-radius: 4px; padding: 0 5px; margin-left: 2px; }
 nav { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
 nav a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
 nav a.active, nav a:hover { background: var(--soft); color: var(--brand); }
@@ -66,3 +66,4 @@ button:disabled { opacity: .5; cursor: wait; }
 .summary-doc h2 { border-bottom: 2px solid var(--brand); padding-bottom: 4px; margin-top: 22px; }
 @media print { .top, .no-print { display: none !important; } main { padding: 0; } .summary-doc { border: 0; } }
 .badge:empty { display: none; }
+.lang { width: auto; padding: 4px 8px; font-size: 13px; }
