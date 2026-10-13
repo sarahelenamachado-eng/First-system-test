@@ -182,3 +182,10 @@ input[type=range], input[type=checkbox] { accent-color: var(--brand); }
 .legend i.st-Realizada { background: #2E7D32; } .legend i.st-Norealizada { background: #C00000; } .legend i.sug { background: #fff; border: 1px dashed var(--brand); }
 .teach { border-left: 4px solid var(--brand); }
 @media (max-width: 760px) { .cal-day { min-height: 70px; } .cal-ev { font-size: .65rem; } }
+
+/* ---------- traduções */
+.tr-btn { vertical-align: middle; font-size: .78rem; margin-left: 6px; }
+h1 .tr-btn, h2 .tr-btn { font-weight: 600; }
+.tr-preview { font-size: .85rem; color: #444; background: #f6f6f7; border-left: 3px solid #b9bcc2; padding: 6px 8px; margin-top: 4px; border-radius: 3px; white-space: pre-wrap; }
+.tr-field { margin-bottom: 12px; }
+.tr-table td { width: 33%; font-size: .9rem; }

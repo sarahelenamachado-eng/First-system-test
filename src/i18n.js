@@ -644,3 +644,25 @@ Object.assign(D, {
   "Salvar critérios": ["Save criteria", "保存标准"], "{n} análises de risco ensinadas": ["{n} risk analyses taught", "已训练 {n} 条风险分析"],
   "Análise de risco de {id} registrada para a IA aprender": ["Risk analysis of {id} recorded for the AI to learn", "{id} 的风险分析已记录，供 AI 学习"],
 });
+
+// ---- tradução automática do conteúdo
+Object.assign(D, {
+  "Traduções": ["Translations", "翻译"], "Tradução do conteúdo": ["Content translation", "内容翻译"],
+  "TRANSLATE_HELP": ["What you write (inputs, items, projects, risks, meetings, minutes, notes) is translated by the AI into Portuguese, English and Chinese when you save. Write in any of the three languages.",
+    "您填写的内容（输入、事项、项目、风险、会议、纪要、备注）在保存时会由 AI 翻译成葡萄牙语、英语和中文。三种语言均可输入。",
+    "O que você escreve (entradas, itens, projetos, riscos, reuniões, atas, notas) é traduzido pela IA para português, inglês e chinês ao salvar. Pode escrever em qualquer um dos três idiomas."],
+  "Traduzir automaticamente o que eu escrever (pt / en / 中文)": ["Automatically translate what I write (pt / en / 中文)", "自动翻译我填写的内容（pt / en / 中文）"],
+  "Mostrar o conteúdo no idioma da tela": ["Show content in the screen language", "按界面语言显示内容"],
+  "Glossário (um termo por linha: termo = tradução)": ["Glossary (one term per line: term = translation)", "术语表（每行一个：术语 = 译文）"],
+  "GLOSSARY_PLACEHOLDER": ["E.g.:\nDiretora = Director / 总监\nmanutenção preventiva = preventive maintenance / 预防性维护\nhora extra = overtime / 加班",
+    "例如：\nDiretora = Director / 总监\nmanutenção preventiva = preventive maintenance / 预防性维护\nhora extra = overtime / 加班",
+    "Ex.:\nDiretora = Director / 总监\nmanutenção preventiva = preventive maintenance / 预防性维护\nhora extra = overtime / 加班"],
+  "Traduzir tudo o que já existe": ["Translate everything that already exists", "翻译所有已有内容"], "{n} campos sem tradução": ["{n} fields without translation", "{n} 个字段未翻译"],
+  "{n} campos traduzidos": ["{n} fields translated", "已翻译 {n} 个字段"], "{n} campos ainda sem tradução.": ["{n} fields still without translation.", "仍有 {n} 个字段未翻译。"],
+  "O texto é traduzido automaticamente ao salvar. Você pode copiar no formato bilíngue (inglês e chinês frase a frase).": ["Text is translated automatically when saved. You can copy it in bilingual format (English and Chinese sentence by sentence).", "文本在保存时自动翻译。可按双语格式复制（英文与中文逐句对照）。"],
+  "A tradução automática precisa da IA ligada (Configurações → IA).": ["Automatic translation needs the AI switched on (Settings → AI).", "自动翻译需要启用 AI（设置 → AI）。"],
+  "Traduzir agora": ["Translate now", "立即翻译"], "Refazer tradução": ["Redo translation", "重新翻译"],
+  "Copiar EN + 中文 (frase a frase)": ["Copy EN + 中文 (sentence by sentence)", "复制 EN + 中文（逐句）"], "Copiar PT + EN + 中文": ["Copy PT + EN + 中文", "复制 PT + EN + 中文"],
+  "Sem tradução ainda.": ["No translation yet.", "尚未翻译。"], "Copiado": ["Copied", "已复制"],
+  "Português": ["Portuguese", "葡萄牙语"], "English": ["English", "英语"], "中文": ["Chinese", "中文"], "O que fazer": ["What to do", "处理方式"],
+});

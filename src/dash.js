@@ -187,7 +187,7 @@ function mandatoryView() {
   return `<div class="card" style="overflow:auto;margin-bottom:var(--gap)"><h2>${t("Reuniões obrigatórias")}</h2>
     <p class="muted">${t("Reuniões que, pelos requisitos da empresa, precisam acontecer. A IA sugere datas e horários do mês respeitando a frequência e as suas regras.")}</p>
     <table>${th(["ID", "Reunião", "Frequência", "Dias preferidos", "Horário", "Duração", "Nível", "Mês atual", "Ativa", ""])}
-    ${S.db.mandatory.map((m) => `<tr><td>${m.id}</td><td>${esc(m.title)}</td><td>${esc(t(m.frequency))}${m.frequency === "Personalizada" ? ` (${m.times_per_month}×)` : ""}</td>
+    ${S.db.mandatory.map((m) => `<tr><td>${m.id}</td><td>${esc(lc(m, "title"))}</td><td>${esc(t(m.frequency))}${m.frequency === "Personalizada" ? ` (${m.times_per_month}×)` : ""}</td>
       <td>${(m.preferred_days || []).map((d) => t(dayNames[d])).join(", ") || "—"}</td><td>${esc(m.preferred_time || "—")}</td><td>${esc(m.duration || 60)} min</td><td>${esc(tv(m.level))}</td>
       <td>${st[m.id] ? meter(st[m.id].held, st[m.id].required, m.title) : ""}</td><td>${m.active === false ? t("Não") : t("Sim")}</td>
       <td class="nowrap"><button class="small ghost" onclick="MAND_EDIT='${m.id}';render()">${t("Editar")}</button><button class="small ghost danger" onclick="if(confirm(t('Excluir este registro?')))api('mandatory/${m.id}','DELETE').then(refresh)">×</button></td></tr>`).join("")

@@ -49,12 +49,12 @@ critério da organização e siga-os quando aplicáveis.`; },
   },
 
   /** Chama o Claude. Retorna objeto (se schema) ou texto. Lança Error em falha. */
-  async call(content, schema = null, effort = "medium", maxTokens = 16000) {
+  async call(content, schema = null, effort = "medium", maxTokens = 16000, system = null) {
     if (!this.key) throw new Error(t("IA sem chave configurada"));
     const body = {
       model: this.model,
       max_tokens: maxTokens,
-      system: this.SYSTEM_PROMPT,
+      system: system || this.SYSTEM_PROMPT,
       messages: [{ role: "user", content }],
       output_config: { effort },
       // Se um classificador de segurança recusar, o servidor tenta outro modelo automaticamente.
@@ -462,6 +462,34 @@ critério da organização e siga-os quando aplicáveis.`; },
       + `deixa a mensagem principal mais clara e por quê.\nDados:\n${JSON.stringify(metrics).slice(0, 60000)}`;
     try { return await this.call(prompt, null, "low", 3000); }
     catch (e) { return `${t("Análise da IA indisponível:")} ${e.message}`; }
+  },
+
+  // ---------------------------------------------------------------- tradução
+  TRANSLATE_SCHEMA: {
+    type: "object", additionalProperties: false, required: ["items"],
+    properties: { items: { type: "array", items: { type: "object", additionalProperties: false, required: ["key", "source_lang", "segments"],
+      properties: { key: { type: "string" }, source_lang: { type: "string", enum: ["pt", "en", "zh", "other"] },
+        segments: { type: "array", items: { type: "object", additionalProperties: false, required: ["src", "pt", "en", "zh"],
+          properties: { src: { type: "string" }, pt: { type: "string" }, en: { type: "string" }, zh: { type: "string" } } } } } } } },
+  },
+  /** Traduz textos frase a frase para pt, en e zh. Retorna { key: {source_lang, segments} }; {} se a IA estiver indisponível. */
+  async translateBatch(items) {
+    if (!this.enabled() || !items.length) return {};
+    const glossary = Core.db?.settings.translation_glossary || "";
+    const content = "Traduza cada texto abaixo FRASE A FRASE para português do Brasil (pt), inglês (en) e chinês simplificado (zh).\n"
+      + "Contexto: governança de uma fábrica automotiva (GWM Brasil): demandas da diretoria, reuniões, projetos e riscos.\n"
+      + "Regras: tom corporativo claro; mantenha IDs (GOV001, PROJ002…), siglas, números, datas e nomes próprios; "
+      + "não acrescente nem omita informação; cada segmento é uma frase do original (src), com a versão nos três idiomas "
+      + "(no idioma de origem, repita a frase original). Informe o idioma de origem em source_lang. Devolva a mesma key.\n"
+      + (glossary ? `Glossário obrigatório (termo = tradução):\n${glossary}\n` : "")
+      + `Textos:\n${JSON.stringify(items)}`;
+    try {
+      const out = await this.call(content, this.TRANSLATE_SCHEMA, "low", 16000, "Você é um tradutor corporativo português/inglês/chinês. Traduza com fidelidade, sem comentários.");
+      return Object.fromEntries((out.items || []).filter((x) => x.segments?.length).map((x) => [x.key, { source_lang: x.source_lang, segments: x.segments }]));
+    } catch (e) {
+      console.warn("tradução falhou:", e.message);
+      return {};
+    }
   },
 
   // ---------------------------------------------------------------- summaries

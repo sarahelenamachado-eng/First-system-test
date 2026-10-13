@@ -40,6 +40,9 @@ function defaultSettings() {
     meeting_rules: "",
     work_hours: { start: "08:00", end: "18:00" },
     risk_guidelines: "",
+    auto_translate: true,
+    show_translated: true,
+    translation_glossary: "",
     appearance: { title: "", accent: "#C00000", font_scale: 1, density: "normal", logo: "", show_bar: true },
     hidden_modules: [],
     schedule_mapping: null,
@@ -64,6 +67,17 @@ const ACTIVITY_FIELDS = {
 /** Reuniões ainda não confirmadas (realizada / não realizada). */
 const OPEN_MEETING = ["Pendente", "Solicitada", "Agendada"];
 const FREQUENCIES = ["Diária", "Semanal", "Quinzenal", "Mensal", "Personalizada"];
+/* Campos de texto livre traduzidos automaticamente (pt / en / zh). */
+const TRANSLATABLE = {
+  inputs: ["title", "description", "background"],
+  items: ["title", "description", "background", "scope", "scope_action", "risk_reason", "impact_details", "gap_analysis"],
+  projects: ["name", "description", "objective"],
+  risks: ["title", "description", "notes", "impact_notes"],
+  meetings: ["title", "agenda", "minutes", "notes"],
+  mandatory: ["title", "notes"],
+};
+const SUB_TRANSLATABLE = { pitems: ["title", "objective", "progress_desc"], activities: ["notes"], scenarios: ["description"], inputs_log: ["text"], actions: ["text", "gap_reason"], history: ["text"] };
+function strHash(s) { let h = 5381; s = String(s); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
 const SUB_LISTS = { projects: ["pitems", "activities", "scenarios"], risks: ["inputs_log", "scenarios"] };
 const SUB_PREFIX = { pitems: "IT", activities: "AT", scenarios: "SC", inputs_log: "RI" };
 const SUB_LABEL = { pitems: "Itens do projeto", activities: "Atividades", scenarios: "Impactos e riscos", inputs_log: "Inputs do risco" };
@@ -287,10 +301,10 @@ const Core = {
     const open = db.items.filter((i) => i.status !== "Concluído");
     const newInputs = db.inputs.filter((i) => inr(i.created_at));
     const bySource = {};
-    for (const i of newInputs) (bySource[i.source || "Outro"] ??= []).push({ id: i.id, title: i.title, status: i.status });
+    for (const i of newInputs) (bySource[i.source || "Outro"] ??= []).push({ id: i.id, title: this.loc(i, "title"), status: i.status });
     const updIds = new Set(events.filter((ev) => ev.type.startsWith("items.")).map((ev) => ev.ref));
     const horizon = addDays(e, 7);
-    const brief = (i) => ({ id: i.id, title: i.title, owner: i.owner, due_date: i.due_date, priority: i.priority, status: i.status });
+    const brief = (i) => ({ id: i.id, title: this.loc(i, "title"), owner: i.owner, due_date: i.due_date, priority: i.priority, status: i.status });
     const activeP = db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status));
     const openR = db.risks.filter((r) => r.status !== "Fechado");
     const summary = {
@@ -311,11 +325,11 @@ const Core = {
       inputs_by_source: bySource,
       critical_items: open.filter((i) => i.priority === "Alta").slice(0, 25).map(brief),
       due_items: open.filter((i) => i.due_date && i.due_date <= horizon).map(brief).sort((a, b) => a.due_date.localeCompare(b.due_date)),
-      projects: activeP.map((p) => ({ id: p.id, name: p.name, status: p.status, next_meeting: p.next_meeting, main: p.main,
+      projects: activeP.map((p) => ({ id: p.id, name: this.loc(p, "name"), status: p.status, next_meeting: p.next_meeting, main: p.main,
         pct: this.projectPct(p), activities_pct: this.activitiesPct(p),
         open_actions: (p.actions || []).filter((a) => a.status !== "Concluída").length, last_monitored: p.last_monitored })),
-      risks: openR.map((r) => ({ id: r.id, title: r.title, mode: r.mode, probability: r.probability, impact: r.impact, status: r.status })),
-      meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title, date: m.date, status: m.status, decisions: m.decisions || [], items: m.links?.items || [] })),
+      risks: openR.map((r) => ({ id: r.id, title: this.loc(r, "title"), mode: r.mode, probability: r.probability, impact: r.impact, status: r.status })),
+      meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title_msg ? t(m.title_msg[0], m.title_msg[1]) : this.loc(m, "title"), date: m.date, status: m.status, decisions: m.decisions || [], items: m.links?.items || [] })),
       report_items: open.filter((i) => i.report).map(brief),
       activity: events.slice(-200).map((ev) => ({ ts: ev.ts, msg: ev.msg, text: ev.text })),
       alerts: this.alerts(),
@@ -660,11 +674,64 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     };
   },
 
+  // ------------------------------------------------------------ tradução automática
+  /** Texto do campo no idioma pedido (tradução válida para o texto atual) ou o original. */
+  loc(rec, field, lang = I18N.lang) {
+    const v = rec?.[field], tr = rec?.tr?.[field];
+    if (!v || !tr || tr.hash !== strHash(v) || tr.source === lang || !tr.segments?.length) return v || "";
+    return tr.segments.map((x) => x[lang]).filter(Boolean).join(" ") || v;
+  },
+  /** Lista de [registro, campo] com texto ainda sem tradução atualizada. */
+  pendingTranslations(only = null) {
+    const out = [];
+    const scan = (rec, fields) => { for (const f of fields) { const v = rec[f]; if (typeof v === "string" && v.trim() && !rec.history_user && (!rec.tr?.[f] || rec.tr[f].hash !== strHash(v)) && !(rec.tr?.[f]?.failed === strHash(v))) out.push([rec, f]); } };
+    for (const [col, fields] of Object.entries(TRANSLATABLE)) {
+      for (const rec of this.db[col] || []) {
+        if (only && (only.col !== col || only.id !== rec.id)) continue;
+        scan(rec, fields);
+        for (const [list, sf] of Object.entries(SUB_TRANSLATABLE)) for (const e of rec[list] || []) if (list !== "history" || !e.msg) scan(e, sf);
+      }
+    }
+    return out;
+  },
+  async translatePending(only = null, max = 400) {
+    let done = 0;
+    while (done < max) {
+      const pend = this.pendingTranslations(only);
+      if (!pend.length) break;
+      // lotes de até ~6000 caracteres
+      const batch = []; let size = 0;
+      for (const p of pend) { const len = p[0][p[1]].length; if (batch.length && size + len > 6000) break; batch.push(p); size += len; }
+      const res = await AI.translateBatch(batch.map(([r, f], i) => ({ key: String(i), text: r[f] })));
+      batch.forEach(([r, f], i) => {
+        const tr = res[String(i)];
+        r.tr ??= {};
+        if (tr) r.tr[f] = { hash: strHash(r[f]), source: tr.source_lang, segments: tr.segments, at: nowISO() };
+        else r.tr[f] = { ...(r.tr[f] || {}), failed: strHash(r[f]) };
+      });
+      done += batch.length;
+      if (!Object.keys(res).length) break; // IA indisponível: para e tenta na próxima alteração
+    }
+    return done;
+  },
+  _trq: Promise.resolve(),
+  /** Traduz em segundo plano depois de cada alteração (não atrasa o salvamento). */
+  queueTranslation() {
+    if (!this.db?.settings.auto_translate || !AI.enabled()) return;
+    this._trq = this._trq.then(async () => {
+      try {
+        const n = await this.translatePending(null, 120);
+        if (n) { await this.save(); window.dispatchEvent(new Event("gov-translated")); }
+      } catch (e) { console.warn("tradução:", e); }
+    });
+  },
+
   // ------------------------------------------------------------ roteador local
   async api(path, method = "GET", body = {}) {
     const res = await this.route(path.split("?")[0].replace(/^\/+|\/+$/g, "").split("/"), method, body || {});
     if (method !== "GET" || res?._dirty) await this.save();
     if (res && res._dirty) delete res._dirty;
+    if (method !== "GET" && !path.startsWith("translate")) this.queueTranslation();
     return res === undefined ? res : structuredClone(res);
   },
 
@@ -706,6 +773,13 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       }
       db.meeting_suggestions = db.meeting_suggestions.filter((x) => !(body.ids || []).includes(x.id) && !(body.discard || []).includes(x.id));
       return { created };
+    }
+    if (head === "translate" && method === "POST") {
+      // traduz agora um registro (col/id) ou tudo o que estiver pendente
+      if (!AI.enabled()) throw new ApiError(t("A tradução automática precisa da IA ligada (Configurações → IA)."));
+      if (body.force && body.col) { const r = this.find(body.col, body.id); if (r) { delete r.tr; for (const l of Object.keys(SUB_TRANSLATABLE)) for (const e of r[l] || []) delete e.tr; } }
+      const n = await this.translatePending(body.col ? { col: body.col, id: body.id } : null);
+      return { translated: n, rec: body.col ? this.find(body.col, body.id) : null };
     }
     if (head === "insights" && method === "POST") {
       const metrics = { projects: () => this.dashProjects(), meetings: () => this.dashMeetings(body.period || "month"), risks: () => this.dashRisks() }[body.kind]?.();

@@ -20,6 +20,12 @@ com o histórico e decisões anteriores). O selo no canto superior direito mostr
 A interface, os alertas, o histórico, os summaries e as respostas da IA seguem o idioma escolhido.
 O que você digita (títulos, descrições, atas) fica como foi escrito.
 
+**Tradução automática do conteúdo (com a IA ligada):** o que você escreve (entradas, itens, projetos, riscos,
+reuniões, atas, notas) é traduzido ao salvar para português, inglês e chinês — escreva em qualquer um deles.
+Com a tela em inglês ou chinês, o conteúdo aparece traduzido. O botão **🌐 Traduções** de cada registro mostra as três
+versões e copia no formato bilíngue (cada frase em inglês seguida da mesma frase em chinês). Glossário e opções em
+Configurações → Módulos e idioma.
+
 **Onde ficam as coisas**
 - Tudo (base `db.json`, pastas de projetos, riscos, reuniões e summaries) fica **na pasta que você escolheu**.
   Pode ser uma pasta do OneDrive/SharePoint sincronizada, para ter backup.
