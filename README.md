@@ -37,6 +37,16 @@ A IA sugere, você confirma ou corrige, e a decisão fica guardada para a IA apr
 ### 2. Lista geral de governança
 Filtros, histórico, vínculos entre itens/projetos/riscos/reuniões e download em planilha (CSV).
 
+### Dashboards (Projetos, Reuniões e Riscos)
+Cada módulo abre com um dashboard: frase-resumo, indicadores e gráficos, e o botão **Analisar com IA**, que
+interpreta os números e sugere a ação.
+- **Projetos:** "de XX projetos ativos, XX têm itens atrasados e XX representam risco em relação ao atraso";
+  situação (no prazo / atrasados / risco de atraso), atrasos por tipo, distribuição da conclusão e projetos que exigem atenção.
+  *Risco de atraso* = projeto "Em risco", ou com itens atrasados somados a risco aberto ligado ou ≥ 30% dos itens com prazo atrasados.
+- **Reuniões (hoje / semana / mês):** realizadas, de nível gerencial, de reporte, pré-agendadas e urgentes;
+  reuniões gerenciais realizadas × não realizadas; por nível e tipo; cumprimento das obrigatórias.
+- **Riscos:** abertos, críticos, em investigação/monitoramento, matriz probabilidade × impacto, impactos principais.
+
 ### 3. Projetos
 Abas de cada projeto:
 - **Visão geral** — dados, objetivo, status, *projeto principal* (★) e reuniões do projeto.
@@ -51,10 +61,20 @@ Abas de cada projeto:
 - **Fluxo** — mapa visual do projeto.
 
 ### 4. Reuniões
+Abas: Dashboard · **Calendário** (clique num dia para inserir; sugestões da IA tracejadas) · **Obrigatórias** ·
+Confirmar e solicitar · Todas.
+- **Reuniões obrigatórias:** cadastre frequência, dias e horário preferidos, duração e nível. A IA sugere as datas e
+  horários do mês que faltam, seguindo as **regras e observações** que você escrever (ex.: "diretora só à tarde").
+- Cada reunião tem **nível** (Gerencial, Diretoria…), **tipo** (Reporte, Decisão…) e **agendamento** (Pré-agendada / Urgente).
 - Projetos principais geram sozinhos a **necessidade de reunião de acompanhamento** (cadência configurável).
 - **Solicitar reunião** — registre reuniões pedidas por alguém.
 - Em **Aguardando confirmação**, marque *Foi realizada* ou *Não foi realizada* (com nova data para projetos).
 - Atas e anotações, com extração de decisões e demandas que vão para as Entradas.
+
+### Ensinar a IA a avaliar riscos
+Nos itens da lista geral, na avaliação das entradas e nos riscos há o campo **Minha análise de risco (ensinar a IA)**:
+nível, fatores e o seu raciocínio. A IA usa essas análises (e os critérios gerais em Configurações → IA) nas próximas
+avaliações de casos parecidos.
 
 ### 5. Riscos
 Abas: visão geral (com seleção dos **principais impactos** do risco), **inputs do risco** (com opção de enviar ao
@@ -87,6 +107,7 @@ src/              # código-fonte — edite aqui e rode `node tools/build.mjs` p
   i18n.js         # traduções (pt / en / zh)
   brand.js        # logo padrão
   flow.js         # editor visual de fluxos
+  dash.js         # dashboards, calendário, reuniões obrigatórias e "ensinar a IA" (risco)
   store.js        # acesso à pasta escolhida (File System Access API) e configurações do navegador
   xlsx.js         # leitura de .xlsx/.csv sem bibliotecas externas
   ai.js           # integração com Claude + heurísticas offline + aprendizado por feedback

@@ -1,6 +1,6 @@
 /* Núcleo: base de dados (db.json na pasta escolhida), regras de governança e um "roteador" local
  * com as mesmas rotas que a interface usa (api("inputs/INP001/commit", "POST", {...})). */
-const PREFIX = { inputs: "INP", items: "GOV", projects: "PROJ", risks: "RISK", meetings: "MEET", actions: "ACT", flows: "FLOW" };
+const PREFIX = { inputs: "INP", items: "GOV", projects: "PROJ", risks: "RISK", meetings: "MEET", actions: "ACT", flows: "FLOW", mandatory: "OBR" };
 const COLLECTIONS = Object.keys(PREFIX);
 const DB_FILE = "db.json";
 
@@ -17,7 +17,7 @@ function emptyDb() {
   const db = Object.fromEntries(COLLECTIONS.map((c) => [c, []]));
   return Object.assign(db, {
     seq: Object.fromEntries(COLLECTIONS.map((c) => [c, 0])),
-    events: [], feedback: [], summaries: [], flow_examples: [],
+    events: [], feedback: [], summaries: [], flow_examples: [], risk_lessons: [], meeting_suggestions: [],
     settings: defaultSettings(),
   });
 }
@@ -34,7 +34,12 @@ function defaultSettings() {
       input_kinds: ["Pedido pontual", "Direcionamento / estratégia (reclamação, opinião)", "Nova solicitação do HQ", "Decisão conjunta entre departamentos", "Atualização de item existente", "Outro"],
       impact_types: ["Custo", "Eficiência", "Operação", "Compliance", "People"],
       flow_edge_labels: ["origina", "afeta", "impacta", "mitiga", "depende de", "se realizado", "se não realizado", "se concretizar", "se tratado"],
+      meeting_levels: ["Gerencial", "Diretoria", "Operacional", "Técnica"],
+      meeting_types: ["Reporte", "Acompanhamento de projeto", "Decisão", "Alinhamento", "Outro"],
     },
+    meeting_rules: "",
+    work_hours: { start: "08:00", end: "18:00" },
+    risk_guidelines: "",
     appearance: { title: "", accent: "#C00000", font_scale: 1, density: "normal", logo: "", show_bar: true },
     hidden_modules: [],
     schedule_mapping: null,
@@ -56,6 +61,9 @@ const ACTIVITY_FIELDS = {
   finish: ["término", "termino", "fim", "finish", "end", "prazo", "due", "deadline", "完成", "截止"],
   progress: ["%", "percent", "progresso %", "concluído", "concluido", "完成率"],
 };
+/** Reuniões ainda não confirmadas (realizada / não realizada). */
+const OPEN_MEETING = ["Pendente", "Solicitada", "Agendada"];
+const FREQUENCIES = ["Diária", "Semanal", "Quinzenal", "Mensal", "Personalizada"];
 const SUB_LISTS = { projects: ["pitems", "activities", "scenarios"], risks: ["inputs_log", "scenarios"] };
 const SUB_PREFIX = { pitems: "IT", activities: "AT", scenarios: "SC", inputs_log: "RI" };
 const SUB_LABEL = { pitems: "Itens do projeto", activities: "Atividades", scenarios: "Impactos e riscos", inputs_log: "Inputs do risco" };
@@ -83,9 +91,13 @@ const Core = {
     db.settings = { ...d, ...db.settings, lists: { ...d.lists, ...(db.settings?.lists || {}) }, appearance: { ...d.appearance, ...(db.settings?.appearance || {}) } };
     for (const p of db.projects) { p.main ??= false; p.pitems ??= []; p.activities ??= []; p.scenarios ??= []; p.actions ??= []; p.schedules ??= []; p.sub_seq ??= 0; }
     for (const r of db.risks) { r.impacts ??= []; r.inputs_log ??= []; r.scenarios ??= []; r.sub_seq ??= 0; }
-    for (const m of db.meetings) { m.status ??= "Realizada"; }
+    for (const m of db.meetings) { m.status ??= "Realizada"; m.scheduling ??= m.auto || m.status === "Solicitada" ? "Pré-agendada" : ""; }
     db.flows ??= [];
     db.flow_examples ??= [];
+    db.mandatory ??= [];
+    db.risk_lessons ??= [];
+    db.meeting_suggestions ??= [];
+    db.settings.work_hours = { ...d.work_hours, ...(db.settings.work_hours || {}) };
   },
   /** % de conclusão do projeto = itens do projeto finalizados / total. */
   projectPct(p) {
@@ -255,7 +267,7 @@ const Core = {
       if (r.status !== "Fechado" && daysSince(r.updated_at) >= limit) add("media", r.id, "Risco {id} sem atualização há {d} dias.", { id: r.id, d: daysSince(r.updated_at) });
     }
     for (const m of db.meetings) {
-      if (["Pendente", "Solicitada"].includes(m.status) && m.date && m.date <= today)
+      if (OPEN_MEETING.includes(m.status) && m.date && m.date <= today)
         add(m.status === "Pendente" ? "alta" : "media", m.id, "Reunião {id} ({title}) de {date}: confirme se foi realizada.", { id: m.id, title: m.title, date: m.date });
     }
     const pending = db.inputs.filter((i) => i.status !== "Registrado").length;
@@ -389,9 +401,10 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     let created = false;
     for (const p of db.projects) {
       if (!p.main || ["Concluído", "Cancelado"].includes(p.status) || !p.next_meeting || p.next_meeting > limit) continue;
-      if (db.meetings.some((m) => m.project_id === p.id && ["Pendente", "Solicitada"].includes(m.status))) continue;
+      if (db.meetings.some((m) => m.project_id === p.id && OPEN_MEETING.includes(m.status))) continue;
       const m = { id: this.nextId("meetings"), title: I18N.fill("Acompanhamento: {name}", { name: p.name }), title_msg: ["Acompanhamento: {name}", { name: p.name }],
         date: p.next_meeting, project_id: p.id, status: "Pendente", auto: true, kind: "Acompanhamento de projeto",
+        level: "Gerencial", mtype: "Acompanhamento de projeto", scheduling: "Pré-agendada",
         created_at: nowISO(), updated_at: nowISO(), links: {}, history: [] };
       db.meetings.push(m);
       this.link("meetings", m.id, "projects", p.id);
@@ -512,6 +525,141 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     return { nodes, edges };
   },
 
+  // ------------------------------------------------------------ reuniões obrigatórias
+  monthDays(month) {
+    const [y, m] = month.split("-").map(Number), out = [];
+    for (let d = 1; d <= new Date(y, m, 0).getDate(); d++) out.push(`${month}-${pad(d)}`);
+    return out;
+  },
+  weekday(iso) { return new Date(iso + "T12:00:00").getDay(); }, // 0 = domingo
+  workdays(month) { return this.monthDays(month).filter((d) => ![0, 6].includes(this.weekday(d))); },
+  /** Quantas vezes a reunião obrigatória precisa acontecer no mês. */
+  requiredCount(m, month) {
+    const wd = this.workdays(month);
+    switch (m.frequency) {
+      case "Diária": return wd.length;
+      case "Semanal": return new Set(wd.map((d) => this.isoWeek(d))).size;
+      case "Quinzenal": return 2;
+      case "Mensal": return 1;
+      default: return Math.max(1, +m.times_per_month || 1);
+    }
+  },
+  isoWeek(iso) { const d = new Date(iso + "T12:00:00"); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day + 3); return d.toISOString().slice(0, 10); },
+  /** Situação de cada reunião obrigatória no mês: exigidas, agendadas, realizadas, não realizadas. */
+  mandatoryStatus(month) {
+    return this.db.mandatory.filter((m) => m.active !== false).map((m) => {
+      const ms = this.db.meetings.filter((x) => x.mandatory_id === m.id && (x.date || "").startsWith(month));
+      return { id: m.id, title: m.title, required: this.requiredCount(m, month),
+        scheduled: ms.filter((x) => OPEN_MEETING.includes(x.status)).length,
+        held: ms.filter((x) => x.status === "Realizada").length,
+        missed: ms.filter((x) => x.status === "Não realizada").length };
+    });
+  },
+  /** Sugestão local (sem IA): distribui pela frequência, nos dias e horários preferidos, evitando conflitos. */
+  heuristicSuggestions(month) {
+    const db = this.db, today = todayISO(), out = [];
+    const busy = new Set(db.meetings.filter((x) => x.date && x.time).map((x) => `${x.date} ${x.time}`));
+    const toMin = (h) => { const [a, b] = (h || "09:00").split(":").map(Number); return a * 60 + (b || 0); };
+    const toHH = (n) => `${pad(Math.floor(n / 60))}:${pad(n % 60)}`;
+    const end = toMin(db.settings.work_hours.end || "18:00");
+    for (const m of db.mandatory.filter((x) => x.active !== false)) {
+      const st = this.mandatoryStatus(month).find((x) => x.id === m.id);
+      let need = st.required - st.scheduled - st.held;
+      if (need <= 0) continue;
+      let days = this.workdays(month).filter((d) => d >= today);
+      if (m.preferred_days?.length) { const pref = days.filter((d) => m.preferred_days.map(Number).includes(this.weekday(d))); if (pref.length) days = pref; }
+      if (!days.length) continue;
+      let picks;
+      if (m.frequency === "Diária") picks = days;
+      else if (m.frequency === "Semanal") {
+        const byWeek = new Map(); for (const d of days) if (!byWeek.has(this.isoWeek(d))) byWeek.set(this.isoWeek(d), d);
+        const held = new Set(db.meetings.filter((x) => x.mandatory_id === m.id && (x.date || "").startsWith(month)).map((x) => this.isoWeek(x.date)));
+        picks = [...byWeek.entries()].filter(([w]) => !held.has(w)).map(([, d]) => d);
+      } else {
+        picks = Array.from({ length: Math.min(need, days.length) }, (_, i) => days[Math.floor((i * days.length) / Math.min(need, days.length))]);
+      }
+      for (const date of picks.slice(0, need)) {
+        let tm = toMin(m.preferred_time || db.settings.work_hours.start || "09:00");
+        while (busy.has(`${date} ${toHH(tm)}`) && tm + (+m.duration || 60) <= end) tm += 60;
+        busy.add(`${date} ${toHH(tm)}`);
+        out.push({ mandatory_id: m.id, title: m.title, date, time: toHH(tm), reason: "Distribuída pela frequência e pelos dias/horários preferidos, sem conflito com outras reuniões." });
+      }
+    }
+    return out;
+  },
+
+  // ------------------------------------------------------------ dashboards
+  lateInfo(p) {
+    const today = todayISO();
+    const items = (p.pitems || []).filter((x) => x.due && x.due < today && x.status !== "Finalizado");
+    const acts = (p.activities || []).filter((x) => x.finish && x.finish < today && (+x.progress || 0) < 100);
+    const adds = (p.actions || []).filter((x) => x.due && x.due < today && x.status !== "Concluída");
+    const dated = (p.pitems || []).filter((x) => x.due).length + (p.activities || []).filter((x) => x.finish).length + (p.actions || []).filter((x) => x.due).length;
+    const late = items.length + acts.length + adds.length;
+    const risks = new Set([...(p.links?.risks || []), ...(p.links?.items || []).flatMap((i) => this.find("items", i)?.links?.risks || [])]);
+    const openRisk = [...risks].some((r) => this.find("risks", r)?.status !== "Fechado");
+    const oldest = [...items.map((x) => x.due), ...acts.map((x) => x.finish), ...adds.map((x) => x.due)].sort()[0] || "";
+    // risco de atraso: status "Em risco", ou itens atrasados combinados com risco aberto ligado ou ≥ 30% do que tem prazo atrasado
+    const delayRisk = p.status === "Em risco" || (late > 0 && (openRisk || (dated && late / dated >= 0.3)));
+    return { items: items.length, acts: acts.length, adds: adds.length, late, dated, openRisk, delayRisk, oldest };
+  },
+  dashProjects() {
+    const s = this.db.settings, active = this.db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status));
+    const rows = active.map((p) => ({ id: p.id, name: p.name, main: p.main, pct: this.projectPct(p), apct: this.activitiesPct(p), stale: daysSince(p.last_monitored || p.updated_at), ...this.lateInfo(p) }));
+    const pcts = rows.map((r) => r.pct).filter((x) => x != null);
+    const bucket = (lo, hi) => rows.filter((r) => r.pct != null && r.pct >= lo && (hi === 100 ? r.pct <= hi : r.pct < hi)).length;
+    return {
+      total: active.length, done: this.db.projects.filter((p) => p.status === "Concluído").length,
+      withLate: rows.filter((r) => r.late > 0).length, delayRisk: rows.filter((r) => r.delayRisk).length,
+      onTrack: rows.filter((r) => r.late === 0 && !r.delayRisk).length,
+      main: rows.filter((r) => r.main).length, stale: rows.filter((r) => r.stale >= (+s.alert_days_without_update || 15)).length,
+      avgPct: pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : null,
+      lateBy: { items: rows.reduce((a, r) => a + r.items, 0), acts: rows.reduce((a, r) => a + r.acts, 0), adds: rows.reduce((a, r) => a + r.adds, 0) },
+      buckets: [["0–25%", bucket(0, 25)], ["25–50%", bucket(25, 50)], ["50–75%", bucket(50, 75)], ["75–100%", bucket(75, 100)], ["Sem itens", rows.filter((r) => r.pct == null).length]],
+      rows: rows.sort((a, b) => (b.delayRisk - a.delayRisk) || (b.late - a.late)),
+    };
+  },
+  periodRange(period, ref = todayISO()) {
+    if (period === "today") return [ref, ref];
+    if (period === "week") { const s = addDays(ref, -((new Date(ref + "T12:00:00").getDay() + 6) % 7)); return [s, addDays(s, 6)]; }
+    const m = ref.slice(0, 7); return [`${m}-01`, this.monthDays(m).at(-1)];
+  },
+  dashMeetings(period) {
+    const [a, b] = this.periodRange(period), today = todayISO();
+    const ms = this.db.meetings.filter((m) => m.date && m.date >= a && m.date <= b);
+    const held = ms.filter((m) => m.status === "Realizada");
+    const ger = ms.filter((m) => m.level === "Gerencial");
+    const levels = this.db.settings.lists.meeting_levels, types = this.db.settings.lists.meeting_types;
+    return {
+      range: [a, b], total: ms.length, held: held.length,
+      heldManagerial: held.filter((m) => m.level === "Gerencial").length,
+      heldReport: held.filter((m) => m.mtype === "Reporte").length,
+      heldPre: held.filter((m) => m.scheduling === "Pré-agendada").length,
+      heldUrgent: held.filter((m) => m.scheduling === "Urgente").length,
+      managerial: { done: ger.filter((m) => m.status === "Realizada").length, notDone: ger.filter((m) => m.status === "Não realizada").length,
+        pending: ger.filter((m) => OPEN_MEETING.includes(m.status) && m.date <= today).length, upcoming: ger.filter((m) => OPEN_MEETING.includes(m.status) && m.date > today).length },
+      byLevel: levels.map((l) => [l, held.filter((m) => m.level === l).length]),
+      byType: types.map((x) => [x, held.filter((m) => m.mtype === x).length]),
+      mandatory: this.mandatoryStatus(today.slice(0, 7)),
+      toConfirm: this.db.meetings.filter((m) => OPEN_MEETING.includes(m.status) && m.date && m.date <= today).length,
+    };
+  },
+  dashRisks() {
+    const open = this.db.risks.filter((r) => r.status !== "Fechado"), s = this.db.settings;
+    const P = ["Alta", "Média", "Baixa"], I = ["Alto", "Médio", "Baixo"];
+    const since = addDays(todayISO(), -30);
+    return {
+      total: open.length, closed: this.db.risks.length - open.length,
+      investigate: open.filter((r) => r.mode === "Investigar").length, monitor: open.filter((r) => r.mode !== "Investigar").length,
+      critical: open.filter((r) => r.probability === "Alta" && r.impact === "Alto").length,
+      stale: open.filter((r) => daysSince(r.updated_at) >= (+s.alert_days_without_update || 15)).length,
+      matrix: P.map((p) => I.map((i) => open.filter((r) => (r.probability || "Média") === p && (r.impact || "Médio") === i).length)),
+      byImpact: s.lists.impact_types.map((x) => [x, open.filter((r) => (r.impacts || []).includes(x)).length]),
+      inputs30: open.reduce((a, r) => a + (r.inputs_log || []).filter((x) => (x.date || "") >= since).length, 0),
+      withProjects: open.filter((r) => (r.links?.projects || []).length || (r.links?.items || []).some((i) => (this.find("items", i)?.links?.projects || []).length)).length,
+    };
+  },
+
   // ------------------------------------------------------------ roteador local
   async api(path, method = "GET", body = {}) {
     const res = await this.route(path.split("?")[0].replace(/^\/+|\/+$/g, "").split("/"), method, body || {});
@@ -527,7 +675,7 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     if (head === "state" && method === "GET") {
       let dirty = this.autoMeetings();
       for (const p of db.projects) dirty = (await this.syncSchedules(p)) || dirty;
-      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples"].map((k) => [k, db[k]])), events: db.events.slice(-60),
+      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons"].map((k) => [k, db[k]])), events: db.events.slice(-60),
         alerts: this.alerts(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
         summaries: db.summaries.slice(-30), today: todayISO() };
     }
@@ -538,6 +686,33 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       }
       AI.IMPACT_TYPES = db.settings.lists.impact_types;
       return db.settings;
+    }
+    if (head === "meeting_suggest" && method === "POST") {
+      const month = body.month || todayISO().slice(0, 7);
+      const res = await AI.suggestMeetings(db, month);
+      db.meeting_suggestions = [...db.meeting_suggestions.filter((x) => !x.date.startsWith(month)),
+        ...res.suggestions.map((x, i) => ({ ...x, id: `SUG${Date.now().toString(36)}${i}`, month }))];
+      return { suggestions: db.meeting_suggestions, engine: res.engine, error: res.error };
+    }
+    if (head === "meeting_suggest_accept" && method === "POST") {
+      const created = [];
+      for (const id of body.ids || []) {
+        const sg = db.meeting_suggestions.find((x) => x.id === id);
+        if (!sg) continue;
+        const m = db.mandatory.find((x) => x.id === sg.mandatory_id) || {};
+        const rec = await this.createRecord("meetings", { title: sg.title || m.title, date: sg.date, time: sg.time, status: "Agendada", mandatory_id: m.id,
+          level: m.level || "Gerencial", mtype: m.mtype || "Reporte", scheduling: "Pré-agendada", participants: m.participants || "", agenda: m.notes || "", duration: m.duration || 60 });
+        created.push(rec.id);
+      }
+      db.meeting_suggestions = db.meeting_suggestions.filter((x) => !(body.ids || []).includes(x.id) && !(body.discard || []).includes(x.id));
+      return { created };
+    }
+    if (head === "insights" && method === "POST") {
+      const metrics = { projects: () => this.dashProjects(), meetings: () => this.dashMeetings(body.period || "month"), risks: () => this.dashRisks() }[body.kind]?.();
+      if (!metrics) throw new ApiError("Unknown route");
+      const text = await AI.dashboardInsights(body.kind, metrics);
+      db.settings.last_insights = { ...(db.settings.last_insights || {}), [body.kind]: { text, at: nowISO() } };
+      return { text };
     }
     if (head === "backup" && method === "POST") {
       // restaura um db.json exportado (substitui a base atual; a anterior é guardada em BACKUPS/)
@@ -733,6 +908,16 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       rec.nodes = g.nodes; rec.edges = g.edges; rec.engine = g.engine || "dados";
       this.touch(rec);
       this.log("flows.generated", rid, "Fluxo {id} gerado", { id: rid });
+      return rec;
+    }
+    if (action === "teach" && ["items", "risks", "inputs"].includes(col)) {
+      // análise de risco do usuário: fica no registro e vira exemplo para a IA
+      const lesson = { date: nowISO(), ref: rid, col, text: col === "risks" ? `${rec.title || ""} ${rec.description || ""}` : AI.itemText(rec) + " " + AI.inputText(rec),
+        analysis: body.analysis || "", level: body.level || "", factors: body.factors || [] };
+      rec.risk_analysis = { analysis: lesson.analysis, level: lesson.level, factors: lesson.factors, date: lesson.date };
+      db.risk_lessons = [...db.risk_lessons.filter((x) => x.ref !== rid), lesson].slice(-200);
+      this.touch(rec);
+      this.log(`${col}.teach`, rid, "Análise de risco de {id} registrada para a IA aprender", { id: rid });
       return rec;
     }
     if (col === "flows" && action === "learn") {

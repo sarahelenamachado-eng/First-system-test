@@ -141,6 +141,55 @@ button:disabled { opacity: .5; cursor: wait; }
 @media print { .top, .no-print, .tabs { display: none !important; } main { padding: 0; } .summary-doc { border: 0; } body { background: #fff; } }
 .acts textarea { min-width: 220px; } .acts input[type=date] { min-width: 130px; }
 input[type=range], input[type=checkbox] { accent-color: var(--brand); }
+
+/* ---------- dashboards */
+.hero { font-size: 1.15rem; font-weight: 600; margin: 4px 0 14px; padding: 12px 16px; background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--brand); border-radius: 6px; }
+.kpi small { display: block; color: var(--muted); font-size: .75rem; margin-top: 2px; }
+.small { font-size: .8rem; }
+.hbars { display: grid; gap: 8px; }
+.hb-row { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 10px; align-items: center; }
+.hb-label { font-size: .88rem; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hb-bar { display: block; height: 14px; border-radius: 0 4px 4px 0; min-width: 0; }
+.hb-val { font-weight: 700; font-size: .88rem; color: #1a1a1a; }
+.stackbar { display: flex; gap: 2px; height: 22px; border-radius: 4px; overflow: hidden; margin: 6px 0 10px; }
+.sb-seg { display: block; height: 100%; min-width: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .85rem; color: #333; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.meter { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+.meter b { font-variant-numeric: tabular-nums; }
+.cols { display: flex; align-items: flex-end; gap: 14px; height: 170px; padding-top: 18px; }
+.col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+.col-bar { display: block; width: min(24px, 70%); background: var(--brand); border-radius: 4px 4px 0 0; min-height: 0; }
+.col-val { font-weight: 700; font-size: .85rem; margin-bottom: 4px; }
+.col-label { font-size: .75rem; color: var(--muted); margin-top: 6px; text-align: center; white-space: nowrap; }
+.heat { border-collapse: separate; border-spacing: 2px; }
+.heat td { text-align: center; font-weight: 700; font-size: 1.05rem; padding: 14px 6px; border: 0; border-radius: 4px; }
+.heat th { background: transparent; text-align: center; border: 0; }
+
+/* ---------- calendário */
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.cal-head { background: #f5f5f6; font-weight: 700; font-size: .8rem; padding: 6px; text-align: center; }
+.cal-day { background: #fff; min-height: 104px; padding: 4px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cal-day:hover { background: #fffafa; }
+.cal-day.weekend { background: #fafafa; }
+.cal-day.empty { background: #f7f7f8; cursor: default; }
+.cal-day.today .cal-num { background: var(--brand); color: #fff; border-radius: 999px; padding: 0 7px; }
+.cal-num { font-size: .8rem; font-weight: 700; align-self: flex-start; }
+.cal-title { font-size: 1.1rem; min-width: 170px; text-align: center; }
+.cal-ev { display: block; font-size: .75rem; padding: 2px 5px; border-radius: 3px; text-decoration: none; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid #999; background: #f1f1f2; }
+.cal-ev.sug { border: 1px dashed var(--brand); border-left-width: 3px; background: #fff; display: flex; align-items: center; gap: 3px; overflow: visible; }
+.cal-ev .sug-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cal-ev .mini { flex: none; padding: 0 5px; font-size: .72rem; line-height: 1.35; }
+.cal-ev .mini + .mini { background: #fff; color: var(--brand); }
+.st-Agendada { border-left-color: #6a6d72 !important; background: #f1f1f2; }
+.st-Pendente, .st-Solicitada { border-left-color: #C98A00 !important; background: #fff6e2; }
+.st-Realizada { border-left-color: #2E7D32 !important; background: #e9f5eb; }
+.st-Norealizada { border-left-color: #C00000 !important; background: #fde8e8; }
+.legend i.st-Agendada { background: #6a6d72; } .legend i.st-Pendente, .legend i.st-Solicitada { background: #C98A00; }
+.legend i.st-Realizada { background: #2E7D32; } .legend i.st-Norealizada { background: #C00000; } .legend i.sug { background: #fff; border: 1px dashed var(--brand); }
+.teach { border-left: 4px solid var(--brand); }
+@media (max-width: 760px) { .cal-day { min-height: 70px; } .cal-ev { font-size: .65rem; } }
 </style>
 </head>
 <body data-density="normal">
@@ -846,6 +895,99 @@ Object.assign(D, {
   "Reunião {id} confirmada como realizada": ["Meeting {id} confirmed as held", "会议 {id} 已确认召开"], "Reunião {id} não realizada": ["Meeting {id} not held", "会议 {id} 未召开"],
   "Fluxo {id} gerado": ["Flow {id} generated", "流程图 {id} 已生成"], "Fluxo {id} salvo como exemplo para a IA": ["Flow {id} saved as an example for the AI", "流程图 {id} 已保存为 AI 示例"],
 });
+
+// ---- dashboards, reuniões obrigatórias, calendário e análises de risco ensinadas
+Object.assign(D, {
+  "Dashboard": ["Dashboard", "仪表板"], "Lista de projetos": ["Project list", "项目列表"], "Lista de riscos": ["Risk list", "风险列表"],
+  "De {total} projetos ativos, {late} têm itens atrasados e {risk} representam risco em relação ao atraso.": ["Of {total} active projects, {late} have overdue items and {risk} pose a delay risk.", "在 {total} 个进行中项目中，{late} 个有逾期事项，{risk} 个存在延期风险。"],
+  "{n} concluídos": ["{n} completed", "已完成 {n} 个"], "{n} fechados": ["{n} closed", "已关闭 {n} 个"],
+  "Com itens atrasados": ["With overdue items", "有逾期事项"], "Risco de atraso": ["Delay risk", "延期风险"], "No prazo": ["On track", "按计划"],
+  "Conclusão média": ["Average completion", "平均完成率"], "Sem atualização recente": ["No recent update", "近期未更新"],
+  "Situação dos projetos": ["Project status", "项目状况"], "Itens atrasados, sem risco": ["Overdue items, no risk", "有逾期但无风险"], "Itens atrasados": ["Overdue items", "逾期事项"],
+  "DELAY_RISK_RULE": ["Delay risk = project marked “At risk”, or with overdue items plus an open linked risk or ≥ 30% of dated items overdue.",
+    "延期风险 = 项目被标记为“有风险”，或存在逾期事项且同时有未结的关联风险，或有截止日期的事项中逾期比例 ≥ 30%。",
+    "Risco de atraso = projeto marcado “Em risco”, ou com itens atrasados somados a risco aberto ligado ou ≥ 30% dos itens com prazo atrasados."],
+  "Itens atrasados por tipo": ["Overdue items by type", "按类型划分的逾期事项"], "Distribuição da conclusão": ["Completion distribution", "完成率分布"], "Sem itens": ["No items", "无事项"],
+  "0–25%": ["0–25%", "0–25%"], "25–50%": ["25–50%", "25–50%"], "50–75%": ["50–75%", "50–75%"], "75–100%": ["75–100%", "75–100%"],
+  "Projetos que exigem atenção": ["Projects needing attention", "需关注的项目"], "Atrasados": ["Overdue", "逾期"], "Atraso mais antigo": ["Oldest overdue", "最早逾期"],
+  "Risco aberto ligado": ["Open linked risk", "关联未结风险"], "Situação": ["Situation", "状况"], "Sim": ["Yes", "是"], "Não": ["No", "否"],
+  "Nenhum projeto com atraso.": ["No projects with delays.", "暂无延期项目。"],
+  "Análise da IA": ["AI analysis", "AI 分析"], "Analisar com IA": ["Analyse with AI", "用 AI 分析"],
+  "Peça à IA para interpretar este dashboard: o que exige atenção e a ação recomendada.": ["Ask the AI to interpret this dashboard: what needs attention and the recommended action.", "让 AI 解读此仪表板：需要关注什么以及建议的行动。"],
+  "IA offline: conecte a IA em Configurações para receber a análise do dashboard.": ["AI offline: connect the AI in Settings to get the dashboard analysis.", "AI 离线：请在设置中连接 AI 以获取仪表板分析。"],
+  "Análise da IA indisponível:": ["AI analysis unavailable:", "AI 分析不可用："],
+  "Hoje": ["Today", "今天"], "Esta semana": ["This week", "本周"], "Este mês": ["This month", "本月"],
+  "hoje": ["today", "今天"], "nesta semana": ["this week", "本周"], "neste mês": ["this month", "本月"],
+  "MEET_HERO": ["{held} meetings held {period}: {ger} management-level, {rep} related to reporting, {pre} pre-scheduled and {urg} scheduled urgently.",
+    "{period}共召开会议 {held} 次：管理层会议 {ger} 次，汇报相关 {rep} 次，预先安排 {pre} 次，紧急安排 {urg} 次。",
+    "{held} reuniões realizadas {period}: {ger} de nível gerencial, {rep} relacionadas a reporte, {pre} pré-agendadas e {urg} agendadas com urgência."],
+  "Realizadas": ["Held", "已召开"], "De nível gerencial": ["Management-level", "管理层"], "Relacionadas a reporte": ["Reporting-related", "汇报相关"],
+  "Pré-agendadas": ["Pre-scheduled", "预先安排"], "Agendadas com urgência": ["Scheduled urgently", "紧急安排"], "A confirmar": ["To confirm", "待确认"],
+  "Reuniões gerenciais do período": ["Management meetings in the period", "本期管理层会议"], "Não realizadas": ["Not held", "未召开"], "Futuras": ["Upcoming", "未来"],
+  "Realizadas por nível": ["Held by level", "按级别统计（已召开）"], "Realizadas por tipo": ["Held by type", "按类型统计（已召开）"],
+  "Reuniões obrigatórias — mês atual": ["Mandatory meetings — current month", "必开会议 — 本月"], "Realizadas / exigidas": ["Held / required", "已召开 / 应召开"], "Agendadas": ["Scheduled", "已安排"],
+  "Nenhuma reunião obrigatória cadastrada.": ["No mandatory meetings registered.", "尚未登记必开会议。"], "Cadastrar": ["Register", "登记"],
+  "RISK_HERO": ["{total} open risks: {crit} critical (high probability × high impact), {inv} under investigation and {stale} without a recent update.",
+    "未结风险 {total} 个：其中关键风险 {crit} 个（高可能性 × 高影响），调查中 {inv} 个，近期未更新 {stale} 个。",
+    "{total} riscos abertos: {crit} críticos (probabilidade alta × impacto alto), {inv} em investigação e {stale} sem atualização recente."],
+  "Críticos (prob. alta × impacto alto)": ["Critical (high prob. × high impact)", "关键（高可能性 × 高影响）"], "Em investigação": ["Under investigation", "调查中"], "Em monitoramento": ["Being monitored", "监控中"],
+  "Inputs nos últimos 30 dias": ["Inputs in the last 30 days", "近 30 天输入"], "Ligados a projetos": ["Linked to projects", "关联项目"],
+  "Matriz probabilidade × impacto": ["Probability × impact matrix", "可能性 × 影响矩阵"], "Riscos abertos por impacto principal": ["Open risks by main impact", "按主要影响划分的未结风险"],
+  "Número de riscos abertos em cada combinação; quanto mais escuro, mais riscos.": ["Number of open risks in each combination; darker means more risks.", "每种组合中的未结风险数量；颜色越深，风险越多。"],
+  // calendário
+  "Calendário": ["Calendar", "日历"], "Obrigatórias": ["Mandatory", "必开会议"], "Confirmar e solicitar": ["Confirm and request", "确认与申请"],
+  "Seg": ["Mon", "周一"], "Ter": ["Tue", "周二"], "Qua": ["Wed", "周三"], "Qui": ["Thu", "周四"], "Sex": ["Fri", "周五"], "Sáb": ["Sat", "周六"], "Dom": ["Sun", "周日"],
+  "Sugerir datas das obrigatórias (IA)": ["Suggest dates for mandatory meetings (AI)", "为必开会议建议日期（AI）"], "Aceitar todas as sugestões": ["Accept all suggestions", "接受全部建议"],
+  "Clique em um dia para inserir uma reunião. Sugestões da IA aparecem tracejadas: ✓ aceita, × descarta.": ["Click a day to add a meeting. AI suggestions appear dashed: ✓ accepts, × discards.", "点击某一天添加会议。AI 建议以虚线显示：✓ 接受，× 放弃。"],
+  "Aceitar": ["Accept", "接受"], "Descartar": ["Discard", "放弃"], "Sugestão": ["Suggestion", "建议"], "Agendada": ["Scheduled", "已安排"],
+  "Nível": ["Level", "级别"], "Agendamento": ["Scheduling", "安排方式"], "Pré-agendada": ["Pre-scheduled", "预先安排"], "Urgente": ["Urgent", "紧急"],
+  "Gerencial": ["Management", "管理层"], "Diretoria": ["Board", "董事层"], "Operacional": ["Operational", "运营层"], "Técnica": ["Technical", "技术层"],
+  "Reporte": ["Reporting", "汇报"], "Decisão": ["Decision", "决策"], "Alinhamento": ["Alignment", "对齐"],
+  "Nova reunião em {date}": ["New meeting on {date}", "{date} 新会议"], "Horário": ["Time", "时间"], "Duração (min)": ["Duration (min)", "时长（分钟）"],
+  "Reunião obrigatória": ["Mandatory meeting", "必开会议"], "Reunião agendada": ["Meeting scheduled", "会议已安排"], "obrigatória": ["mandatory", "必开"],
+  "Cadastre primeiro as reuniões obrigatórias.": ["Register the mandatory meetings first.", "请先登记必开会议。"],
+  "Sugestões calculadas pela frequência (IA offline).": ["Suggestions calculated from the frequency (AI offline).", "已根据频率计算建议（AI 离线）。"],
+  "Sugestões da IA prontas: confira no calendário.": ["AI suggestions ready: check the calendar.", "AI 建议已生成：请在日历中查看。"],
+  "{n} reuniões agendadas": ["{n} meetings scheduled", "已安排 {n} 次会议"],
+  // obrigatórias
+  "Reuniões obrigatórias": ["Mandatory meetings", "必开会议"],
+  "Reuniões que, pelos requisitos da empresa, precisam acontecer. A IA sugere datas e horários do mês respeitando a frequência e as suas regras.": ["Meetings that company requirements say must happen. The AI suggests dates and times for the month following the frequency and your rules.", "根据公司要求必须召开的会议。AI 会按频率和您的规则建议本月的日期和时间。"],
+  "Frequência": ["Frequency", "频率"], "Dias preferidos": ["Preferred days", "首选日期"], "Duração": ["Duration", "时长"], "Mês atual": ["Current month", "本月"], "Ativa": ["Active", "启用"], "Editar": ["Edit", "编辑"],
+  "Diária": ["Daily", "每日"], "Quinzenal": ["Fortnightly", "每两周"], "Mensal": ["Monthly", "每月"], "Personalizada": ["Custom", "自定义"],
+  "Editar reunião obrigatória": ["Edit mandatory meeting", "编辑必开会议"], "Nova reunião obrigatória": ["New mandatory meeting", "新必开会议"],
+  "Vezes por mês (personalizada)": ["Times per month (custom)", "每月次数（自定义）"], "Horário preferido": ["Preferred time", "首选时间"], "Requisito / observações": ["Requirement / notes", "要求 / 备注"],
+  "Regras para a IA sugerir horários": ["Rules for the AI to suggest times", "AI 建议时间的规则"],
+  "Escreva observações e regras: dias e horários a evitar, disponibilidade da diretoria, feriados, intervalo entre reuniões…": ["Write notes and rules: days and times to avoid, management availability, holidays, gaps between meetings…", "写下备注和规则：需避开的日期和时间、领导的空闲时间、节假日、会议间隔…"],
+  "Início do expediente": ["Workday start", "上班时间"], "Fim do expediente": ["Workday end", "下班时间"], "Regras e observações": ["Rules and notes", "规则与备注"],
+  "MEETING_RULES_PLACEHOLDER": ["E.g.: the director is only available in the afternoon; avoid Monday mornings; leave 30 min between meetings; no meetings on 15/11 (holiday)…",
+    "例如：总监只在下午有空；避开周一上午；会议之间留 30 分钟；11 月 15 日为节假日不安排会议…",
+    "Ex.: a diretora só pode à tarde; evitar segunda de manhã; deixar 30 min entre reuniões; sem reuniões em 15/11 (feriado)…"],
+  "Sugerir datas do mês atual (IA)": ["Suggest dates for the current month (AI)", "建议本月日期（AI）"], "Sugestões para o mês": ["Suggestions for the month", "本月建议"],
+  "Motivo": ["Reason", "原因"], "Ver no calendário": ["View in calendar", "在日历中查看"],
+  "Distribuída pela frequência e pelos dias/horários preferidos, sem conflito com outras reuniões.": ["Spread by frequency and preferred days/times, with no conflict with other meetings.", "按频率和首选日期/时间分布，与其他会议不冲突。"],
+  "Níveis de reunião": ["Meeting levels", "会议级别"], "Ex.: Gerencial, Diretoria, Operacional…": ["E.g.: Management, Board, Operational…", "例如：管理层、董事层、运营层…"],
+  "Tipos de reunião": ["Meeting types", "会议类型"], "Ex.: Reporte, Decisão, Alinhamento…": ["E.g.: Reporting, Decision, Alignment…", "例如：汇报、决策、对齐…"],
+  // ensinar a IA — risco
+  "Minha análise de risco (ensinar a IA)": ["My risk analysis (teach the AI)", "我的风险分析（训练 AI）"],
+  "TEACH_RISK_HELP": ["Record how you assess this risk and why. The AI stores your reasoning and uses it as a reference in the next assessments of similar items.",
+    "记录您如何评估此风险及其原因。AI 会保存您的思路，并在之后评估类似事项时作为参考。",
+    "Registre como você avalia este risco e por quê. A IA guarda o seu raciocínio e usa como referência nas próximas avaliações de itens parecidos."],
+  "Nível de risco na sua avaliação": ["Risk level in your assessment", "您评估的风险等级"], "Fatores que pesaram": ["Factors that weighed in", "考虑的因素"], "Sua análise": ["Your analysis", "您的分析"],
+  "TEACH_RISK_PLACEHOLDER": ["E.g.: high risk because it directly affects the production line and can generate a contractual fine; it repeats the 2025 problem…",
+    "例如：风险高，因为直接影响生产线并可能产生合同罚款；与 2025 年的问题类似…",
+    "Ex.: risco alto porque afeta diretamente a linha de produção e pode gerar multa contratual; repete o problema de 2025…"],
+  "Salvar análise e ensinar a IA": ["Save analysis and teach the AI", "保存分析并训练 AI"], "Última análise": ["Last analysis", "最近分析"],
+  "Escreva a sua análise.": ["Write your analysis.", "请填写您的分析。"],
+  "Análise salva: a IA vai usar o seu raciocínio nas próximas avaliações.": ["Analysis saved: the AI will use your reasoning in future assessments.", "分析已保存：AI 将在之后的评估中参考您的思路。"],
+  "Sua análise de risco (ensina a IA)": ["Your risk analysis (teaches the AI)", "您的风险分析（训练 AI）"],
+  "Risco avaliado como na sua análise de {ref}.": ["Risk assessed as in your analysis of {ref}.", "风险评估参考了您对 {ref} 的分析。"],
+  "Critérios de avaliação de risco (valem para todos os itens e riscos)": ["Risk assessment criteria (apply to all items and risks)", "风险评估标准（适用于全部事项和风险）"],
+  "RISK_GUIDE_PLACEHOLDER": ["E.g.: anything that stops the production line is High; labour-ministry topics are always High urgency; supplier delays under 7 days are Low…",
+    "例如：任何导致生产线停工的都是“高”；劳动部相关议题一律紧急程度“高”；供应商延误少于 7 天为“低”…",
+    "Ex.: tudo que para a linha de produção é Alta; temas do Ministério do Trabalho são sempre urgência Alta; atraso de fornecedor menor que 7 dias é Baixa…"],
+  "Salvar critérios": ["Save criteria", "保存标准"], "{n} análises de risco ensinadas": ["{n} risk analyses taught", "已训练 {n} 条风险分析"],
+  "Análise de risco de {id} registrada para a IA aprender": ["Risk analysis of {id} recorded for the AI to learn", "{id} 的风险分析已记录，供 AI 学习"],
+});
 </script>
 <script>
 /* Leitor mínimo de .xlsx (primeira planilha) e .csv, sem bibliotecas externas.
@@ -1077,6 +1219,10 @@ critério da organização e siga-os quando aplicáveis.`; },
       .sort((a, b) => b[0] - a[0]).slice(0, limit)
       .map(([s, it]) => ({ id: it.id, title: it.title, score: Math.round(s * 100) / 100, status: it.status }));
   },
+  similarLessons(db, text, limit = 5) {
+    return (db.risk_lessons || []).map((l) => [this.similarity(text, l.text || ""), l]).filter(([s]) => s > 0.12)
+      .sort((a, b) => b[0] - a[0]).slice(0, limit).map(([, l]) => l);
+  },
   similarFeedback(db, text, limit = 5) {
     return db.feedback.map((f) => [this.similarity(text, f.text || ""), f]).filter(([s]) => s > 0.1)
       .sort((a, b) => b[0] - a[0]).slice(0, limit).map(([, f]) => f);
@@ -1142,6 +1288,12 @@ critério da organização e siga-os quando aplicáveis.`; },
       rationale: t("Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores."),
     };
     out.msg = ["Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores.", {}];
+    const lesson = this.similarLessons(db, this.inputText(inp), 1)[0];
+    if (lesson?.level) {
+      out.priority = out.urgency = lesson.level;
+      out.risk_reason = lesson.analysis || out.risk_reason;
+      out.rationale += " " + t("Risco avaliado como na sua análise de {ref}.", { ref: lesson.ref });
+    }
     if (learned.length) {
       const fin = learned[0].final || {};
       for (const k of ["priority", "urgency", "impacts", "definitions"]) if (fin[k] && (!Array.isArray(fin[k]) || fin[k].length)) out[k] = fin[k];
@@ -1167,6 +1319,8 @@ critério da organização e siga-os quando aplicáveis.`; },
       + "\n\nCandidatos mais parecidos (similaridade textual):\n" + J(related)
       + "\n\nProjetos existentes:\n" + J(projects)
       + "\n\nDecisões anteriores do usuário em demandas parecidas (aprenda com elas):\n" + J(examples)
+      + "\n\nCritérios de avaliação de risco definidos pelo usuário (siga com prioridade):\n" + (db.settings.risk_guidelines || "(nenhum)")
+      + "\n\nAnálises de risco feitas pelo usuário em casos parecidos (aprenda o raciocínio):\n" + J(this.similarLessons(db, text).map((l) => ({ caso: (l.text || "").slice(0, 300), nivel: l.level, fatores: l.factors, analise: l.analysis })))
       + "\n\nTarefa: 1) Verifique se tem relação com item já levantado. Relação direta -> relation_mode=incluir_existente "
       + "e include_in=<id>. Relacionado só em impacto -> relation_mode=novo, e liste o vínculo em related. "
       + "2) Classifique escopo (o que é / o que fazer), prioridade, urgência com justificativa do risco, impactos "
@@ -1318,7 +1472,11 @@ critério da organização e siga-os quando aplicáveis.`; },
     if (!this.enabled()) return { summary: t("IA offline — análise automática indisponível. Preencha manualmente."),
       probability: risk.probability || "Média", impact: risk.impact || "Médio", ...empty, engine: "heuristica" };
     const linked = db.items.filter((it) => (risk.links?.items || []).includes(it.id)).map((i) => ({ id: i.id, title: i.title, risk_reason: i.risk_reason }));
-    const prompt = `Risco ${risk.id}: ${risk.title} (${risk.mode})\nDescrição: ${risk.description || ""}\n`
+    const lessons = this.similarLessons(db, `${risk.title} ${risk.description || ""}`).map((l) => ({ caso: (l.text || "").slice(0, 300), nivel: l.level, fatores: l.factors, analise: l.analysis }));
+    const prompt = `Critérios de avaliação de risco do usuário (siga com prioridade):\n${db.settings.risk_guidelines || "(nenhum)"}\n`
+      + `Análises de risco do usuário em casos parecidos (aprenda o raciocínio):\n${JSON.stringify(lessons)}\n`
+      + (risk.risk_analysis?.analysis ? `Análise do próprio usuário para este risco: ${risk.risk_analysis.analysis} (nível ${risk.risk_analysis.level})\n` : "")
+      + `Risco ${risk.id}: ${risk.title} (${risk.mode})\nDescrição: ${risk.description || ""}\n`
       + `Itens vinculados: ${JSON.stringify(linked)}\nNotas: ${risk.notes || ""}\nConteúdo dos documentos da pasta (texto):\n${filesText.slice(0, 60000)}\n\n`
       + "Compile as informações do risco para análise e reporte. As sugestões serão confirmadas pelo usuário.";
     try {
@@ -1373,6 +1531,47 @@ critério da organização e siga-os quando aplicáveis.`; },
     }
   },
 
+  // ---------------------------------------------------------------- reuniões obrigatórias: sugestão de datas
+  SUGGEST_SCHEMA: {
+    type: "object", additionalProperties: false, required: ["suggestions"],
+    properties: { suggestions: { type: "array", items: { type: "object", additionalProperties: false, required: ["mandatory_id", "date", "time", "reason"],
+      properties: { mandatory_id: { type: "string" }, date: { type: "string", description: "AAAA-MM-DD" }, time: { type: "string", description: "HH:MM" }, reason: { type: "string" } } } } },
+  },
+  async suggestMeetings(db, month) {
+    const base = Core.heuristicSuggestions(month);
+    if (!this.enabled() || !db.mandatory.some((m) => m.active !== false)) return { suggestions: base, engine: "heuristica" };
+    const status = Core.mandatoryStatus(month);
+    const busy = db.meetings.filter((m) => (m.date || "").startsWith(month)).map((m) => ({ date: m.date, time: m.time || "", duration: m.duration || 60, title: m.title, status: m.status }));
+    const prompt = `Sugira datas e horários para as REUNIÕES OBRIGATÓRIAS do mês ${month} (hoje é ${todayISO()}; não sugira datas passadas).\n`
+      + `Horário de trabalho: ${db.settings.work_hours.start}–${db.settings.work_hours.end}, segunda a sexta.\n`
+      + `Regras e observações do usuário (siga com prioridade):\n${db.settings.meeting_rules || "(nenhuma)"}\n\n`
+      + `Reuniões obrigatórias (frequência, duração em minutos, dias preferidos 0=domingo..6=sábado, horário preferido):\n${JSON.stringify(db.mandatory.filter((m) => m.active !== false))}\n\n`
+      + `Situação no mês (exigidas, já agendadas, realizadas):\n${JSON.stringify(status)}\n\n`
+      + `Agenda já ocupada no mês (evite conflitos):\n${JSON.stringify(busy)}\n\n`
+      + `Sugestão inicial calculada pela frequência (pode melhorar):\n${JSON.stringify(base)}\n\n`
+      + "Sugira apenas as ocorrências que faltam para cumprir a frequência. Explique em reason, em uma frase, por que escolheu a data/horário.";
+    try {
+      const out = await this.call(prompt, this.SUGGEST_SCHEMA, "medium");
+      const ids = new Map(db.mandatory.map((m) => [m.id, m]));
+      const suggestions = out.suggestions.filter((x) => ids.has(x.mandatory_id) && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && x.date.startsWith(month))
+        .map((x) => ({ ...x, title: ids.get(x.mandatory_id).title }));
+      return { suggestions, engine: this.model };
+    } catch (e) {
+      return { suggestions: base, engine: "heuristica", error: e.message };
+    }
+  },
+
+  // ---------------------------------------------------------------- dashboards
+  async dashboardInsights(kind, metrics) {
+    const label = { projects: "projetos", meetings: "reuniões", risks: "riscos" }[kind];
+    if (!this.enabled()) return t("IA offline: conecte a IA em Configurações para receber a análise do dashboard.");
+    const prompt = `Analise este dashboard de ${label} para a diretoria. Em até 6 bullets curtos: o que os números mostram, `
+      + "o que exige atenção agora, a causa provável e a ação recomendada. Cite números. Depois, em uma linha, diga qual visualização "
+      + `deixa a mensagem principal mais clara e por quê.\nDados:\n${JSON.stringify(metrics).slice(0, 60000)}`;
+    try { return await this.call(prompt, null, "low", 3000); }
+    catch (e) { return `${t("Análise da IA indisponível:")} ${e.message}`; }
+  },
+
   // ---------------------------------------------------------------- summaries
   async narrative(summary) {
     const k = summary.kpis;
@@ -1393,7 +1592,7 @@ function fileToB64(file) {
 <script>
 /* Núcleo: base de dados (db.json na pasta escolhida), regras de governança e um "roteador" local
  * com as mesmas rotas que a interface usa (api("inputs/INP001/commit", "POST", {...})). */
-const PREFIX = { inputs: "INP", items: "GOV", projects: "PROJ", risks: "RISK", meetings: "MEET", actions: "ACT", flows: "FLOW" };
+const PREFIX = { inputs: "INP", items: "GOV", projects: "PROJ", risks: "RISK", meetings: "MEET", actions: "ACT", flows: "FLOW", mandatory: "OBR" };
 const COLLECTIONS = Object.keys(PREFIX);
 const DB_FILE = "db.json";
 
@@ -1410,7 +1609,7 @@ function emptyDb() {
   const db = Object.fromEntries(COLLECTIONS.map((c) => [c, []]));
   return Object.assign(db, {
     seq: Object.fromEntries(COLLECTIONS.map((c) => [c, 0])),
-    events: [], feedback: [], summaries: [], flow_examples: [],
+    events: [], feedback: [], summaries: [], flow_examples: [], risk_lessons: [], meeting_suggestions: [],
     settings: defaultSettings(),
   });
 }
@@ -1427,7 +1626,12 @@ function defaultSettings() {
       input_kinds: ["Pedido pontual", "Direcionamento / estratégia (reclamação, opinião)", "Nova solicitação do HQ", "Decisão conjunta entre departamentos", "Atualização de item existente", "Outro"],
       impact_types: ["Custo", "Eficiência", "Operação", "Compliance", "People"],
       flow_edge_labels: ["origina", "afeta", "impacta", "mitiga", "depende de", "se realizado", "se não realizado", "se concretizar", "se tratado"],
+      meeting_levels: ["Gerencial", "Diretoria", "Operacional", "Técnica"],
+      meeting_types: ["Reporte", "Acompanhamento de projeto", "Decisão", "Alinhamento", "Outro"],
     },
+    meeting_rules: "",
+    work_hours: { start: "08:00", end: "18:00" },
+    risk_guidelines: "",
     appearance: { title: "", accent: "#C00000", font_scale: 1, density: "normal", logo: "", show_bar: true },
     hidden_modules: [],
     schedule_mapping: null,
@@ -1449,6 +1653,9 @@ const ACTIVITY_FIELDS = {
   finish: ["término", "termino", "fim", "finish", "end", "prazo", "due", "deadline", "完成", "截止"],
   progress: ["%", "percent", "progresso %", "concluído", "concluido", "完成率"],
 };
+/** Reuniões ainda não confirmadas (realizada / não realizada). */
+const OPEN_MEETING = ["Pendente", "Solicitada", "Agendada"];
+const FREQUENCIES = ["Diária", "Semanal", "Quinzenal", "Mensal", "Personalizada"];
 const SUB_LISTS = { projects: ["pitems", "activities", "scenarios"], risks: ["inputs_log", "scenarios"] };
 const SUB_PREFIX = { pitems: "IT", activities: "AT", scenarios: "SC", inputs_log: "RI" };
 const SUB_LABEL = { pitems: "Itens do projeto", activities: "Atividades", scenarios: "Impactos e riscos", inputs_log: "Inputs do risco" };
@@ -1476,9 +1683,13 @@ const Core = {
     db.settings = { ...d, ...db.settings, lists: { ...d.lists, ...(db.settings?.lists || {}) }, appearance: { ...d.appearance, ...(db.settings?.appearance || {}) } };
     for (const p of db.projects) { p.main ??= false; p.pitems ??= []; p.activities ??= []; p.scenarios ??= []; p.actions ??= []; p.schedules ??= []; p.sub_seq ??= 0; }
     for (const r of db.risks) { r.impacts ??= []; r.inputs_log ??= []; r.scenarios ??= []; r.sub_seq ??= 0; }
-    for (const m of db.meetings) { m.status ??= "Realizada"; }
+    for (const m of db.meetings) { m.status ??= "Realizada"; m.scheduling ??= m.auto || m.status === "Solicitada" ? "Pré-agendada" : ""; }
     db.flows ??= [];
     db.flow_examples ??= [];
+    db.mandatory ??= [];
+    db.risk_lessons ??= [];
+    db.meeting_suggestions ??= [];
+    db.settings.work_hours = { ...d.work_hours, ...(db.settings.work_hours || {}) };
   },
   /** % de conclusão do projeto = itens do projeto finalizados / total. */
   projectPct(p) {
@@ -1648,7 +1859,7 @@ const Core = {
       if (r.status !== "Fechado" && daysSince(r.updated_at) >= limit) add("media", r.id, "Risco {id} sem atualização há {d} dias.", { id: r.id, d: daysSince(r.updated_at) });
     }
     for (const m of db.meetings) {
-      if (["Pendente", "Solicitada"].includes(m.status) && m.date && m.date <= today)
+      if (OPEN_MEETING.includes(m.status) && m.date && m.date <= today)
         add(m.status === "Pendente" ? "alta" : "media", m.id, "Reunião {id} ({title}) de {date}: confirme se foi realizada.", { id: m.id, title: m.title, date: m.date });
     }
     const pending = db.inputs.filter((i) => i.status !== "Registrado").length;
@@ -1782,9 +1993,10 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     let created = false;
     for (const p of db.projects) {
       if (!p.main || ["Concluído", "Cancelado"].includes(p.status) || !p.next_meeting || p.next_meeting > limit) continue;
-      if (db.meetings.some((m) => m.project_id === p.id && ["Pendente", "Solicitada"].includes(m.status))) continue;
+      if (db.meetings.some((m) => m.project_id === p.id && OPEN_MEETING.includes(m.status))) continue;
       const m = { id: this.nextId("meetings"), title: I18N.fill("Acompanhamento: {name}", { name: p.name }), title_msg: ["Acompanhamento: {name}", { name: p.name }],
         date: p.next_meeting, project_id: p.id, status: "Pendente", auto: true, kind: "Acompanhamento de projeto",
+        level: "Gerencial", mtype: "Acompanhamento de projeto", scheduling: "Pré-agendada",
         created_at: nowISO(), updated_at: nowISO(), links: {}, history: [] };
       db.meetings.push(m);
       this.link("meetings", m.id, "projects", p.id);
@@ -1905,6 +2117,141 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     return { nodes, edges };
   },
 
+  // ------------------------------------------------------------ reuniões obrigatórias
+  monthDays(month) {
+    const [y, m] = month.split("-").map(Number), out = [];
+    for (let d = 1; d <= new Date(y, m, 0).getDate(); d++) out.push(`${month}-${pad(d)}`);
+    return out;
+  },
+  weekday(iso) { return new Date(iso + "T12:00:00").getDay(); }, // 0 = domingo
+  workdays(month) { return this.monthDays(month).filter((d) => ![0, 6].includes(this.weekday(d))); },
+  /** Quantas vezes a reunião obrigatória precisa acontecer no mês. */
+  requiredCount(m, month) {
+    const wd = this.workdays(month);
+    switch (m.frequency) {
+      case "Diária": return wd.length;
+      case "Semanal": return new Set(wd.map((d) => this.isoWeek(d))).size;
+      case "Quinzenal": return 2;
+      case "Mensal": return 1;
+      default: return Math.max(1, +m.times_per_month || 1);
+    }
+  },
+  isoWeek(iso) { const d = new Date(iso + "T12:00:00"); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day + 3); return d.toISOString().slice(0, 10); },
+  /** Situação de cada reunião obrigatória no mês: exigidas, agendadas, realizadas, não realizadas. */
+  mandatoryStatus(month) {
+    return this.db.mandatory.filter((m) => m.active !== false).map((m) => {
+      const ms = this.db.meetings.filter((x) => x.mandatory_id === m.id && (x.date || "").startsWith(month));
+      return { id: m.id, title: m.title, required: this.requiredCount(m, month),
+        scheduled: ms.filter((x) => OPEN_MEETING.includes(x.status)).length,
+        held: ms.filter((x) => x.status === "Realizada").length,
+        missed: ms.filter((x) => x.status === "Não realizada").length };
+    });
+  },
+  /** Sugestão local (sem IA): distribui pela frequência, nos dias e horários preferidos, evitando conflitos. */
+  heuristicSuggestions(month) {
+    const db = this.db, today = todayISO(), out = [];
+    const busy = new Set(db.meetings.filter((x) => x.date && x.time).map((x) => `${x.date} ${x.time}`));
+    const toMin = (h) => { const [a, b] = (h || "09:00").split(":").map(Number); return a * 60 + (b || 0); };
+    const toHH = (n) => `${pad(Math.floor(n / 60))}:${pad(n % 60)}`;
+    const end = toMin(db.settings.work_hours.end || "18:00");
+    for (const m of db.mandatory.filter((x) => x.active !== false)) {
+      const st = this.mandatoryStatus(month).find((x) => x.id === m.id);
+      let need = st.required - st.scheduled - st.held;
+      if (need <= 0) continue;
+      let days = this.workdays(month).filter((d) => d >= today);
+      if (m.preferred_days?.length) { const pref = days.filter((d) => m.preferred_days.map(Number).includes(this.weekday(d))); if (pref.length) days = pref; }
+      if (!days.length) continue;
+      let picks;
+      if (m.frequency === "Diária") picks = days;
+      else if (m.frequency === "Semanal") {
+        const byWeek = new Map(); for (const d of days) if (!byWeek.has(this.isoWeek(d))) byWeek.set(this.isoWeek(d), d);
+        const held = new Set(db.meetings.filter((x) => x.mandatory_id === m.id && (x.date || "").startsWith(month)).map((x) => this.isoWeek(x.date)));
+        picks = [...byWeek.entries()].filter(([w]) => !held.has(w)).map(([, d]) => d);
+      } else {
+        picks = Array.from({ length: Math.min(need, days.length) }, (_, i) => days[Math.floor((i * days.length) / Math.min(need, days.length))]);
+      }
+      for (const date of picks.slice(0, need)) {
+        let tm = toMin(m.preferred_time || db.settings.work_hours.start || "09:00");
+        while (busy.has(`${date} ${toHH(tm)}`) && tm + (+m.duration || 60) <= end) tm += 60;
+        busy.add(`${date} ${toHH(tm)}`);
+        out.push({ mandatory_id: m.id, title: m.title, date, time: toHH(tm), reason: "Distribuída pela frequência e pelos dias/horários preferidos, sem conflito com outras reuniões." });
+      }
+    }
+    return out;
+  },
+
+  // ------------------------------------------------------------ dashboards
+  lateInfo(p) {
+    const today = todayISO();
+    const items = (p.pitems || []).filter((x) => x.due && x.due < today && x.status !== "Finalizado");
+    const acts = (p.activities || []).filter((x) => x.finish && x.finish < today && (+x.progress || 0) < 100);
+    const adds = (p.actions || []).filter((x) => x.due && x.due < today && x.status !== "Concluída");
+    const dated = (p.pitems || []).filter((x) => x.due).length + (p.activities || []).filter((x) => x.finish).length + (p.actions || []).filter((x) => x.due).length;
+    const late = items.length + acts.length + adds.length;
+    const risks = new Set([...(p.links?.risks || []), ...(p.links?.items || []).flatMap((i) => this.find("items", i)?.links?.risks || [])]);
+    const openRisk = [...risks].some((r) => this.find("risks", r)?.status !== "Fechado");
+    const oldest = [...items.map((x) => x.due), ...acts.map((x) => x.finish), ...adds.map((x) => x.due)].sort()[0] || "";
+    // risco de atraso: status "Em risco", ou itens atrasados combinados com risco aberto ligado ou ≥ 30% do que tem prazo atrasado
+    const delayRisk = p.status === "Em risco" || (late > 0 && (openRisk || (dated && late / dated >= 0.3)));
+    return { items: items.length, acts: acts.length, adds: adds.length, late, dated, openRisk, delayRisk, oldest };
+  },
+  dashProjects() {
+    const s = this.db.settings, active = this.db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status));
+    const rows = active.map((p) => ({ id: p.id, name: p.name, main: p.main, pct: this.projectPct(p), apct: this.activitiesPct(p), stale: daysSince(p.last_monitored || p.updated_at), ...this.lateInfo(p) }));
+    const pcts = rows.map((r) => r.pct).filter((x) => x != null);
+    const bucket = (lo, hi) => rows.filter((r) => r.pct != null && r.pct >= lo && (hi === 100 ? r.pct <= hi : r.pct < hi)).length;
+    return {
+      total: active.length, done: this.db.projects.filter((p) => p.status === "Concluído").length,
+      withLate: rows.filter((r) => r.late > 0).length, delayRisk: rows.filter((r) => r.delayRisk).length,
+      onTrack: rows.filter((r) => r.late === 0 && !r.delayRisk).length,
+      main: rows.filter((r) => r.main).length, stale: rows.filter((r) => r.stale >= (+s.alert_days_without_update || 15)).length,
+      avgPct: pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : null,
+      lateBy: { items: rows.reduce((a, r) => a + r.items, 0), acts: rows.reduce((a, r) => a + r.acts, 0), adds: rows.reduce((a, r) => a + r.adds, 0) },
+      buckets: [["0–25%", bucket(0, 25)], ["25–50%", bucket(25, 50)], ["50–75%", bucket(50, 75)], ["75–100%", bucket(75, 100)], ["Sem itens", rows.filter((r) => r.pct == null).length]],
+      rows: rows.sort((a, b) => (b.delayRisk - a.delayRisk) || (b.late - a.late)),
+    };
+  },
+  periodRange(period, ref = todayISO()) {
+    if (period === "today") return [ref, ref];
+    if (period === "week") { const s = addDays(ref, -((new Date(ref + "T12:00:00").getDay() + 6) % 7)); return [s, addDays(s, 6)]; }
+    const m = ref.slice(0, 7); return [`${m}-01`, this.monthDays(m).at(-1)];
+  },
+  dashMeetings(period) {
+    const [a, b] = this.periodRange(period), today = todayISO();
+    const ms = this.db.meetings.filter((m) => m.date && m.date >= a && m.date <= b);
+    const held = ms.filter((m) => m.status === "Realizada");
+    const ger = ms.filter((m) => m.level === "Gerencial");
+    const levels = this.db.settings.lists.meeting_levels, types = this.db.settings.lists.meeting_types;
+    return {
+      range: [a, b], total: ms.length, held: held.length,
+      heldManagerial: held.filter((m) => m.level === "Gerencial").length,
+      heldReport: held.filter((m) => m.mtype === "Reporte").length,
+      heldPre: held.filter((m) => m.scheduling === "Pré-agendada").length,
+      heldUrgent: held.filter((m) => m.scheduling === "Urgente").length,
+      managerial: { done: ger.filter((m) => m.status === "Realizada").length, notDone: ger.filter((m) => m.status === "Não realizada").length,
+        pending: ger.filter((m) => OPEN_MEETING.includes(m.status) && m.date <= today).length, upcoming: ger.filter((m) => OPEN_MEETING.includes(m.status) && m.date > today).length },
+      byLevel: levels.map((l) => [l, held.filter((m) => m.level === l).length]),
+      byType: types.map((x) => [x, held.filter((m) => m.mtype === x).length]),
+      mandatory: this.mandatoryStatus(today.slice(0, 7)),
+      toConfirm: this.db.meetings.filter((m) => OPEN_MEETING.includes(m.status) && m.date && m.date <= today).length,
+    };
+  },
+  dashRisks() {
+    const open = this.db.risks.filter((r) => r.status !== "Fechado"), s = this.db.settings;
+    const P = ["Alta", "Média", "Baixa"], I = ["Alto", "Médio", "Baixo"];
+    const since = addDays(todayISO(), -30);
+    return {
+      total: open.length, closed: this.db.risks.length - open.length,
+      investigate: open.filter((r) => r.mode === "Investigar").length, monitor: open.filter((r) => r.mode !== "Investigar").length,
+      critical: open.filter((r) => r.probability === "Alta" && r.impact === "Alto").length,
+      stale: open.filter((r) => daysSince(r.updated_at) >= (+s.alert_days_without_update || 15)).length,
+      matrix: P.map((p) => I.map((i) => open.filter((r) => (r.probability || "Média") === p && (r.impact || "Médio") === i).length)),
+      byImpact: s.lists.impact_types.map((x) => [x, open.filter((r) => (r.impacts || []).includes(x)).length]),
+      inputs30: open.reduce((a, r) => a + (r.inputs_log || []).filter((x) => (x.date || "") >= since).length, 0),
+      withProjects: open.filter((r) => (r.links?.projects || []).length || (r.links?.items || []).some((i) => (this.find("items", i)?.links?.projects || []).length)).length,
+    };
+  },
+
   // ------------------------------------------------------------ roteador local
   async api(path, method = "GET", body = {}) {
     const res = await this.route(path.split("?")[0].replace(/^\/+|\/+$/g, "").split("/"), method, body || {});
@@ -1920,7 +2267,7 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     if (head === "state" && method === "GET") {
       let dirty = this.autoMeetings();
       for (const p of db.projects) dirty = (await this.syncSchedules(p)) || dirty;
-      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples"].map((k) => [k, db[k]])), events: db.events.slice(-60),
+      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons"].map((k) => [k, db[k]])), events: db.events.slice(-60),
         alerts: this.alerts(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
         summaries: db.summaries.slice(-30), today: todayISO() };
     }
@@ -1931,6 +2278,33 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       }
       AI.IMPACT_TYPES = db.settings.lists.impact_types;
       return db.settings;
+    }
+    if (head === "meeting_suggest" && method === "POST") {
+      const month = body.month || todayISO().slice(0, 7);
+      const res = await AI.suggestMeetings(db, month);
+      db.meeting_suggestions = [...db.meeting_suggestions.filter((x) => !x.date.startsWith(month)),
+        ...res.suggestions.map((x, i) => ({ ...x, id: `SUG${Date.now().toString(36)}${i}`, month }))];
+      return { suggestions: db.meeting_suggestions, engine: res.engine, error: res.error };
+    }
+    if (head === "meeting_suggest_accept" && method === "POST") {
+      const created = [];
+      for (const id of body.ids || []) {
+        const sg = db.meeting_suggestions.find((x) => x.id === id);
+        if (!sg) continue;
+        const m = db.mandatory.find((x) => x.id === sg.mandatory_id) || {};
+        const rec = await this.createRecord("meetings", { title: sg.title || m.title, date: sg.date, time: sg.time, status: "Agendada", mandatory_id: m.id,
+          level: m.level || "Gerencial", mtype: m.mtype || "Reporte", scheduling: "Pré-agendada", participants: m.participants || "", agenda: m.notes || "", duration: m.duration || 60 });
+        created.push(rec.id);
+      }
+      db.meeting_suggestions = db.meeting_suggestions.filter((x) => !(body.ids || []).includes(x.id) && !(body.discard || []).includes(x.id));
+      return { created };
+    }
+    if (head === "insights" && method === "POST") {
+      const metrics = { projects: () => this.dashProjects(), meetings: () => this.dashMeetings(body.period || "month"), risks: () => this.dashRisks() }[body.kind]?.();
+      if (!metrics) throw new ApiError("Unknown route");
+      const text = await AI.dashboardInsights(body.kind, metrics);
+      db.settings.last_insights = { ...(db.settings.last_insights || {}), [body.kind]: { text, at: nowISO() } };
+      return { text };
     }
     if (head === "backup" && method === "POST") {
       // restaura um db.json exportado (substitui a base atual; a anterior é guardada em BACKUPS/)
@@ -2126,6 +2500,16 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       rec.nodes = g.nodes; rec.edges = g.edges; rec.engine = g.engine || "dados";
       this.touch(rec);
       this.log("flows.generated", rid, "Fluxo {id} gerado", { id: rid });
+      return rec;
+    }
+    if (action === "teach" && ["items", "risks", "inputs"].includes(col)) {
+      // análise de risco do usuário: fica no registro e vira exemplo para a IA
+      const lesson = { date: nowISO(), ref: rid, col, text: col === "risks" ? `${rec.title || ""} ${rec.description || ""}` : AI.itemText(rec) + " " + AI.inputText(rec),
+        analysis: body.analysis || "", level: body.level || "", factors: body.factors || [] };
+      rec.risk_analysis = { analysis: lesson.analysis, level: lesson.level, factors: lesson.factors, date: lesson.date };
+      db.risk_lessons = [...db.risk_lessons.filter((x) => x.ref !== rid), lesson].slice(-200);
+      this.touch(rec);
+      this.log(`${col}.teach`, rid, "Análise de risco de {id} registrada para a IA aprender", { id: rid });
       return rec;
     }
     if (col === "flows" && action === "learn") {
@@ -2418,6 +2802,259 @@ async function openFlowFor(col, id) {
 }
 </script>
 <script>
+/* Dashboards (projetos, reuniões, riscos), calendário de reuniões e reuniões obrigatórias.
+ *
+ * Escolha das formas: números de destaque em cartões (o "de XX projetos, XX…"); barras horizontais de uma cor
+ * para contagens por categoria (valor na ponta); barra empilhada com cores de status (sempre com legenda e
+ * números, nunca só a cor) para partes de um todo; mapa de calor de um só tom para probabilidade × impacto. */
+const STATUS_COLORS = { good: "#2E7D32", warn: "#C98A00", bad: "#C00000", idle: "#B9BCC2" };
+const HEAT = ["#f4f4f5", "#fbe1e1", "#f2b0b0", "#e07272", "#c53030", "#990000"];
+
+// ------------------------------------------------------------------ peças de gráfico
+function statTile(value, label, sub = "", href = "") {
+  const tag = href ? "a" : "div";
+  return `<${tag} class="kpi" ${href ? `href="#${href}"` : ""}><b>${value ?? "—"}</b><span>${esc(label)}</span>${sub ? `<small>${esc(sub)}</small>` : ""}</${tag}>`;
+}
+/** Barras horizontais de uma série (uma cor), valor na ponta. rows: [[rótulo, valor, dica?]] */
+function hbars(rows, { color = "var(--brand)", empty = "—" } = {}) {
+  const max = Math.max(1, ...rows.map((r) => r[1]));
+  if (!rows.length) return `<p class="muted">${empty}</p>`;
+  return `<div class="hbars">${rows.map(([label, v, hint]) => `<div class="hb-row" title="${esc(label)}: ${v}${hint ? " — " + esc(hint) : ""}">
+    <span class="hb-label">${esc(label)}</span><span class="hb-track"><span class="hb-bar" style="width:${(v / max) * 100}%;background:${v ? color : "transparent"}"></span><span class="hb-val">${v}</span></span></div>`).join("")}</div>`;
+}
+/** Barra empilhada (partes de um todo) + legenda com valores. segs: [{label, value, color}] */
+function stackBar(segs) {
+  const total = segs.reduce((a, s) => a + s.value, 0);
+  const bar = total ? segs.filter((s) => s.value).map((s) => `<span class="sb-seg" style="flex:${s.value};background:${s.color}" title="${esc(s.label)}: ${s.value} (${Math.round((s.value / total) * 100)}%)"></span>`).join("")
+    : `<span class="sb-seg" style="flex:1;background:#eee"></span>`;
+  return `<div class="stackbar">${bar}</div><div class="legend">${segs.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.label)} <b>${s.value}</b>${total ? ` <span class="muted">(${Math.round((s.value / total) * 100)}%)</span>` : ""}</span>`).join("")}</div>`;
+}
+/** Medidor X de Y. */
+function meter(done, total, label) {
+  const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  return `<div class="meter" title="${esc(label)}: ${done}/${total}"><div class="progress-bar"><span style="width:${pct}%;background:${pct >= 100 ? STATUS_COLORS.good : "var(--brand)"}"></span></div><b>${done}/${total}</b></div>`;
+}
+/** Colunas verticais (distribuição). */
+function columns(rows) {
+  const max = Math.max(1, ...rows.map((r) => r[1]));
+  return `<div class="cols">${rows.map(([label, v]) => `<div class="col" title="${esc(label)}: ${v}"><span class="col-val">${v}</span><span class="col-bar" style="height:${(v / max) * 100}%"></span><span class="col-label">${esc(label)}</span></div>`).join("")}</div>`;
+}
+/** Mapa de calor probabilidade (linhas) × impacto (colunas). */
+function heatmap(matrix, rowLabels, colLabels) {
+  const max = Math.max(1, ...matrix.flat());
+  const step = (v) => (v === 0 ? 0 : Math.max(1, Math.round((v / max) * (HEAT.length - 1))));
+  return `<table class="heat"><tr><th>${esc(t("Probabilidade"))} ↓ / ${esc(t("Impacto"))} →</th>${colLabels.map((c) => `<th>${esc(t(c))}</th>`).join("")}</tr>
+    ${matrix.map((row, i) => `<tr><th>${esc(t(rowLabels[i]))}</th>${row.map((v, j) => `<td style="background:${HEAT[step(v)]};color:${step(v) >= 4 ? "#fff" : "#1a1a1a"}" title="${esc(t(rowLabels[i]))} × ${esc(t(colLabels[j]))}: ${v}">${v}</td>`).join("")}</tr>`).join("")}</table>`;
+}
+function insightsBox(kind, extra = {}) {
+  const last = S.db.settings.last_insights?.[kind];
+  return `<div class="card"><h2>${t("Análise da IA")}</h2>
+    ${last ? `<div class="ai-box">${esc(last.text)}</div><p class="muted">${fmt(last.at)}</p>` : `<p class="muted">${t("Peça à IA para interpretar este dashboard: o que exige atenção e a ação recomendada.")}</p>`}
+    <div class="actions"><button onclick='busy(this, async()=>{await api("insights","POST",${JSON.stringify({ kind, ...extra })}); await refresh();})'>${t("Analisar com IA")}</button></div></div>`;
+}
+
+// ------------------------------------------------------------------ dashboard de projetos
+function dashProjectsView() {
+  const d = Core.dashProjects();
+  const lateOnly = d.rows.filter((r) => r.late > 0 && !r.delayRisk).length;
+  const attention = d.rows.filter((r) => r.late > 0 || r.delayRisk);
+  return `<div class="hero">${t("De {total} projetos ativos, {late} têm itens atrasados e {risk} representam risco em relação ao atraso.", { total: d.total, late: d.withLate, risk: d.delayRisk })}</div>
+  <div class="kpis">${statTile(d.total, t("Projetos ativos"), t("{n} concluídos", { n: d.done }))}${statTile(d.withLate, t("Com itens atrasados"))}${statTile(d.delayRisk, t("Risco de atraso"), "", "")}
+    ${statTile(d.onTrack, t("No prazo"))}${statTile(d.avgPct == null ? "—" : d.avgPct + "%", t("Conclusão média"))}${statTile(d.stale, t("Sem atualização recente"))}${statTile(d.main, t("Projetos principais"))}</div>
+  <div class="grid">
+    <div class="card"><h2>${t("Situação dos projetos")}</h2>${stackBar([
+      { label: t("No prazo"), value: d.onTrack, color: STATUS_COLORS.good },
+      { label: t("Itens atrasados, sem risco"), value: lateOnly, color: STATUS_COLORS.warn },
+      { label: t("Risco de atraso"), value: d.delayRisk, color: STATUS_COLORS.bad }])}
+      <p class="muted small">${t("DELAY_RISK_RULE")}</p></div>
+    <div class="card"><h2>${t("Itens atrasados por tipo")}</h2>${hbars([[t("Itens do projeto"), d.lateBy.items], [t("Atividades (planilha)"), d.lateBy.acts], [t("Itens adicionais do projeto"), d.lateBy.adds]])}</div>
+    <div class="card"><h2>${t("Distribuição da conclusão")}</h2>${columns(d.buckets.map(([l, v]) => [t(l), v]))}</div>
+  </div>
+  <div class="grid" style="margin-top:var(--gap)">
+    <div class="card" style="overflow:auto"><h2>${t("Projetos que exigem atenção")}</h2><table>${th(["ID", "Projeto", "Atrasados", "Atraso mais antigo", "% concluído", "Risco aberto ligado", "Situação"])}
+      ${attention.map((r) => `<tr class="click" onclick="location.hash='projetos/${r.id}'"><td>${r.id}</td><td>${r.main ? "★ " : ""}${esc(r.name)}</td><td>${r.late}</td><td>${esc(r.oldest)}</td><td>${bar(r.pct)}</td>
+        <td>${r.openRisk ? t("Sim") : t("Não")}</td><td>${r.delayRisk ? pill(t("Risco de atraso"), "p-Alta") : pill(t("Itens atrasados"), "p-Média")}</td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Nenhum projeto com atraso.")}</td></tr>`}</table></div>
+    ${insightsBox("projects")}
+  </div>`;
+}
+
+// ------------------------------------------------------------------ dashboard de reuniões
+let M_PERIOD = "month";
+function dashMeetingsView() {
+  const d = Core.dashMeetings(M_PERIOD);
+  const pname = { today: "hoje", week: "nesta semana", month: "neste mês" }[M_PERIOD];
+  const mand = d.mandatory;
+  return `<div class="toolbar">${[["today", "Hoje"], ["week", "Esta semana"], ["month", "Este mês"]].map(([k, l]) => `<button class="small ${k === M_PERIOD ? "" : "ghost"}" onclick="M_PERIOD='${k}';render()">${t(l)}</button>`).join("")}
+    <span class="muted">${esc(d.range[0])} – ${esc(d.range[1])}</span></div>
+  <div class="hero">${t("MEET_HERO", { held: d.held, period: t(pname), ger: d.heldManagerial, rep: d.heldReport, pre: d.heldPre, urg: d.heldUrgent })}</div>
+  <div class="kpis">${statTile(d.held, t("Realizadas"))}${statTile(d.heldManagerial, t("De nível gerencial"))}${statTile(d.heldReport, t("Relacionadas a reporte"))}
+    ${statTile(d.heldPre, t("Pré-agendadas"))}${statTile(d.heldUrgent, t("Agendadas com urgência"))}${statTile(d.toConfirm, t("A confirmar"), "", "reunioes/confirmar")}</div>
+  <div class="grid">
+    <div class="card"><h2>${t("Reuniões gerenciais do período")}</h2>${stackBar([
+      { label: t("Realizadas"), value: d.managerial.done, color: STATUS_COLORS.good },
+      { label: t("Não realizadas"), value: d.managerial.notDone, color: STATUS_COLORS.bad },
+      { label: t("Aguardando confirmação"), value: d.managerial.pending, color: STATUS_COLORS.warn },
+      { label: t("Futuras"), value: d.managerial.upcoming, color: STATUS_COLORS.idle }])}</div>
+    <div class="card"><h2>${t("Realizadas por nível")}</h2>${hbars(d.byLevel.map(([l, v]) => [t(l), v]))}</div>
+    <div class="card"><h2>${t("Realizadas por tipo")}</h2>${hbars(d.byType.map(([l, v]) => [t(l), v]))}</div>
+  </div>
+  <div class="grid" style="margin-top:var(--gap)">
+    <div class="card"><h2>${t("Reuniões obrigatórias — mês atual")}</h2>
+      ${mand.length ? `<table>${th(["Reunião", "Realizadas / exigidas", "Agendadas", "Não realizadas"])}${mand.map((m) => `<tr><td>${esc(m.title)}</td><td>${meter(m.held, m.required, m.title)}</td><td>${m.scheduled}</td><td>${m.missed ? pill(m.missed, "p-Alta") : 0}</td></tr>`).join("")}</table>`
+        : `<p class="muted">${t("Nenhuma reunião obrigatória cadastrada.")} <a href="#reunioes/obrigatorias">${t("Cadastrar")}</a></p>`}</div>
+    ${insightsBox("meetings", { period: M_PERIOD })}
+  </div>`;
+}
+
+// ------------------------------------------------------------------ dashboard de riscos
+function dashRisksView() {
+  const d = Core.dashRisks();
+  return `<div class="hero">${t("RISK_HERO", { total: d.total, crit: d.critical, inv: d.investigate, stale: d.stale })}</div>
+  <div class="kpis">${statTile(d.total, t("Riscos abertos"), t("{n} fechados", { n: d.closed }))}${statTile(d.critical, t("Críticos (prob. alta × impacto alto)"))}${statTile(d.investigate, t("Em investigação"))}
+    ${statTile(d.monitor, t("Em monitoramento"))}${statTile(d.stale, t("Sem atualização recente"))}${statTile(d.inputs30, t("Inputs nos últimos 30 dias"))}${statTile(d.withProjects, t("Ligados a projetos"))}</div>
+  <div class="grid">
+    <div class="card"><h2>${t("Matriz probabilidade × impacto")}</h2>${heatmap(d.matrix, ["Alta", "Média", "Baixa"], ["Alto", "Médio", "Baixo"])}<p class="muted small">${t("Número de riscos abertos em cada combinação; quanto mais escuro, mais riscos.")}</p></div>
+    <div class="card"><h2>${t("Riscos abertos por impacto principal")}</h2>${hbars(d.byImpact.map(([l, v]) => [t(l), v]))}</div>
+    ${insightsBox("risks")}
+  </div>`;
+}
+
+// ------------------------------------------------------------------ calendário de reuniões
+let CAL_MONTH = null;
+const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+function calendarView() {
+  CAL_MONTH ||= S.today.slice(0, 7);
+  const days = Core.monthDays(CAL_MONTH), lead = (Core.weekday(days[0]) + 6) % 7;
+  const evs = S.db.meetings.filter((m) => (m.date || "").startsWith(CAL_MONTH)).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
+  const sugs = (S.db.meeting_suggestions || []).filter((x) => x.date.startsWith(CAL_MONTH));
+  const [y, m] = CAL_MONTH.split("-").map(Number);
+  const ml = new Date(y, m - 1, 1).toLocaleDateString(I18N.htmlLang(), { month: "long", year: "numeric" });
+  const monthLabel = ml.charAt(0).toUpperCase() + ml.slice(1);
+  const shift = (n) => { const d = new Date(y, m - 1 + n, 1); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; };
+  const cell = (date) => {
+    const de = evs.filter((e) => e.date === date), ds = sugs.filter((x) => x.date === date);
+    return `<div class="cal-day ${date === S.today ? "today" : ""} ${[0, 6].includes(Core.weekday(date)) ? "weekend" : ""}" onclick="if(event.target===this||event.target.classList.contains('cal-num'))quickMeeting('${date}')">
+      <span class="cal-num">${+date.slice(8)}</span>
+      ${de.map((e) => `<a class="cal-ev st-${e.status.replace(/\W/g, "")}" href="#reunioes/${e.id}" title="${esc(titleOf(e))} · ${esc(t(e.status))}">${esc(e.time || "")} ${esc(titleOf(e))}</a>`).join("")}
+      ${ds.map((x) => `<span class="cal-ev sug" title="${esc(t(x.reason))}"><span class="sug-t">${esc(x.time)} ${esc(x.title)}</span>
+        <button class="mini" title="${esc(t("Aceitar"))}" onclick="event.stopPropagation();busy(this, ()=>acceptSuggestions(['${x.id}']))">✓</button><button class="mini" title="${esc(t("Descartar"))}" onclick="event.stopPropagation();busy(this, ()=>discardSuggestion('${x.id}'))">×</button></span>`).join("")}
+    </div>`;
+  };
+  return `<div class="toolbar"><button class="small ghost" onclick="CAL_MONTH='${shift(-1)}';render()">←</button><b class="cal-title">${esc(monthLabel)}</b>
+      <button class="small ghost" onclick="CAL_MONTH='${shift(1)}';render()">→</button><button class="small ghost" onclick="CAL_MONTH=null;render()">${t("Hoje")}</button>
+      <button class="small" onclick="busy(this, ()=>suggestMonth(CAL_MONTH))">${t("Sugerir datas das obrigatórias (IA)")}</button>
+      ${sugs.length ? `<button class="small ghost" onclick="busy(this, ()=>acceptSuggestions(${JSON.stringify(sugs.map((x) => x.id)).replace(/"/g, "'")}))">${t("Aceitar todas as sugestões")} (${sugs.length})</button>` : ""}</div>
+  <p class="muted">${t("Clique em um dia para inserir uma reunião. Sugestões da IA aparecem tracejadas: ✓ aceita, × descarta.")}</p>
+  <div class="cal">${WEEKDAYS.map((w) => `<div class="cal-head">${t(w)}</div>`).join("")}${"<div class='cal-day empty'></div>".repeat(lead)}${days.map(cell).join("")}</div>
+  <div class="legend">${["Agendada", "Pendente", "Solicitada", "Realizada", "Não realizada"].map((s) => `<span><i class="st-${s.replace(/\W/g, "")}"></i>${esc(t(s))}</span>`).join("")}<span><i class="sug"></i>${t("Sugestão")}</span></div>`;
+}
+function meetingFields(pre = {}) {
+  return `<div class="row"><div>${L("Nível")}<select id="mq-level">${opts(LIST("meeting_levels"), pre.level || "Gerencial")}</select></div>
+    <div>${L("Tipo")}<select id="mq-type">${opts(LIST("meeting_types"), pre.mtype || "Reporte")}</select></div>
+    <div>${L("Agendamento")}<select id="mq-sched">${opts(["Pré-agendada", "Urgente"], pre.scheduling || "Pré-agendada")}</select></div></div>`;
+}
+const readMeetingFields = () => ({ level: $("#mq-level").value, mtype: $("#mq-type").value, scheduling: $("#mq-sched").value });
+function quickMeeting(date) {
+  openModal(`<h2>${t("Nova reunião em {date}", { date })}</h2>
+    <div class="row"><div>${L("Título")}<input id="mq-title"></div><div>${L("Horário")}<input type="time" id="mq-time" value="${esc(S.db.settings.work_hours.start)}"></div><div>${L("Duração (min)")}<input type="number" id="mq-dur" value="60"></div></div>
+    ${meetingFields()}
+    <div class="row"><div>${L("Reunião obrigatória")}<select id="mq-mand"><option value="">—</option>${S.db.mandatory.map((m) => `<option value="${m.id}">${esc(m.title)}</option>`).join("")}</select></div>
+      <div>${L("Projeto")}<select id="mq-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}">${p.id} · ${esc(p.name)}</option>`).join("")}</select></div>
+      <div>${L("Participantes")}<input id="mq-part"></div></div>
+    ${L("Pauta / objetivo")}<textarea id="mq-agenda" style="min-height:60px"></textarea>
+    <div class="actions"><button onclick="busy(this, ()=>saveQuickMeeting('${date}'))">${t("Salvar")}</button><button class="ghost" onclick="closeModal()">${t("Cancelar")}</button></div>`);
+  $("#mq-mand").onchange = () => { const m = S.db.mandatory.find((x) => x.id === $("#mq-mand").value); if (m) { $("#mq-title").value ||= m.title; $("#mq-level").value = m.level || "Gerencial"; $("#mq-type").value = m.mtype || "Reporte"; if (m.preferred_time) $("#mq-time").value = m.preferred_time; } };
+}
+async function saveQuickMeeting(date) {
+  const title = $("#mq-title").value.trim();
+  if (!title) throw new Error(t("Informe o título."));
+  await api("meetings", "POST", { title, date, time: $("#mq-time").value, duration: +$("#mq-dur").value || 60, ...readMeetingFields(), mandatory_id: $("#mq-mand").value,
+    project_id: $("#mq-proj").value, participants: $("#mq-part").value, agenda: $("#mq-agenda").value, status: date < S.today ? "Pendente" : "Agendada" });
+  closeModal(); toast(t("Reunião agendada")); await refresh();
+}
+async function suggestMonth(month) {
+  if (!S.db.mandatory.some((m) => m.active !== false)) throw new Error(t("Cadastre primeiro as reuniões obrigatórias."));
+  const r = await api("meeting_suggest", "POST", { month });
+  toast(r.engine === "heuristica" ? t("Sugestões calculadas pela frequência (IA offline).") : t("Sugestões da IA prontas: confira no calendário."));
+  await refresh();
+}
+async function acceptSuggestions(ids) { const r = await api("meeting_suggest_accept", "POST", { ids }); toast(t("{n} reuniões agendadas", { n: r.created.length })); await refresh(); }
+async function discardSuggestion(id) { await api("meeting_suggest_accept", "POST", { ids: [], discard: [id] }); await refresh(); }
+
+// ------------------------------------------------------------------ reuniões obrigatórias
+let MAND_EDIT = null;
+function mandatoryView() {
+  const month = S.today.slice(0, 7), st = Object.fromEntries(Core.mandatoryStatus(month).map((x) => [x.id, x]));
+  const e = MAND_EDIT ? S.db.mandatory.find((x) => x.id === MAND_EDIT) || {} : {};
+  const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const sugs = (S.db.meeting_suggestions || []).filter((x) => x.date.startsWith(month));
+  return `<div class="card" style="overflow:auto;margin-bottom:var(--gap)"><h2>${t("Reuniões obrigatórias")}</h2>
+    <p class="muted">${t("Reuniões que, pelos requisitos da empresa, precisam acontecer. A IA sugere datas e horários do mês respeitando a frequência e as suas regras.")}</p>
+    <table>${th(["ID", "Reunião", "Frequência", "Dias preferidos", "Horário", "Duração", "Nível", "Mês atual", "Ativa", ""])}
+    ${S.db.mandatory.map((m) => `<tr><td>${m.id}</td><td>${esc(m.title)}</td><td>${esc(t(m.frequency))}${m.frequency === "Personalizada" ? ` (${m.times_per_month}×)` : ""}</td>
+      <td>${(m.preferred_days || []).map((d) => t(dayNames[d])).join(", ") || "—"}</td><td>${esc(m.preferred_time || "—")}</td><td>${esc(m.duration || 60)} min</td><td>${esc(tv(m.level))}</td>
+      <td>${st[m.id] ? meter(st[m.id].held, st[m.id].required, m.title) : ""}</td><td>${m.active === false ? t("Não") : t("Sim")}</td>
+      <td class="nowrap"><button class="small ghost" onclick="MAND_EDIT='${m.id}';render()">${t("Editar")}</button><button class="small ghost danger" onclick="if(confirm(t('Excluir este registro?')))api('mandatory/${m.id}','DELETE').then(refresh)">×</button></td></tr>`).join("")
+      || `<tr><td colspan=10 class="muted">${t("Nenhuma reunião obrigatória cadastrada.")}</td></tr>`}</table></div>
+  <div class="grid">
+  <div class="card"><h2>${t(MAND_EDIT ? "Editar reunião obrigatória" : "Nova reunião obrigatória")}</h2>
+    ${L("Título")}<input id="mo-title" value="${esc(e.title)}">
+    <div class="row"><div>${L("Frequência")}<select id="mo-freq">${opts(FREQUENCIES, e.frequency || "Mensal")}</select></div><div>${L("Vezes por mês (personalizada)")}<input type="number" id="mo-times" min="1" value="${esc(e.times_per_month || 1)}"></div>
+      <div>${L("Horário preferido")}<input type="time" id="mo-time" value="${esc(e.preferred_time || "")}"></div><div>${L("Duração (min)")}<input type="number" id="mo-dur" value="${esc(e.duration || 60)}"></div></div>
+    ${L("Dias preferidos")}<div class="checks inline">${[1, 2, 3, 4, 5].map((d) => `<label><input type="checkbox" class="mo-day" value="${d}" ${(e.preferred_days || []).map(Number).includes(d) ? "checked" : ""}> ${t(dayNames[d])}</label>`).join("")}</div>
+    <div class="row"><div>${L("Nível")}<select id="mo-level">${opts(LIST("meeting_levels"), e.level || "Gerencial")}</select></div><div>${L("Tipo")}<select id="mo-type">${opts(LIST("meeting_types"), e.mtype || "Reporte")}</select></div>
+      <div>${L("Participantes")}<input id="mo-part" value="${esc(e.participants)}"></div></div>
+    ${L("Requisito / observações")}<textarea id="mo-notes" style="min-height:50px">${esc(e.notes)}</textarea>
+    <div class="checks"><label><input type="checkbox" id="mo-active" ${e.active === false ? "" : "checked"}> ${t("Ativa")}</label></div>
+    <div class="actions"><button onclick="busy(this, saveMandatory)">${t("Salvar")}</button>${MAND_EDIT ? `<button class="ghost" onclick="MAND_EDIT=null;render()">${t("Cancelar")}</button>` : ""}</div></div>
+  <div class="card"><h2>${t("Regras para a IA sugerir horários")}</h2>
+    <p class="muted">${t("Escreva observações e regras: dias e horários a evitar, disponibilidade da diretoria, feriados, intervalo entre reuniões…")}</p>
+    <div class="row"><div>${L("Início do expediente")}<input type="time" id="mr-start" value="${esc(S.db.settings.work_hours.start)}"></div><div>${L("Fim do expediente")}<input type="time" id="mr-end" value="${esc(S.db.settings.work_hours.end)}"></div></div>
+    ${L("Regras e observações")}<textarea id="mr-rules" style="min-height:140px" placeholder="${esc(t("MEETING_RULES_PLACEHOLDER"))}">${esc(S.db.settings.meeting_rules)}</textarea>
+    <div class="actions"><button class="ghost" onclick="busy(this, saveMeetingRules)">${t("Salvar regras")}</button>
+      <button onclick="busy(this, async()=>{await saveMeetingRules(); await suggestMonth('${month}');})">${t("Sugerir datas do mês atual (IA)")}</button></div>
+    ${sugs.length ? `<h3>${t("Sugestões para o mês")}</h3><table>${th(["Reunião", "Data", "Horário", "Motivo", ""])}${sugs.map((x) => `<tr><td>${esc(x.title)}</td><td>${esc(x.date)} (${t(dayNames[Core.weekday(x.date)])})</td><td>${esc(x.time)}</td><td class="muted">${esc(t(x.reason))}</td>
+      <td class="nowrap"><button class="small" onclick="busy(this, ()=>acceptSuggestions(['${x.id}']))">✓</button><button class="small ghost danger" onclick="busy(this, ()=>discardSuggestion('${x.id}'))">×</button></td></tr>`).join("")}</table>
+      <div class="actions"><button onclick="busy(this, ()=>acceptSuggestions(${JSON.stringify(sugs.map((x) => x.id)).replace(/"/g, "'")}))">${t("Aceitar todas as sugestões")}</button><a class="btn ghost" href="#reunioes/calendario">${t("Ver no calendário")}</a></div>` : ""}
+  </div></div>`;
+}
+async function saveMandatory() {
+  const title = $("#mo-title").value.trim();
+  if (!title) throw new Error(t("Informe o título."));
+  const data = { title, frequency: $("#mo-freq").value, times_per_month: +$("#mo-times").value || 1, preferred_time: $("#mo-time").value, duration: +$("#mo-dur").value || 60,
+    preferred_days: [...document.querySelectorAll(".mo-day")].filter((c) => c.checked).map((c) => +c.value), level: $("#mo-level").value, mtype: $("#mo-type").value,
+    participants: $("#mo-part").value, notes: $("#mo-notes").value, active: $("#mo-active").checked };
+  if (MAND_EDIT) await api(`mandatory/${MAND_EDIT}`, "PATCH", data); else await api("mandatory", "POST", data);
+  MAND_EDIT = null; toast(t("Salvo")); await refresh();
+}
+async function saveMeetingRules() {
+  await api("settings", "PATCH", { meeting_rules: $("#mr-rules").value, work_hours: { start: $("#mr-start").value || "08:00", end: $("#mr-end").value || "18:00" } });
+  S.db.settings.meeting_rules = $("#mr-rules").value;
+  toast(t("Regras salvas"));
+}
+
+// ------------------------------------------------------------------ ensinar a IA: análise de risco
+function teachBox(col, rec) {
+  const a = rec.risk_analysis || {};
+  const factors = LIST("impact_types");
+  return `<div class="card teach"><h2>${t("Minha análise de risco (ensinar a IA)")}</h2>
+    <p class="muted">${t("TEACH_RISK_HELP")}</p>
+    <div class="row"><div>${L("Nível de risco na sua avaliação")}<select id="tc-level">${opts(LEVELS, a.level || "Média")}</select></div></div>
+    ${L("Fatores que pesaram")}<div class="checks inline">${factors.map((x) => `<label><input type="checkbox" class="tc-f" value="${esc(x)}" ${(a.factors || []).includes(x) ? "checked" : ""}> ${esc(t(x))}</label>`).join("")}</div>
+    ${L("Sua análise")}<textarea id="tc-text" style="min-height:90px" placeholder="${esc(t("TEACH_RISK_PLACEHOLDER"))}">${esc(a.analysis)}</textarea>
+    <div class="actions"><button onclick="busy(this, ()=>saveTeach('${col}','${rec.id}'))">${t("Salvar análise e ensinar a IA")}</button>
+      ${a.date ? `<span class="muted">${t("Última análise")}: ${fmt(a.date)}</span>` : ""}</div></div>`;
+}
+async function saveTeach(col, id) {
+  const analysis = $("#tc-text").value.trim();
+  if (!analysis) throw new Error(t("Escreva a sua análise."));
+  await api(`${col}/${id}/teach`, "POST", { analysis, level: $("#tc-level").value, factors: [...document.querySelectorAll(".tc-f")].filter((c) => c.checked).map((c) => c.value) });
+  toast(t("Análise salva: a IA vai usar o seu raciocínio nas próximas avaliações."));
+  if (col === "items") { closeModal(); location.hash = "lista"; }
+  await refresh();
+}
+</script>
+<script>
 /* Plataforma de Governança — interface (JS puro, sem build).
  * Textos de tela passam por t() (i18n.js). Valores guardados nos dados (status, prioridade, origem…)
  * ficam como códigos fixos em português e são traduzidos só na exibição, com tv(). */
@@ -2426,7 +3063,7 @@ let S = null; // estado vindo de Core.api("state")
 const STATUS_ITEM = ["Aberto", "Em andamento", "Aguardando", "Concluído"];
 const LEVELS = ["Alta", "Média", "Baixa"];
 const PITEM_STATUS = ["Aberto", "Em andamento", "Finalizado"];
-const MEETING_STATUS = ["Pendente", "Solicitada", "Realizada", "Não realizada"];
+const MEETING_STATUS = ["Agendada", "Pendente", "Solicitada", "Realizada", "Não realizada"];
 const MODULES = ["painel", "entradas", "lista", "projetos", "reunioes", "riscos", "fluxos", "summaries"];
 const SCENARIOS = { projects: ["se realizado", "se não realizado"], risks: ["se concretizar", "se tratado"] };
 const ACT_FIELDS = { scope: "Scope", target: "Target", item: "Item", n: "Nº", subitem: "Subitem", last_progress: "Last Progress",
@@ -2450,7 +3087,7 @@ const LIST = (k) => S.db.settings.lists[k] || [];
 const timeline = (list) => list.map((h) => `<li><span class="muted">${fmt(h.date || h.ts)}</span> ${esc(msg(h))}</li>`).join("") || '<li class="muted">—</li>';
 const bar = (pct, label = "") => (pct == null ? `<span class="muted">—</span>`
   : `<div class="progress" title="${esc(label)}"><div class="progress-bar"><span style="width:${pct}%"></span></div><b>${pct}%</b></div>`);
-const statusPill = (s) => pill(tv(s), { Realizada: "p-Baixa", "Não realizada": "p-Alta", Pendente: "p-Média", Solicitada: "p-Média", Finalizado: "p-Baixa", Concluído: "p-Baixa", Concluída: "p-Baixa" }[s] || "");
+const statusPill = (s) => pill(tv(s), { Realizada: "p-Baixa", "Não realizada": "p-Alta", Pendente: "p-Média", Solicitada: "p-Média", Agendada: "", Finalizado: "p-Baixa", Concluído: "p-Baixa", Concluída: "p-Baixa" }[s] || "");
 const tabs = (base, list, cur) => `<div class="tabs">${list.map(([k, label]) => `<a href="#${base}/${k}" class="${k === cur ? "on" : ""}">${label}</a>`).join("")}</div>`;
 const actStatus = (a) => ((+a.progress || 0) >= 100 ? "Concluída" : (+a.progress || 0) > 0 ? "Em andamento" : "Não iniciada");
 
@@ -2553,7 +3190,7 @@ window.addEventListener("hashchange", render);
 // ------------------------------------------------------------------ painel
 function viewPainel() {
   const open = S.db.items.filter((i) => i.status !== "Concluído");
-  const toConfirm = S.db.meetings.filter((m) => ["Pendente", "Solicitada"].includes(m.status));
+  const toConfirm = S.db.meetings.filter((m) => OPEN_MEETING.includes(m.status) && m.date && m.date <= S.today);
   const k = [
     ["Entradas pendentes", S.db.inputs.filter((i) => i.status !== "Registrado").length, "entradas"],
     ["Itens em aberto", open.length, "lista"],
@@ -2646,6 +3283,7 @@ function openTriage(id) {
   ${L("Impactos")}<div class="checks inline">${S.impact_types.map((x) => `<label><input type="checkbox" class="t-imp" value="${esc(x)}" ${(a.impacts || []).includes(x) ? "checked" : ""}> ${esc(t(x))}</label>`).join("")}</div>
   ${L("Impactos em quais projetos / operações, por quê")}<textarea id="t-impd" style="min-height:50px">${esc(a.impact_details)}</textarea>
   ${L("Gaps (por que não foi previsto antes?)")}<textarea id="t-gap" style="min-height:50px">${esc(a.gap_analysis)}</textarea>
+  ${L("Sua análise de risco (ensina a IA)")}<textarea id="t-teach" style="min-height:50px" placeholder="${esc(t("TEACH_RISK_PLACEHOLDER"))}">${esc(inp.risk_analysis?.analysis)}</textarea>
   <div class="steps" style="margin-top:14px"><span class="step on">${t("3. Definição (pode ser mais de uma)")}</span></div>
   <div class="checks">${Object.entries(S.definitions).map(([k, v]) => `<label><input type="checkbox" class="t-def" value="${k}" ${defs.includes(k) ? "checked" : ""}> ${esc(t(v))}</label>`).join("")}</div>
   <p class="muted">${t("“Ação dentro de um projeto” entra automaticamente na aba Itens adicionais do projeto.")}</p>
@@ -2667,6 +3305,8 @@ async function commitTriage(id) {
   };
   if (body.relation_mode === "incluir_existente" && !body.include_in) throw new Error(t("Selecione o item on going."));
   const c = (await api(`inputs/${id}/commit`, "POST", body)).created;
+  const teach = $("#t-teach").value.trim();
+  if (teach) await api(`items/${c.item}/teach`, "POST", { analysis: teach, level: body.assessment.urgency, factors: body.assessment.impacts });
   toast(`${t("Registrado em")} ${c.item}` + (c.project ? ` · ${t("projeto")} ${c.project}` : "") + (c.risks ? ` · ${c.risks.join(", ")}` : "") + (c.action ? ` · ${t("ação")} ${c.action}` : ""));
   closeModal();
   location.hash = "lista";
@@ -2706,6 +3346,7 @@ function openItem(id) {
   ${L("Registrar atualização")}<textarea id="i-note" style="min-height:50px" placeholder="${esc(t("O que aconteceu? (entra no histórico e no summary)"))}"></textarea>
   <div class="checks"><label><input type="checkbox" id="i-report" ${i.report ? "checked" : ""}> ${t("Info a ser reportada (entra no summary)")}</label></div>
   <div class="actions"><button onclick="busy(this, ()=>saveItem('${i.id}'))">${t("Salvar")}</button></div>
+  ${teachBox("items", i)}
   <h3>${t("Histórico")}</h3><ul class="tl">${timeline((i.history || []).slice().reverse())}</ul>`);
 }
 async function saveItem(id) {
@@ -2743,9 +3384,12 @@ async function addScenario(col, id, sc) {
 
 // ------------------------------------------------------------------ projetos
 function viewProjetos(id, tab) {
-  if (id) return projectDetail(byId("projects", id), tab || "geral");
+  if (id && !["dash", "lista"].includes(id)) return projectDetail(byId("projects", id), tab || "geral");
+  const T = [["dash", t("Dashboard")], ["lista", t("Lista de projetos")]];
+  const head = `<h1>${t("Gerenciamento de projetos")}</h1>${tabs("projetos", T, id || "dash")}`;
+  if ((id || "dash") === "dash") return head + dashProjectsView();
   const list = S.db.projects.slice().sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0));
-  return `<h1>${t("Gerenciamento de projetos")}</h1>
+  return `${head}
   <div class="grid" style="grid-template-columns: minmax(300px,2.2fr) minmax(280px,1fr)">
   <div class="card" style="overflow:auto"><table>${th(["ID", "Projeto", "Responsável", "% concluído", "Atividades", "Itens adicionais abertos", "Próx. reunião", "Status"])}
   ${list.map((p) => `<tr class="click" onclick="location.hash='projetos/${p.id}'"><td>${p.id}</td><td>${p.main ? `<span class="star" title="${esc(t("Projeto principal"))}">★</span> ` : ""}${esc(p.name)}</td><td>${esc(p.owner)}</td>
@@ -2763,7 +3407,7 @@ function projectDetail(p, tab) {
   const T = [["geral", t("Visão geral")], ["itens", `${t("Itens do projeto")} (${pct == null ? 0 : pct}%)`], ["atividades", `${t("Atividades (planilha)")} (${p.activities.length})`],
     ["adicionais", `${t("Itens adicionais do projeto")} (${open})`], ["impactos", t("Impactos e riscos")], ["arquivos", t("Arquivos / master schedule")], ["fluxo", t("Fluxo")]];
   const body = { geral: projOverview, itens: projItems, atividades: projActivities, adicionais: projAdditional, impactos: (x) => scenariosTab("projects", x), arquivos: projFiles, fluxo: projFlow }[tab] || projOverview;
-  return `<p><a href="#projetos">← ${t("Projetos")}</a></p>
+  return `<p><a href="#projetos/lista">← ${t("Projetos")}</a></p>
   <div class="title-row"><h1>${p.main ? '<span class="star">★</span> ' : ""}${p.id} · ${esc(p.name)}</h1><div class="pct-big">${t("Concluído")}: ${bar(pct)}</div></div>
   <p class="muted">${t("Pasta local:")} <code>${esc(S.workspace)}/${esc(p.folder)}</code>${apct != null ? ` · ${t("Progresso das atividades")}: ${apct}%` : ""}</p>
   ${tabs("projetos/" + p.id, T, tab)}${body(p)}`;
@@ -2918,43 +3562,52 @@ function scheduleAnalysis(a) {
 // ------------------------------------------------------------------ reuniões
 let M_FILTER = "";
 function viewReunioes(id) {
-  if (id) return meetingDetail(byId("meetings", id));
+  if (id && /^MEET/.test(id)) return meetingDetail(byId("meetings", id));
+  const tab = id || "dash";
+  const pend = S.db.meetings.filter((m) => ["Pendente", "Solicitada"].includes(m.status) || (m.status === "Agendada" && m.date <= S.today)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const T = [["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`], ["confirmar", `${t("Confirmar e solicitar")} (${pend.length})`], ["todas", t("Todas as reuniões")]];
+  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, confirmar: () => meetingsConfirmView(pend), todas: meetingsAllView }[tab] || dashMeetingsView;
+  return `<h1>${t("Gerenciamento de reuniões")}</h1>${tabs("reunioes", T, tab)}${body()}`;
+}
+function meetingsConfirmView(pend) {
   const pre = window._newMeetingProject || ""; window._newMeetingProject = "";
-  const pend = S.db.meetings.filter((m) => ["Pendente", "Solicitada"].includes(m.status)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  const all = S.db.meetings.filter((m) => !M_FILTER || m.status === M_FILTER).slice().reverse();
   const projSel = (idp) => `<select id="${idp}"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}" ${p.id === pre ? "selected" : ""}>${p.id} · ${esc(p.name)}</option>`).join("")}</select>`;
-  return `<h1>${t("Gerenciamento de reuniões")}</h1>
-  <div class="card" style="margin-bottom:14px"><h2>${t("Aguardando confirmação")} (${pend.length})</h2>
+  return `<div class="card" style="margin-bottom:14px"><h2>${t("Aguardando confirmação")} (${pend.length})</h2>
     <p class="muted">${t("Reuniões solicitadas e as geradas automaticamente pelos projetos principais. Confirme se a reunião foi feita ou não.")}</p>
-    <table>${th(["ID", "Reunião", "Data", "Projeto", "Solicitada por", "Status", ""])}
-    ${pend.map((m) => `<tr class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}${m.auto ? ` ${pill(t("automática"))}` : ""}</td><td>${esc(m.date)}</td>
-      <td>${m.project_id ? `<a href="#projetos/${m.project_id}">${m.project_id}</a>` : ""}</td><td>${esc(tv(m.requested_by))}</td><td>${statusPill(m.status)}</td>
+    <table>${th(["ID", "Reunião", "Data", "Nível", "Projeto", "Solicitada por", "Status", ""])}
+    ${pend.map((m) => `<tr class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}${m.auto ? ` ${pill(t("automática"))}` : ""}${m.mandatory_id ? ` ${pill(t("obrigatória"), "p-Alta")}` : ""}</td><td>${esc(m.date)} ${esc(m.time || "")}</td>
+      <td>${esc(tv(m.level))}</td><td>${m.project_id ? `<a href="#projetos/${m.project_id}">${m.project_id}</a>` : ""}</td><td>${esc(tv(m.requested_by))}</td><td>${statusPill(m.status)}</td>
       <td class="nowrap"><button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
-        <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Nada a confirmar.")}</td></tr>`}</table></div>
+        <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nada a confirmar.")}</td></tr>`}</table></div>
   <div class="grid">
   <div class="card"><h2>${t("Solicitar reunião")}</h2>
-    <div class="row"><div>${L("Título / pauta")}<input id="rq-title"></div><div>${L("Data prevista")}<input type="date" id="rq-date" value="${S.today}"></div></div>
+    <div class="row"><div>${L("Título / pauta")}<input id="rq-title"></div><div>${L("Data prevista")}<input type="date" id="rq-date" value="${S.today}"></div><div>${L("Horário")}<input type="time" id="rq-time"></div></div>
     <div class="row"><div>${L("Solicitada por")}<input id="rq-by" list="rq-sources"></div><div>${L("Participantes")}<input id="rq-part"></div><div>${L("Projeto")}${projSel("rq-proj")}</div></div>
-    <datalist id="rq-sources">${LIST("sources").map((s) => `<option value="${esc(t(s))}">`).join("")}</datalist>
+    ${meetingFields({ scheduling: "Urgente" }).replace(/mq-/g, "rq-")}
+    <datalist id="rq-sources">${LIST("sources").map((x) => `<option value="${esc(t(x))}">`).join("")}</datalist>
     ${L("Pauta / objetivo")}<textarea id="rq-agenda" style="min-height:60px"></textarea>
     <div class="actions"><button onclick="busy(this, requestMeeting)">${t("Registrar solicitação")}</button></div></div>
   <div class="card"><h2>${t("Nova ata / anotação")}</h2>
-    <div class="row"><div>${L("Título")}<input id="m-title"></div><div>${L("Data")}<input type="date" id="m-date" value="${S.today}"></div></div>
+    <div class="row"><div>${L("Título")}<input id="m-title"></div><div>${L("Data")}<input type="date" id="m-date" value="${S.today}"></div><div>${L("Horário")}<input type="time" id="m-time"></div></div>
     <div class="row"><div>${L("Participantes")}<input id="m-part"></div><div>${L("Departamentos")}<input id="m-dept"></div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
+    ${meetingFields().replace(/mq-/g, "m-")}
     ${L("Ata")}<textarea id="m-min" style="min-height:120px" placeholder="${esc(t("MINUTES_HINT"))}"></textarea>
     ${L("Anotações pessoais")}<textarea id="m-notes"></textarea>
-    <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>
-  <div class="card" style="margin-top:14px"><h2>${t("Todas as reuniões")}</h2>
-    <div class="toolbar"><select onchange="M_FILTER=this.value;render()"><option value="">${t("Status")}</option>${opts(MEETING_STATUS, M_FILTER)}</select></div>
-    <table>${th(["ID", "Reunião", "Data", "Projeto", "Itens", "Status"])}
-    ${all.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)}</td><td>${esc(m.project_id)}</td>
-      <td>${(m.links.items || []).length + (m.links.inputs || []).length}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=6 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
+    <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>`;
+}
+function meetingsAllView() {
+  const all = S.db.meetings.filter((m) => !M_FILTER || m.status === M_FILTER).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  return `<div class="card"><div class="toolbar"><select onchange="M_FILTER=this.value;render()"><option value="">${t("Status")}</option>${opts(MEETING_STATUS, M_FILTER)}</select></div>
+    <table>${th(["ID", "Reunião", "Data", "Nível", "Tipo", "Agendamento", "Projeto", "Status"])}
+    ${all.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)} ${esc(m.time || "")}</td><td>${esc(tv(m.level))}</td><td>${esc(tv(m.mtype))}</td>
+      <td>${esc(tv(m.scheduling))}</td><td>${esc(m.project_id)}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
 }
 async function requestMeeting() {
   const title = $("#rq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
-  await api("meetings", "POST", { title, date: $("#rq-date").value, requested_by: $("#rq-by").value, participants: $("#rq-part").value,
-    project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: "Solicitada", kind: "Solicitada" });
+  await api("meetings", "POST", { title, date: $("#rq-date").value, time: $("#rq-time").value, requested_by: $("#rq-by").value, participants: $("#rq-part").value,
+    project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: "Solicitada", kind: "Solicitada",
+    level: $("#rq-level").value, mtype: $("#rq-type").value, scheduling: $("#rq-sched").value });
   toast(t("Solicitação registrada")); await refresh();
 }
 async function meetingDone(id) {
@@ -2971,8 +3624,9 @@ async function meetingNotDone(id) {
   await refresh();
 }
 async function saveMeeting() {
-  const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, participants: $("#m-part").value,
-    departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value, status: "Realizada" });
+  const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, time: $("#m-time").value, participants: $("#m-part").value,
+    departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value, status: "Realizada",
+    level: $("#m-level").value, mtype: $("#m-type").value, scheduling: $("#m-sched").value });
   await api(`meetings/${r.id}/extract`, "POST");
   await refresh(); location.hash = "reunioes/" + r.id;
 }
@@ -2980,12 +3634,14 @@ function meetingDetail(m) {
   if (!m) return `<p>${t("Reunião não encontrada.")}</p>`;
   const ex = m.extraction;
   window._demands = ex?.demands || [];
-  const pending = ["Pendente", "Solicitada"].includes(m.status);
-  return `<p><a href="#reunioes">← ${t("Reuniões")}</a></p><h1>${m.id} · ${esc(titleOf(m))}</h1>
+  const pending = OPEN_MEETING.includes(m.status);
+  return `<p><a href="#reunioes/todas">← ${t("Reuniões")}</a></p><h1>${m.id} · ${esc(titleOf(m))}</h1>
   <p>${statusPill(m.status)} <span class="muted">${[m.date, m.participants, m.departments, m.requested_by ? t("Solicitada por") + ": " + tv(m.requested_by) : ""].filter(Boolean).map(esc).join(" · ")}</span></p>
   ${pending ? `<div class="alert lv-media">${t("Esta reunião aguarda confirmação.")} <button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
     <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></div>` : ""}
   ${m.agenda ? `<div class="card" style="margin-bottom:14px"><b>${t("Pauta / objetivo")}:</b> ${esc(m.agenda)}</div>` : ""}
+  <div class="card" style="margin-bottom:14px"><div class="row"><div>${L("Data")}<input type="date" id="me-date" value="${esc(m.date)}"></div><div>${L("Horário")}<input type="time" id="me-time" value="${esc(m.time)}"></div></div>
+    ${meetingFields(m)}<div class="actions"><button class="small" onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{date:$('#me-date').value,time:$('#me-time').value,...readMeetingFields()}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>
   <div class="grid">
   <div class="card"><h2>${t("Ata")}</h2><textarea id="md-min" style="min-height:200px">${esc(m.minutes)}</textarea>${L("Anotações")}<textarea id="md-notes">${esc(m.notes)}</textarea>
     <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{minutes:$('#md-min').value,notes:$('#md-notes').value}); await api('meetings/${m.id}/extract','POST'); await refresh();})">${t("Salvar e reprocessar")}</button></div>
@@ -3010,8 +3666,10 @@ async function demandToInput(mid, k) {
 
 // ------------------------------------------------------------------ riscos
 function viewRiscos(id, tab) {
-  if (id) return riskDetail(byId("risks", id), tab || "geral");
-  return `<h1>${t("Gerenciamento de riscos")}</h1>
+  if (id && !["dash", "lista"].includes(id)) return riskDetail(byId("risks", id), tab || "geral");
+  const head = `<h1>${t("Gerenciamento de riscos")}</h1>${tabs("riscos", [["dash", t("Dashboard")], ["lista", t("Lista de riscos")]], id || "dash")}`;
+  if ((id || "dash") === "dash") return head + dashRisksView();
+  return `${head}
   <div class="grid" style="grid-template-columns: minmax(300px,2fr) minmax(260px,1fr)">
   <div class="card" style="overflow:auto"><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto", "Principais impactos", "Inputs", "Responsável", "Status"])}
   ${S.db.risks.map((r) => `<tr class="click" onclick="location.hash='riscos/${r.id}'"><td>${r.id}</td><td>${esc(r.title)}</td><td>${esc(tv(r.mode))}</td><td>${prio(r.probability)}</td><td>${pill(tv(r.impact), "p-" + r.impact)}</td>
@@ -3026,7 +3684,7 @@ function riskDetail(r, tab) {
   if (!r) return `<p>${t("Risco não encontrado.")}</p>`;
   const T = [["geral", t("Visão geral")], ["inputs", `${t("Inputs do risco")} (${(r.inputs_log || []).length})`], ["impactos", t("Impactos e riscos")], ["docs", t("Documentos e análise")], ["fluxo", t("Fluxo")]];
   const body = { geral: riskOverview, inputs: riskInputs, impactos: (x) => scenariosTab("risks", x), docs: riskDocs, fluxo: riskFlow }[tab] || riskOverview;
-  return `<p><a href="#riscos">← ${t("Riscos")}</a></p><h1>${r.id} · ${esc(r.title)}</h1>
+  return `<p><a href="#riscos/lista">← ${t("Riscos")}</a></p><h1>${r.id} · ${esc(r.title)}</h1>
   <p>${(r.impacts || []).map((x) => pill(t(x), "p-Alta")).join("")} <span class="muted">${t("Pasta:")} <code>${esc(S.workspace)}/${esc(r.folder)}</code></span></p>
   ${tabs("riscos/" + r.id, T, tab)}${body(r)}`;
 }
@@ -3039,7 +3697,8 @@ function riskOverview(r) {
     ${L("Descrição")}<textarea id="rd-desc">${esc(r.description)}</textarea>${L("Notas / informações")}<textarea id="rd-notes">${esc(r.notes)}</textarea>
     <div class="actions"><button onclick="busy(this, saveRisk.bind(null,'${r.id}'))">${t("Salvar")}</button></div></div>
     <div class="card">${L("Vínculos")}<div>${linksHtml(r)}</div>${linkForm("risks", r.id)}
-    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((r.history || []).slice().reverse())}</ul></div></div>`;
+    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((r.history || []).slice().reverse())}</ul></div></div>
+    <div style="margin-top:var(--gap)">${teachBox("risks", r)}</div>`;
 }
 async function saveRisk(id) {
   await api("risks/" + id, "PATCH", { mode: $("#rd-mode").value, probability: $("#rd-prob").value, impact: $("#rd-imp").value, status: $("#rd-status").value, owner: $("#rd-owner").value,
@@ -3186,12 +3845,13 @@ function cfgLists(st) {
   return `<p class="muted">${t("Um valor por linha. Os valores padrão são traduzidos automaticamente; os que você criar aparecem como escritos.")}</p>
   <div class="grid">${box("sources", "Origens das demandas", "Ex.: Diretora, HQ, Departamento…")}${box("input_kinds", "Tipos de entrada", "Ex.: Pedido pontual, Nova solicitação do HQ…")}
     ${box("impact_types", "Categorias de impacto", "Usadas na classificação, nos riscos e nos fluxos.")}${box("areas", "Áreas", "Sugestões no campo Área principal.")}
-    ${box("flow_edge_labels", "Rótulos das ligações dos fluxos", "Ex.: causa, impacta, mitiga…")}</div>
+    ${box("flow_edge_labels", "Rótulos das ligações dos fluxos", "Ex.: causa, impacta, mitiga…")}
+    ${box("meeting_levels", "Níveis de reunião", "Ex.: Gerencial, Diretoria, Operacional…")}${box("meeting_types", "Tipos de reunião", "Ex.: Reporte, Decisão, Alinhamento…")}</div>
   <div class="actions"><button onclick="busy(this, saveLists)">${t("Salvar listas")}</button></div>`;
 }
 async function saveLists() {
   const v = (k) => $(`#ls-${k}`).value.split("\n").map((x) => x.trim()).filter(Boolean);
-  await api("settings", "PATCH", { areas: v("areas"), lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels") } });
+  await api("settings", "PATCH", { areas: v("areas"), lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels"), meeting_levels: v("meeting_levels"), meeting_types: v("meeting_types") } });
   toast(t("Salvo")); await refresh();
 }
 function cfgRules(st) {
@@ -3210,7 +3870,9 @@ function cfgAI() {
     <div class="actions"><button onclick="busy(this, saveAi)">${t("Salvar e testar")}</button>
       <span class="muted">${S.ai.enabled ? t("IA ativa —") + " " + esc(S.ai.model) : t("IA offline")}</span></div></div>
   <div class="card"><h2>${t("Aprendizado")}</h2>
-    <p>${t("{n} decisões de classificação guardadas", { n: Core.db.feedback.length })} · ${t("{n} exemplos salvos", { n: (S.db.flow_examples || []).length })}</p>
+    <p>${t("{n} decisões de classificação guardadas", { n: Core.db.feedback.length })} · ${t("{n} análises de risco ensinadas", { n: (S.db.risk_lessons || []).length })} · ${t("{n} exemplos salvos", { n: (S.db.flow_examples || []).length })}</p>
+    ${L("Critérios de avaliação de risco (valem para todos os itens e riscos)")}<textarea id="c-riskguide" style="min-height:110px" placeholder="${esc(t("RISK_GUIDE_PLACEHOLDER"))}">${esc(S.db.settings.risk_guidelines)}</textarea>
+    <div class="actions"><button class="ghost" onclick="busy(this, async()=>{await api('settings','PATCH',{risk_guidelines:$('#c-riskguide').value}); toast(t('Regras salvas')); await refresh();})">${t("Salvar critérios")}</button></div>
     ${L("Regras para montar fluxos (valem para todos)")}<textarea id="c-guide" style="min-height:120px" placeholder="${esc(t("FLOW_GUIDE_PLACEHOLDER"))}">${esc(S.db.settings.flow_guidelines)}</textarea>
     <div class="actions"><button class="ghost" onclick="busy(this, async()=>{await api('settings','PATCH',{flow_guidelines:$('#c-guide').value}); toast(t('Regras salvas')); await refresh();})">${t("Salvar regras")}</button></div></div></div>`;
 }

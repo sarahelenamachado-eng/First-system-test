@@ -6,7 +6,7 @@ let S = null; // estado vindo de Core.api("state")
 const STATUS_ITEM = ["Aberto", "Em andamento", "Aguardando", "Concluído"];
 const LEVELS = ["Alta", "Média", "Baixa"];
 const PITEM_STATUS = ["Aberto", "Em andamento", "Finalizado"];
-const MEETING_STATUS = ["Pendente", "Solicitada", "Realizada", "Não realizada"];
+const MEETING_STATUS = ["Agendada", "Pendente", "Solicitada", "Realizada", "Não realizada"];
 const MODULES = ["painel", "entradas", "lista", "projetos", "reunioes", "riscos", "fluxos", "summaries"];
 const SCENARIOS = { projects: ["se realizado", "se não realizado"], risks: ["se concretizar", "se tratado"] };
 const ACT_FIELDS = { scope: "Scope", target: "Target", item: "Item", n: "Nº", subitem: "Subitem", last_progress: "Last Progress",
@@ -30,7 +30,7 @@ const LIST = (k) => S.db.settings.lists[k] || [];
 const timeline = (list) => list.map((h) => `<li><span class="muted">${fmt(h.date || h.ts)}</span> ${esc(msg(h))}</li>`).join("") || '<li class="muted">—</li>';
 const bar = (pct, label = "") => (pct == null ? `<span class="muted">—</span>`
   : `<div class="progress" title="${esc(label)}"><div class="progress-bar"><span style="width:${pct}%"></span></div><b>${pct}%</b></div>`);
-const statusPill = (s) => pill(tv(s), { Realizada: "p-Baixa", "Não realizada": "p-Alta", Pendente: "p-Média", Solicitada: "p-Média", Finalizado: "p-Baixa", Concluído: "p-Baixa", Concluída: "p-Baixa" }[s] || "");
+const statusPill = (s) => pill(tv(s), { Realizada: "p-Baixa", "Não realizada": "p-Alta", Pendente: "p-Média", Solicitada: "p-Média", Agendada: "", Finalizado: "p-Baixa", Concluído: "p-Baixa", Concluída: "p-Baixa" }[s] || "");
 const tabs = (base, list, cur) => `<div class="tabs">${list.map(([k, label]) => `<a href="#${base}/${k}" class="${k === cur ? "on" : ""}">${label}</a>`).join("")}</div>`;
 const actStatus = (a) => ((+a.progress || 0) >= 100 ? "Concluída" : (+a.progress || 0) > 0 ? "Em andamento" : "Não iniciada");
 
@@ -133,7 +133,7 @@ window.addEventListener("hashchange", render);
 // ------------------------------------------------------------------ painel
 function viewPainel() {
   const open = S.db.items.filter((i) => i.status !== "Concluído");
-  const toConfirm = S.db.meetings.filter((m) => ["Pendente", "Solicitada"].includes(m.status));
+  const toConfirm = S.db.meetings.filter((m) => OPEN_MEETING.includes(m.status) && m.date && m.date <= S.today);
   const k = [
     ["Entradas pendentes", S.db.inputs.filter((i) => i.status !== "Registrado").length, "entradas"],
     ["Itens em aberto", open.length, "lista"],
@@ -226,6 +226,7 @@ function openTriage(id) {
   ${L("Impactos")}<div class="checks inline">${S.impact_types.map((x) => `<label><input type="checkbox" class="t-imp" value="${esc(x)}" ${(a.impacts || []).includes(x) ? "checked" : ""}> ${esc(t(x))}</label>`).join("")}</div>
   ${L("Impactos em quais projetos / operações, por quê")}<textarea id="t-impd" style="min-height:50px">${esc(a.impact_details)}</textarea>
   ${L("Gaps (por que não foi previsto antes?)")}<textarea id="t-gap" style="min-height:50px">${esc(a.gap_analysis)}</textarea>
+  ${L("Sua análise de risco (ensina a IA)")}<textarea id="t-teach" style="min-height:50px" placeholder="${esc(t("TEACH_RISK_PLACEHOLDER"))}">${esc(inp.risk_analysis?.analysis)}</textarea>
   <div class="steps" style="margin-top:14px"><span class="step on">${t("3. Definição (pode ser mais de uma)")}</span></div>
   <div class="checks">${Object.entries(S.definitions).map(([k, v]) => `<label><input type="checkbox" class="t-def" value="${k}" ${defs.includes(k) ? "checked" : ""}> ${esc(t(v))}</label>`).join("")}</div>
   <p class="muted">${t("“Ação dentro de um projeto” entra automaticamente na aba Itens adicionais do projeto.")}</p>
@@ -247,6 +248,8 @@ async function commitTriage(id) {
   };
   if (body.relation_mode === "incluir_existente" && !body.include_in) throw new Error(t("Selecione o item on going."));
   const c = (await api(`inputs/${id}/commit`, "POST", body)).created;
+  const teach = $("#t-teach").value.trim();
+  if (teach) await api(`items/${c.item}/teach`, "POST", { analysis: teach, level: body.assessment.urgency, factors: body.assessment.impacts });
   toast(`${t("Registrado em")} ${c.item}` + (c.project ? ` · ${t("projeto")} ${c.project}` : "") + (c.risks ? ` · ${c.risks.join(", ")}` : "") + (c.action ? ` · ${t("ação")} ${c.action}` : ""));
   closeModal();
   location.hash = "lista";
@@ -286,6 +289,7 @@ function openItem(id) {
   ${L("Registrar atualização")}<textarea id="i-note" style="min-height:50px" placeholder="${esc(t("O que aconteceu? (entra no histórico e no summary)"))}"></textarea>
   <div class="checks"><label><input type="checkbox" id="i-report" ${i.report ? "checked" : ""}> ${t("Info a ser reportada (entra no summary)")}</label></div>
   <div class="actions"><button onclick="busy(this, ()=>saveItem('${i.id}'))">${t("Salvar")}</button></div>
+  ${teachBox("items", i)}
   <h3>${t("Histórico")}</h3><ul class="tl">${timeline((i.history || []).slice().reverse())}</ul>`);
 }
 async function saveItem(id) {
@@ -323,9 +327,12 @@ async function addScenario(col, id, sc) {
 
 // ------------------------------------------------------------------ projetos
 function viewProjetos(id, tab) {
-  if (id) return projectDetail(byId("projects", id), tab || "geral");
+  if (id && !["dash", "lista"].includes(id)) return projectDetail(byId("projects", id), tab || "geral");
+  const T = [["dash", t("Dashboard")], ["lista", t("Lista de projetos")]];
+  const head = `<h1>${t("Gerenciamento de projetos")}</h1>${tabs("projetos", T, id || "dash")}`;
+  if ((id || "dash") === "dash") return head + dashProjectsView();
   const list = S.db.projects.slice().sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0));
-  return `<h1>${t("Gerenciamento de projetos")}</h1>
+  return `${head}
   <div class="grid" style="grid-template-columns: minmax(300px,2.2fr) minmax(280px,1fr)">
   <div class="card" style="overflow:auto"><table>${th(["ID", "Projeto", "Responsável", "% concluído", "Atividades", "Itens adicionais abertos", "Próx. reunião", "Status"])}
   ${list.map((p) => `<tr class="click" onclick="location.hash='projetos/${p.id}'"><td>${p.id}</td><td>${p.main ? `<span class="star" title="${esc(t("Projeto principal"))}">★</span> ` : ""}${esc(p.name)}</td><td>${esc(p.owner)}</td>
@@ -343,7 +350,7 @@ function projectDetail(p, tab) {
   const T = [["geral", t("Visão geral")], ["itens", `${t("Itens do projeto")} (${pct == null ? 0 : pct}%)`], ["atividades", `${t("Atividades (planilha)")} (${p.activities.length})`],
     ["adicionais", `${t("Itens adicionais do projeto")} (${open})`], ["impactos", t("Impactos e riscos")], ["arquivos", t("Arquivos / master schedule")], ["fluxo", t("Fluxo")]];
   const body = { geral: projOverview, itens: projItems, atividades: projActivities, adicionais: projAdditional, impactos: (x) => scenariosTab("projects", x), arquivos: projFiles, fluxo: projFlow }[tab] || projOverview;
-  return `<p><a href="#projetos">← ${t("Projetos")}</a></p>
+  return `<p><a href="#projetos/lista">← ${t("Projetos")}</a></p>
   <div class="title-row"><h1>${p.main ? '<span class="star">★</span> ' : ""}${p.id} · ${esc(p.name)}</h1><div class="pct-big">${t("Concluído")}: ${bar(pct)}</div></div>
   <p class="muted">${t("Pasta local:")} <code>${esc(S.workspace)}/${esc(p.folder)}</code>${apct != null ? ` · ${t("Progresso das atividades")}: ${apct}%` : ""}</p>
   ${tabs("projetos/" + p.id, T, tab)}${body(p)}`;
@@ -498,43 +505,52 @@ function scheduleAnalysis(a) {
 // ------------------------------------------------------------------ reuniões
 let M_FILTER = "";
 function viewReunioes(id) {
-  if (id) return meetingDetail(byId("meetings", id));
+  if (id && /^MEET/.test(id)) return meetingDetail(byId("meetings", id));
+  const tab = id || "dash";
+  const pend = S.db.meetings.filter((m) => ["Pendente", "Solicitada"].includes(m.status) || (m.status === "Agendada" && m.date <= S.today)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const T = [["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`], ["confirmar", `${t("Confirmar e solicitar")} (${pend.length})`], ["todas", t("Todas as reuniões")]];
+  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, confirmar: () => meetingsConfirmView(pend), todas: meetingsAllView }[tab] || dashMeetingsView;
+  return `<h1>${t("Gerenciamento de reuniões")}</h1>${tabs("reunioes", T, tab)}${body()}`;
+}
+function meetingsConfirmView(pend) {
   const pre = window._newMeetingProject || ""; window._newMeetingProject = "";
-  const pend = S.db.meetings.filter((m) => ["Pendente", "Solicitada"].includes(m.status)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  const all = S.db.meetings.filter((m) => !M_FILTER || m.status === M_FILTER).slice().reverse();
   const projSel = (idp) => `<select id="${idp}"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}" ${p.id === pre ? "selected" : ""}>${p.id} · ${esc(p.name)}</option>`).join("")}</select>`;
-  return `<h1>${t("Gerenciamento de reuniões")}</h1>
-  <div class="card" style="margin-bottom:14px"><h2>${t("Aguardando confirmação")} (${pend.length})</h2>
+  return `<div class="card" style="margin-bottom:14px"><h2>${t("Aguardando confirmação")} (${pend.length})</h2>
     <p class="muted">${t("Reuniões solicitadas e as geradas automaticamente pelos projetos principais. Confirme se a reunião foi feita ou não.")}</p>
-    <table>${th(["ID", "Reunião", "Data", "Projeto", "Solicitada por", "Status", ""])}
-    ${pend.map((m) => `<tr class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}${m.auto ? ` ${pill(t("automática"))}` : ""}</td><td>${esc(m.date)}</td>
-      <td>${m.project_id ? `<a href="#projetos/${m.project_id}">${m.project_id}</a>` : ""}</td><td>${esc(tv(m.requested_by))}</td><td>${statusPill(m.status)}</td>
+    <table>${th(["ID", "Reunião", "Data", "Nível", "Projeto", "Solicitada por", "Status", ""])}
+    ${pend.map((m) => `<tr class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}${m.auto ? ` ${pill(t("automática"))}` : ""}${m.mandatory_id ? ` ${pill(t("obrigatória"), "p-Alta")}` : ""}</td><td>${esc(m.date)} ${esc(m.time || "")}</td>
+      <td>${esc(tv(m.level))}</td><td>${m.project_id ? `<a href="#projetos/${m.project_id}">${m.project_id}</a>` : ""}</td><td>${esc(tv(m.requested_by))}</td><td>${statusPill(m.status)}</td>
       <td class="nowrap"><button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
-        <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Nada a confirmar.")}</td></tr>`}</table></div>
+        <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nada a confirmar.")}</td></tr>`}</table></div>
   <div class="grid">
   <div class="card"><h2>${t("Solicitar reunião")}</h2>
-    <div class="row"><div>${L("Título / pauta")}<input id="rq-title"></div><div>${L("Data prevista")}<input type="date" id="rq-date" value="${S.today}"></div></div>
+    <div class="row"><div>${L("Título / pauta")}<input id="rq-title"></div><div>${L("Data prevista")}<input type="date" id="rq-date" value="${S.today}"></div><div>${L("Horário")}<input type="time" id="rq-time"></div></div>
     <div class="row"><div>${L("Solicitada por")}<input id="rq-by" list="rq-sources"></div><div>${L("Participantes")}<input id="rq-part"></div><div>${L("Projeto")}${projSel("rq-proj")}</div></div>
-    <datalist id="rq-sources">${LIST("sources").map((s) => `<option value="${esc(t(s))}">`).join("")}</datalist>
+    ${meetingFields({ scheduling: "Urgente" }).replace(/mq-/g, "rq-")}
+    <datalist id="rq-sources">${LIST("sources").map((x) => `<option value="${esc(t(x))}">`).join("")}</datalist>
     ${L("Pauta / objetivo")}<textarea id="rq-agenda" style="min-height:60px"></textarea>
     <div class="actions"><button onclick="busy(this, requestMeeting)">${t("Registrar solicitação")}</button></div></div>
   <div class="card"><h2>${t("Nova ata / anotação")}</h2>
-    <div class="row"><div>${L("Título")}<input id="m-title"></div><div>${L("Data")}<input type="date" id="m-date" value="${S.today}"></div></div>
+    <div class="row"><div>${L("Título")}<input id="m-title"></div><div>${L("Data")}<input type="date" id="m-date" value="${S.today}"></div><div>${L("Horário")}<input type="time" id="m-time"></div></div>
     <div class="row"><div>${L("Participantes")}<input id="m-part"></div><div>${L("Departamentos")}<input id="m-dept"></div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
+    ${meetingFields().replace(/mq-/g, "m-")}
     ${L("Ata")}<textarea id="m-min" style="min-height:120px" placeholder="${esc(t("MINUTES_HINT"))}"></textarea>
     ${L("Anotações pessoais")}<textarea id="m-notes"></textarea>
-    <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>
-  <div class="card" style="margin-top:14px"><h2>${t("Todas as reuniões")}</h2>
-    <div class="toolbar"><select onchange="M_FILTER=this.value;render()"><option value="">${t("Status")}</option>${opts(MEETING_STATUS, M_FILTER)}</select></div>
-    <table>${th(["ID", "Reunião", "Data", "Projeto", "Itens", "Status"])}
-    ${all.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)}</td><td>${esc(m.project_id)}</td>
-      <td>${(m.links.items || []).length + (m.links.inputs || []).length}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=6 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
+    <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>`;
+}
+function meetingsAllView() {
+  const all = S.db.meetings.filter((m) => !M_FILTER || m.status === M_FILTER).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  return `<div class="card"><div class="toolbar"><select onchange="M_FILTER=this.value;render()"><option value="">${t("Status")}</option>${opts(MEETING_STATUS, M_FILTER)}</select></div>
+    <table>${th(["ID", "Reunião", "Data", "Nível", "Tipo", "Agendamento", "Projeto", "Status"])}
+    ${all.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)} ${esc(m.time || "")}</td><td>${esc(tv(m.level))}</td><td>${esc(tv(m.mtype))}</td>
+      <td>${esc(tv(m.scheduling))}</td><td>${esc(m.project_id)}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
 }
 async function requestMeeting() {
   const title = $("#rq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
-  await api("meetings", "POST", { title, date: $("#rq-date").value, requested_by: $("#rq-by").value, participants: $("#rq-part").value,
-    project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: "Solicitada", kind: "Solicitada" });
+  await api("meetings", "POST", { title, date: $("#rq-date").value, time: $("#rq-time").value, requested_by: $("#rq-by").value, participants: $("#rq-part").value,
+    project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: "Solicitada", kind: "Solicitada",
+    level: $("#rq-level").value, mtype: $("#rq-type").value, scheduling: $("#rq-sched").value });
   toast(t("Solicitação registrada")); await refresh();
 }
 async function meetingDone(id) {
@@ -551,8 +567,9 @@ async function meetingNotDone(id) {
   await refresh();
 }
 async function saveMeeting() {
-  const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, participants: $("#m-part").value,
-    departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value, status: "Realizada" });
+  const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, time: $("#m-time").value, participants: $("#m-part").value,
+    departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value, status: "Realizada",
+    level: $("#m-level").value, mtype: $("#m-type").value, scheduling: $("#m-sched").value });
   await api(`meetings/${r.id}/extract`, "POST");
   await refresh(); location.hash = "reunioes/" + r.id;
 }
@@ -560,12 +577,14 @@ function meetingDetail(m) {
   if (!m) return `<p>${t("Reunião não encontrada.")}</p>`;
   const ex = m.extraction;
   window._demands = ex?.demands || [];
-  const pending = ["Pendente", "Solicitada"].includes(m.status);
-  return `<p><a href="#reunioes">← ${t("Reuniões")}</a></p><h1>${m.id} · ${esc(titleOf(m))}</h1>
+  const pending = OPEN_MEETING.includes(m.status);
+  return `<p><a href="#reunioes/todas">← ${t("Reuniões")}</a></p><h1>${m.id} · ${esc(titleOf(m))}</h1>
   <p>${statusPill(m.status)} <span class="muted">${[m.date, m.participants, m.departments, m.requested_by ? t("Solicitada por") + ": " + tv(m.requested_by) : ""].filter(Boolean).map(esc).join(" · ")}</span></p>
   ${pending ? `<div class="alert lv-media">${t("Esta reunião aguarda confirmação.")} <button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
     <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></div>` : ""}
   ${m.agenda ? `<div class="card" style="margin-bottom:14px"><b>${t("Pauta / objetivo")}:</b> ${esc(m.agenda)}</div>` : ""}
+  <div class="card" style="margin-bottom:14px"><div class="row"><div>${L("Data")}<input type="date" id="me-date" value="${esc(m.date)}"></div><div>${L("Horário")}<input type="time" id="me-time" value="${esc(m.time)}"></div></div>
+    ${meetingFields(m)}<div class="actions"><button class="small" onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{date:$('#me-date').value,time:$('#me-time').value,...readMeetingFields()}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>
   <div class="grid">
   <div class="card"><h2>${t("Ata")}</h2><textarea id="md-min" style="min-height:200px">${esc(m.minutes)}</textarea>${L("Anotações")}<textarea id="md-notes">${esc(m.notes)}</textarea>
     <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{minutes:$('#md-min').value,notes:$('#md-notes').value}); await api('meetings/${m.id}/extract','POST'); await refresh();})">${t("Salvar e reprocessar")}</button></div>
@@ -590,8 +609,10 @@ async function demandToInput(mid, k) {
 
 // ------------------------------------------------------------------ riscos
 function viewRiscos(id, tab) {
-  if (id) return riskDetail(byId("risks", id), tab || "geral");
-  return `<h1>${t("Gerenciamento de riscos")}</h1>
+  if (id && !["dash", "lista"].includes(id)) return riskDetail(byId("risks", id), tab || "geral");
+  const head = `<h1>${t("Gerenciamento de riscos")}</h1>${tabs("riscos", [["dash", t("Dashboard")], ["lista", t("Lista de riscos")]], id || "dash")}`;
+  if ((id || "dash") === "dash") return head + dashRisksView();
+  return `${head}
   <div class="grid" style="grid-template-columns: minmax(300px,2fr) minmax(260px,1fr)">
   <div class="card" style="overflow:auto"><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto", "Principais impactos", "Inputs", "Responsável", "Status"])}
   ${S.db.risks.map((r) => `<tr class="click" onclick="location.hash='riscos/${r.id}'"><td>${r.id}</td><td>${esc(r.title)}</td><td>${esc(tv(r.mode))}</td><td>${prio(r.probability)}</td><td>${pill(tv(r.impact), "p-" + r.impact)}</td>
@@ -606,7 +627,7 @@ function riskDetail(r, tab) {
   if (!r) return `<p>${t("Risco não encontrado.")}</p>`;
   const T = [["geral", t("Visão geral")], ["inputs", `${t("Inputs do risco")} (${(r.inputs_log || []).length})`], ["impactos", t("Impactos e riscos")], ["docs", t("Documentos e análise")], ["fluxo", t("Fluxo")]];
   const body = { geral: riskOverview, inputs: riskInputs, impactos: (x) => scenariosTab("risks", x), docs: riskDocs, fluxo: riskFlow }[tab] || riskOverview;
-  return `<p><a href="#riscos">← ${t("Riscos")}</a></p><h1>${r.id} · ${esc(r.title)}</h1>
+  return `<p><a href="#riscos/lista">← ${t("Riscos")}</a></p><h1>${r.id} · ${esc(r.title)}</h1>
   <p>${(r.impacts || []).map((x) => pill(t(x), "p-Alta")).join("")} <span class="muted">${t("Pasta:")} <code>${esc(S.workspace)}/${esc(r.folder)}</code></span></p>
   ${tabs("riscos/" + r.id, T, tab)}${body(r)}`;
 }
@@ -619,7 +640,8 @@ function riskOverview(r) {
     ${L("Descrição")}<textarea id="rd-desc">${esc(r.description)}</textarea>${L("Notas / informações")}<textarea id="rd-notes">${esc(r.notes)}</textarea>
     <div class="actions"><button onclick="busy(this, saveRisk.bind(null,'${r.id}'))">${t("Salvar")}</button></div></div>
     <div class="card">${L("Vínculos")}<div>${linksHtml(r)}</div>${linkForm("risks", r.id)}
-    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((r.history || []).slice().reverse())}</ul></div></div>`;
+    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((r.history || []).slice().reverse())}</ul></div></div>
+    <div style="margin-top:var(--gap)">${teachBox("risks", r)}</div>`;
 }
 async function saveRisk(id) {
   await api("risks/" + id, "PATCH", { mode: $("#rd-mode").value, probability: $("#rd-prob").value, impact: $("#rd-imp").value, status: $("#rd-status").value, owner: $("#rd-owner").value,
@@ -766,12 +788,13 @@ function cfgLists(st) {
   return `<p class="muted">${t("Um valor por linha. Os valores padrão são traduzidos automaticamente; os que você criar aparecem como escritos.")}</p>
   <div class="grid">${box("sources", "Origens das demandas", "Ex.: Diretora, HQ, Departamento…")}${box("input_kinds", "Tipos de entrada", "Ex.: Pedido pontual, Nova solicitação do HQ…")}
     ${box("impact_types", "Categorias de impacto", "Usadas na classificação, nos riscos e nos fluxos.")}${box("areas", "Áreas", "Sugestões no campo Área principal.")}
-    ${box("flow_edge_labels", "Rótulos das ligações dos fluxos", "Ex.: causa, impacta, mitiga…")}</div>
+    ${box("flow_edge_labels", "Rótulos das ligações dos fluxos", "Ex.: causa, impacta, mitiga…")}
+    ${box("meeting_levels", "Níveis de reunião", "Ex.: Gerencial, Diretoria, Operacional…")}${box("meeting_types", "Tipos de reunião", "Ex.: Reporte, Decisão, Alinhamento…")}</div>
   <div class="actions"><button onclick="busy(this, saveLists)">${t("Salvar listas")}</button></div>`;
 }
 async function saveLists() {
   const v = (k) => $(`#ls-${k}`).value.split("\n").map((x) => x.trim()).filter(Boolean);
-  await api("settings", "PATCH", { areas: v("areas"), lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels") } });
+  await api("settings", "PATCH", { areas: v("areas"), lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels"), meeting_levels: v("meeting_levels"), meeting_types: v("meeting_types") } });
   toast(t("Salvo")); await refresh();
 }
 function cfgRules(st) {
@@ -790,7 +813,9 @@ function cfgAI() {
     <div class="actions"><button onclick="busy(this, saveAi)">${t("Salvar e testar")}</button>
       <span class="muted">${S.ai.enabled ? t("IA ativa —") + " " + esc(S.ai.model) : t("IA offline")}</span></div></div>
   <div class="card"><h2>${t("Aprendizado")}</h2>
-    <p>${t("{n} decisões de classificação guardadas", { n: Core.db.feedback.length })} · ${t("{n} exemplos salvos", { n: (S.db.flow_examples || []).length })}</p>
+    <p>${t("{n} decisões de classificação guardadas", { n: Core.db.feedback.length })} · ${t("{n} análises de risco ensinadas", { n: (S.db.risk_lessons || []).length })} · ${t("{n} exemplos salvos", { n: (S.db.flow_examples || []).length })}</p>
+    ${L("Critérios de avaliação de risco (valem para todos os itens e riscos)")}<textarea id="c-riskguide" style="min-height:110px" placeholder="${esc(t("RISK_GUIDE_PLACEHOLDER"))}">${esc(S.db.settings.risk_guidelines)}</textarea>
+    <div class="actions"><button class="ghost" onclick="busy(this, async()=>{await api('settings','PATCH',{risk_guidelines:$('#c-riskguide').value}); toast(t('Regras salvas')); await refresh();})">${t("Salvar critérios")}</button></div>
     ${L("Regras para montar fluxos (valem para todos)")}<textarea id="c-guide" style="min-height:120px" placeholder="${esc(t("FLOW_GUIDE_PLACEHOLDER"))}">${esc(S.db.settings.flow_guidelines)}</textarea>
     <div class="actions"><button class="ghost" onclick="busy(this, async()=>{await api('settings','PATCH',{flow_guidelines:$('#c-guide').value}); toast(t('Regras salvas')); await refresh();})">${t("Salvar regras")}</button></div></div></div>`;
 }

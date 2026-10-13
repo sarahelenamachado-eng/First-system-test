@@ -111,6 +111,10 @@ critério da organização e siga-os quando aplicáveis.`; },
       .sort((a, b) => b[0] - a[0]).slice(0, limit)
       .map(([s, it]) => ({ id: it.id, title: it.title, score: Math.round(s * 100) / 100, status: it.status }));
   },
+  similarLessons(db, text, limit = 5) {
+    return (db.risk_lessons || []).map((l) => [this.similarity(text, l.text || ""), l]).filter(([s]) => s > 0.12)
+      .sort((a, b) => b[0] - a[0]).slice(0, limit).map(([, l]) => l);
+  },
   similarFeedback(db, text, limit = 5) {
     return db.feedback.map((f) => [this.similarity(text, f.text || ""), f]).filter(([s]) => s > 0.1)
       .sort((a, b) => b[0] - a[0]).slice(0, limit).map(([, f]) => f);
@@ -176,6 +180,12 @@ critério da organização e siga-os quando aplicáveis.`; },
       rationale: t("Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores."),
     };
     out.msg = ["Sugestão heurística (IA offline): palavras-chave, similaridade com o histórico e decisões anteriores.", {}];
+    const lesson = this.similarLessons(db, this.inputText(inp), 1)[0];
+    if (lesson?.level) {
+      out.priority = out.urgency = lesson.level;
+      out.risk_reason = lesson.analysis || out.risk_reason;
+      out.rationale += " " + t("Risco avaliado como na sua análise de {ref}.", { ref: lesson.ref });
+    }
     if (learned.length) {
       const fin = learned[0].final || {};
       for (const k of ["priority", "urgency", "impacts", "definitions"]) if (fin[k] && (!Array.isArray(fin[k]) || fin[k].length)) out[k] = fin[k];
@@ -201,6 +211,8 @@ critério da organização e siga-os quando aplicáveis.`; },
       + "\n\nCandidatos mais parecidos (similaridade textual):\n" + J(related)
       + "\n\nProjetos existentes:\n" + J(projects)
       + "\n\nDecisões anteriores do usuário em demandas parecidas (aprenda com elas):\n" + J(examples)
+      + "\n\nCritérios de avaliação de risco definidos pelo usuário (siga com prioridade):\n" + (db.settings.risk_guidelines || "(nenhum)")
+      + "\n\nAnálises de risco feitas pelo usuário em casos parecidos (aprenda o raciocínio):\n" + J(this.similarLessons(db, text).map((l) => ({ caso: (l.text || "").slice(0, 300), nivel: l.level, fatores: l.factors, analise: l.analysis })))
       + "\n\nTarefa: 1) Verifique se tem relação com item já levantado. Relação direta -> relation_mode=incluir_existente "
       + "e include_in=<id>. Relacionado só em impacto -> relation_mode=novo, e liste o vínculo em related. "
       + "2) Classifique escopo (o que é / o que fazer), prioridade, urgência com justificativa do risco, impactos "
@@ -352,7 +364,11 @@ critério da organização e siga-os quando aplicáveis.`; },
     if (!this.enabled()) return { summary: t("IA offline — análise automática indisponível. Preencha manualmente."),
       probability: risk.probability || "Média", impact: risk.impact || "Médio", ...empty, engine: "heuristica" };
     const linked = db.items.filter((it) => (risk.links?.items || []).includes(it.id)).map((i) => ({ id: i.id, title: i.title, risk_reason: i.risk_reason }));
-    const prompt = `Risco ${risk.id}: ${risk.title} (${risk.mode})\nDescrição: ${risk.description || ""}\n`
+    const lessons = this.similarLessons(db, `${risk.title} ${risk.description || ""}`).map((l) => ({ caso: (l.text || "").slice(0, 300), nivel: l.level, fatores: l.factors, analise: l.analysis }));
+    const prompt = `Critérios de avaliação de risco do usuário (siga com prioridade):\n${db.settings.risk_guidelines || "(nenhum)"}\n`
+      + `Análises de risco do usuário em casos parecidos (aprenda o raciocínio):\n${JSON.stringify(lessons)}\n`
+      + (risk.risk_analysis?.analysis ? `Análise do próprio usuário para este risco: ${risk.risk_analysis.analysis} (nível ${risk.risk_analysis.level})\n` : "")
+      + `Risco ${risk.id}: ${risk.title} (${risk.mode})\nDescrição: ${risk.description || ""}\n`
       + `Itens vinculados: ${JSON.stringify(linked)}\nNotas: ${risk.notes || ""}\nConteúdo dos documentos da pasta (texto):\n${filesText.slice(0, 60000)}\n\n`
       + "Compile as informações do risco para análise e reporte. As sugestões serão confirmadas pelo usuário.";
     try {
@@ -405,6 +421,47 @@ critério da organização e siga-os quando aplicáveis.`; },
     } catch (e) {
       return { ...base, engine: "heuristica", error: e.message };
     }
+  },
+
+  // ---------------------------------------------------------------- reuniões obrigatórias: sugestão de datas
+  SUGGEST_SCHEMA: {
+    type: "object", additionalProperties: false, required: ["suggestions"],
+    properties: { suggestions: { type: "array", items: { type: "object", additionalProperties: false, required: ["mandatory_id", "date", "time", "reason"],
+      properties: { mandatory_id: { type: "string" }, date: { type: "string", description: "AAAA-MM-DD" }, time: { type: "string", description: "HH:MM" }, reason: { type: "string" } } } } },
+  },
+  async suggestMeetings(db, month) {
+    const base = Core.heuristicSuggestions(month);
+    if (!this.enabled() || !db.mandatory.some((m) => m.active !== false)) return { suggestions: base, engine: "heuristica" };
+    const status = Core.mandatoryStatus(month);
+    const busy = db.meetings.filter((m) => (m.date || "").startsWith(month)).map((m) => ({ date: m.date, time: m.time || "", duration: m.duration || 60, title: m.title, status: m.status }));
+    const prompt = `Sugira datas e horários para as REUNIÕES OBRIGATÓRIAS do mês ${month} (hoje é ${todayISO()}; não sugira datas passadas).\n`
+      + `Horário de trabalho: ${db.settings.work_hours.start}–${db.settings.work_hours.end}, segunda a sexta.\n`
+      + `Regras e observações do usuário (siga com prioridade):\n${db.settings.meeting_rules || "(nenhuma)"}\n\n`
+      + `Reuniões obrigatórias (frequência, duração em minutos, dias preferidos 0=domingo..6=sábado, horário preferido):\n${JSON.stringify(db.mandatory.filter((m) => m.active !== false))}\n\n`
+      + `Situação no mês (exigidas, já agendadas, realizadas):\n${JSON.stringify(status)}\n\n`
+      + `Agenda já ocupada no mês (evite conflitos):\n${JSON.stringify(busy)}\n\n`
+      + `Sugestão inicial calculada pela frequência (pode melhorar):\n${JSON.stringify(base)}\n\n`
+      + "Sugira apenas as ocorrências que faltam para cumprir a frequência. Explique em reason, em uma frase, por que escolheu a data/horário.";
+    try {
+      const out = await this.call(prompt, this.SUGGEST_SCHEMA, "medium");
+      const ids = new Map(db.mandatory.map((m) => [m.id, m]));
+      const suggestions = out.suggestions.filter((x) => ids.has(x.mandatory_id) && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && x.date.startsWith(month))
+        .map((x) => ({ ...x, title: ids.get(x.mandatory_id).title }));
+      return { suggestions, engine: this.model };
+    } catch (e) {
+      return { suggestions: base, engine: "heuristica", error: e.message };
+    }
+  },
+
+  // ---------------------------------------------------------------- dashboards
+  async dashboardInsights(kind, metrics) {
+    const label = { projects: "projetos", meetings: "reuniões", risks: "riscos" }[kind];
+    if (!this.enabled()) return t("IA offline: conecte a IA em Configurações para receber a análise do dashboard.");
+    const prompt = `Analise este dashboard de ${label} para a diretoria. Em até 6 bullets curtos: o que os números mostram, `
+      + "o que exige atenção agora, a causa provável e a ação recomendada. Cite números. Depois, em uma linha, diga qual visualização "
+      + `deixa a mensagem principal mais clara e por quê.\nDados:\n${JSON.stringify(metrics).slice(0, 60000)}`;
+    try { return await this.call(prompt, null, "low", 3000); }
+    catch (e) { return `${t("Análise da IA indisponível:")} ${e.message}`; }
   },
 
   // ---------------------------------------------------------------- summaries
