@@ -15,12 +15,7 @@ const byId = (col, id) => (S.db[col] || []).find((r) => r.id === id);
 const defLabel = (d) => S.definitions[d] || d;
 const fmt = (iso) => (iso ? iso.replace("T", " ").slice(0, 16) : "");
 
-async function api(path, method = "GET", body) {
-  const r = await fetch("/api/" + path, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error || r.statusText);
-  return data;
-}
+const api = (path, method = "GET", body) => Core.api(path, method, body);
 function toast(msg) {
   const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden");
   clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add("hidden"), 3500);
@@ -31,11 +26,26 @@ async function busy(btn, fn) {
 }
 function openModal(html) { $("#modal-body").innerHTML = html; $("#modal").classList.remove("hidden"); }
 function closeModal() { $("#modal").classList.add("hidden"); }
-function fileToB64(file) {
-  return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result.split(",")[1]); fr.onerror = rej; fr.readAsDataURL(file); });
-}
 async function uploadFiles(path, input, extra = {}) {
-  for (const f of input.files) await api(path, "POST", { filename: f.name, content_b64: await fileToB64(f), ...extra });
+  if (!input.files.length) throw new Error("Escolha um arquivo.");
+  for (const f of input.files) await api(path, "POST", { file: f, ...extra });
+}
+/** Abre um arquivo da pasta local numa nova aba. */
+async function openFile(rel) {
+  const f = await Store.read(rel);
+  if (!f) return toast("Arquivo não encontrado na pasta.");
+  const type = rel.toLowerCase().endsWith(".html") ? "text/html" : f.type || "application/octet-stream";
+  const url = URL.createObjectURL(new Blob([f], { type }));
+  if (/\.(html|pdf|png|jpe?g|gif|txt|csv)$/i.test(rel)) window.open(url, "_blank");
+  else download(url, f.name);
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+function download(url, name) { const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+function fileLink(rel, label) { return `<a href="#" data-rel="${esc(rel)}" onclick="openFile(this.dataset.rel);return false">${esc(label)}</a>`; }
+function exportCsv() {
+  const url = URL.createObjectURL(new Blob([Core.exportCsv()], { type: "text/csv;charset=utf-8" }));
+  download(url, `lista_governanca_${S.today}.csv`);
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 function linksHtml(rec) {
   const L = rec.links || {}, names = { items: "Itens", projects: "Projetos", risks: "Riscos", meetings: "Reuniões", inputs: "Entradas" };
@@ -56,6 +66,7 @@ async function addLink(col, id) {
 // ------------------------------------------------------------------ roteamento
 async function refresh() { S = await api("state"); render(); }
 function render() {
+  if (!S) return;
   const [view, id] = (location.hash.slice(1) || "painel").split("/");
   document.querySelectorAll("nav a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + view));
   const b = $("#ai-badge");
@@ -199,7 +210,7 @@ function viewLista() {
     <select onchange="F.prio=this.value;render()"><option value="">Prioridade</option>${opts(["Alta", "Média", "Baixa"], F.prio)}</select>
     <select onchange="F.src=this.value;render()"><option value="">Origem</option>${opts(SOURCES, F.src)}</select>
     <select onchange="F.def=this.value;render()"><option value="">Definição</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${v}</option>`).join("")}</select>
-    <a class="btn ghost" href="/api/export/items.csv">Baixar planilha (CSV)</a></div>
+    <button class="ghost" onclick="exportCsv()">Baixar planilha (CSV)</button></div>
   <div class="card" style="overflow:auto"><table><tr><th>ID</th><th>Item</th><th>Origem</th><th>Responsável</th><th>Emitido</th><th>Prazo</th><th>Prioridade</th><th>Impactos</th><th>Definição</th><th>Vínculos</th><th>Status</th></tr>
   ${rows.map((i) => `<tr class="click" onclick="location.hash='lista/${i.id}'"><td>${i.id}</td><td>${esc(i.title)}</td><td>${esc(i.source)}</td><td>${esc(i.owner)}</td>
     <td>${esc(i.emitted_at || (i.created_at || "").slice(0, 10))}</td><td>${i.due_date && i.due_date < S.today && i.status !== "Concluído" ? pill(i.due_date, "p-Alta") : esc(i.due_date)}</td>
@@ -256,7 +267,7 @@ function projectDetail(p) {
   <div class="card"><h2>Master schedules</h2>
     <p class="muted">Os arquivos ficam na pasta local <code>master_schedule</code>. Você pode copiá-los direto para a pasta e clicar em "Sincronizar", ou fazer upload aqui. Formatos analisáveis: .xlsx, .csv, .pdf (MS Project: exporte para .xlsx/.pdf).</p>
     <div class="toolbar"><input type="file" id="pd-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('projects/${p.id}/upload', $('#pd-file')); await refresh();})">Upload</button><button class="ghost small" onclick="refresh()">Sincronizar pasta</button></div>
-    <table><tr><th>Arquivo</th><th>Data</th><th></th></tr>${(p.schedules || []).map((s, k) => `<tr><td class="files"><a href="/files/${encodeURI(s.rel)}" target="_blank">${esc(s.name)}</a></td><td>${fmt(s.uploaded_at)}</td>
+    <table><tr><th>Arquivo</th><th>Data</th><th></th></tr>${(p.schedules || []).map((s, k) => `<tr><td class="files">${fileLink(s.rel, s.name)}</td><td>${fmt(s.uploaded_at)}</td>
       <td><button class="small" onclick="busy(this, async()=>{await api('projects/${p.id}/analyze','POST',{rel:byId('projects','${p.id}').schedules[${k}].rel}); await refresh();})">Organizar com IA</button></td></tr>
       ${s.analysis ? `<tr><td colspan=3>${scheduleAnalysis(s.analysis)}</td></tr>` : ""}`).join("") || '<tr><td colspan=3 class="muted">Nenhum cronograma.</td></tr>'}</table></div>
   </div>
@@ -341,7 +352,7 @@ function viewRiscos(id) {
 function riskDetail(r) {
   if (!r) return "<p>Risco não encontrado.</p>";
   const a = r.analysis;
-  setTimeout(() => api(`risks/${r.id}/files`).then((fs) => { const el = $("#rk-files"); if (el) el.innerHTML = fs.map((f) => `<li><a href="/files/${encodeURI(f.rel)}" target="_blank">${esc(f.name)}</a> <span class="muted">${fmt(f.modified)}</span></li>`).join("") || "<li class='muted'>Pasta vazia</li>"; }), 0);
+  setTimeout(() => api(`risks/${r.id}/files`).then((fs) => { const el = $("#rk-files"); if (el) el.innerHTML = fs.map((f) => `<li>${fileLink(f.rel, f.name)} <span class="muted">${fmt(f.modified)}</span></li>`).join("") || "<li class='muted'>Pasta vazia</li>"; }), 0);
   return `<p><a href="#riscos">← Riscos</a></p><h1>${r.id} · ${esc(r.title)}</h1><p class="muted">Pasta: <code>${esc(S.workspace)}/${esc(r.folder)}</code></p>
   <div class="grid"><div class="card">
     <div class="row"><div><label>Modo</label><select id="rd-mode">${opts(["Monitorar", "Investigar"], r.mode)}</select></div><div><label>Probabilidade</label><select id="rd-prob">${opts(["Alta", "Média", "Baixa"], r.probability)}</select></div>
@@ -364,7 +375,7 @@ function viewSummaries() {
   <div class="toolbar no-print"><select id="s-type"><option value="daily">Diário</option><option value="weekly">Semanal</option></select><input type="date" id="s-date" value="${S.today}">
     <button onclick="busy(this, genSummary)">Gerar summary</button><button class="ghost" onclick="window.print()">Imprimir / PDF</button></div>
   <div id="s-out">${LAST_SUMMARY ? summaryDoc(LAST_SUMMARY) : '<p class="muted">Escolha o tipo e a data. O summary também é salvo como HTML na pasta local SUMMARIES.</p>'}</div>
-  <div class="card no-print" style="margin-top:14px"><h2>Gerados anteriormente</h2><ul>${S.summaries.slice().reverse().map((s) => `<li><a href="/files/${encodeURI(s.file)}" target="_blank">${esc(s.file)}</a> <span class="muted">${fmt(s.generated_at)}</span></li>`).join("") || '<li class="muted">—</li>'}</ul></div>`;
+  <div class="card no-print" style="margin-top:14px"><h2>Gerados anteriormente</h2><ul>${S.summaries.slice().reverse().map((s) => `<li>${fileLink(s.file, s.file)} <span class="muted">${fmt(s.generated_at)}</span></li>`).join("") || '<li class="muted">—</li>'}</ul></div>`;
 }
 async function genSummary() {
   LAST_SUMMARY = await api("summary", "POST", { type: $("#s-type").value, date: $("#s-date").value });
@@ -390,14 +401,74 @@ function summaryDoc({ summary: s, narrative }) {
 // ------------------------------------------------------------------ config
 function viewConfig() {
   const st = S.db.settings;
-  return `<h1>Configurações</h1><div class="card">
-  <p>Pasta local de trabalho: <code>${esc(S.workspace)}</code></p>
-  <p>IA: ${S.ai.enabled ? "ativa — " + esc(S.ai.model) : "offline — " + esc(S.ai.detail)}</p>
+  return `<h1>Configurações</h1>
+  <div class="grid">
+  <div class="card"><h2>IA (Claude)</h2>
+    <p class="muted">Sem chave, a plataforma usa sugestões heurísticas locais. A chave fica guardada só neste navegador (não vai para a pasta).</p>
+    <label>Chave da API da Anthropic</label><input id="c-key" type="password" placeholder="sk-ant-..." value="${esc(AI.key)}">
+    <label>Modelo</label><input id="c-model" value="${esc(AI.model)}">
+    <div class="actions"><button onclick="busy(this, saveAi)">Salvar e testar</button>
+      <span class="muted">${S.ai.enabled ? "IA ativa — " + esc(S.ai.model) : "IA offline"}</span></div></div>
+  <div class="card"><h2>Pasta de trabalho</h2>
+    <p>Pasta atual: <code>${esc(S.workspace)}</code></p>
+    <p class="muted">É nesta pasta do computador que ficam o <code>db.json</code>, as master schedules (PROJECTS), os riscos (RISKS) e os summaries (SUMMARIES).</p>
+    <div class="actions"><button class="ghost" onclick="busy(this, changeFolder)">Trocar de pasta</button></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h2>Regras</h2>
   <div class="row"><div><label>Alerta: dias sem atualização</label><input type="number" id="c-days" value="${st.alert_days_without_update}"></div>
     <div><label>Cadência de reunião de projeto (dias)</label><input type="number" id="c-cad" value="${st.project_meeting_cadence_days}"></div>
     <div><label>Nº de vínculos para sugerir projeto</label><input type="number" id="c-links" value="${st.links_for_project_alert}"></div></div>
   <label>Áreas (separadas por vírgula)</label><input id="c-areas" value="${esc((st.areas || []).join(", "))}">
   <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{alert_days_without_update:+$('#c-days').value,project_meeting_cadence_days:+$('#c-cad').value,links_for_project_alert:+$('#c-links').value,areas:$('#c-areas').value.split(',').map(s=>s.trim()).filter(Boolean)}); toast('Salvo'); await refresh();})">Salvar</button></div></div>`;
 }
+async function saveAi() {
+  await AI.configure($("#c-key").value, $("#c-model").value);
+  if (AI.enabled()) {
+    try { await AI.call("Responda apenas: OK", null, "low", 200); toast("IA conectada: " + AI.model); }
+    catch (e) { toast("Chave salva, mas o teste falhou: " + e.message); }
+  } else toast("IA desativada (sem chave)");
+  await refresh();
+}
+async function changeFolder() {
+  await Store.pick();
+  await Core.load();
+  await refresh();
+  toast("Pasta: " + Store.name);
+}
 
-refresh().catch((e) => { $("#view").innerHTML = `<p>Não foi possível carregar: ${esc(e.message)}</p>`; });
+// ------------------------------------------------------------------ inicialização (escolha da pasta)
+function welcome(remembered) {
+  document.querySelectorAll("nav a").forEach((a) => a.classList.remove("active"));
+  const ok = Store.supported();
+  $("#view").innerHTML = `<div class="card" style="max-width:640px;margin:40px auto">
+    <h1>Plataforma de Governança</h1>
+    ${ok ? `<p>Escolha a <b>pasta do seu computador</b> onde a plataforma vai guardar a base de dados, as master schedules,
+      os documentos de riscos e os summaries. Pode ser uma pasta nova e vazia, ou uma pasta do OneDrive/SharePoint sincronizada.</p>
+      <p class="muted">O navegador vai pedir permissão para "ver e editar arquivos" dessa pasta. Sempre que você reabrir a plataforma,
+      basta clicar em "Continuar" para liberar o acesso de novo.</p>
+      <div class="actions">${remembered ? `<button onclick="busy(this, ()=>reconnect())">Continuar com a pasta "${esc(remembered.name)}"</button>` : ""}
+        <button class="${remembered ? "ghost" : ""}" onclick="busy(this, startWithNewFolder)">${remembered ? "Escolher outra pasta" : "Escolher pasta de trabalho"}</button></div>`
+      : `<p><b>Este navegador não permite acessar pastas do computador.</b></p><p>Abra este arquivo no <b>Microsoft Edge</b> ou no <b>Google Chrome</b>.</p>`}
+  </div>`;
+}
+async function startWithNewFolder() { await Store.pick(); await boot(); }
+async function reconnect() {
+  const h = await Store.remembered();
+  if (!h || !(await Store.requestPermission(h))) throw new Error("Permissão negada para a pasta.");
+  await Store.use(h);
+  await boot();
+}
+async function boot() {
+  await Core.load();
+  await refresh();
+}
+(async () => {
+  try {
+    await AI.init();
+    const h = await Store.remembered();
+    if (h && (await Store.hasPermission(h).catch(() => false))) { await Store.use(h); return boot(); }
+    welcome(h);
+  } catch (e) {
+    $("#view").innerHTML = `<p>Não foi possível iniciar: ${esc(e.message)}</p>`;
+  }
+})();

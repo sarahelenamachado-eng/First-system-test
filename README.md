@@ -3,25 +3,24 @@
 Plataforma local (navegador + pasta no computador) que implementa a lógica de governança da planilha
 *Systems flows*: **Inputs management → Lista geral de governança → Projetos, Reuniões e Riscos → Summaries**.
 
-## Como rodar
+## Como usar (sem instalar nada)
 
-1. Instale o Python 3.10+.
-2. (Opcional, recomendado) `pip install -r requirements.txt` e configure a IA:
-   - Windows (PowerShell): `$env:ANTHROPIC_API_KEY="sk-ant-..."`
-   - macOS/Linux: `export ANTHROPIC_API_KEY=sk-ant-...`
-3. Execute `iniciar.bat` (Windows) ou `./iniciar.sh` (macOS/Linux) e abra http://localhost:8765
+1. Baixe o repositório (botão **Code → Download ZIP** no GitHub) e descompacte numa pasta do computador.
+2. Dê dois cliques em **`index.html`**. Ele abre no navegador — use **Microsoft Edge** ou **Google Chrome**
+   (o Firefox não permite acessar pastas do computador).
+3. Clique em **Escolher pasta de trabalho** e selecione (ou crie) a pasta onde ficarão os dados.
+   O navegador pede permissão para "ver e editar arquivos" — confirme.
+   Nas próximas vezes, basta clicar em **Continuar com a pasta …**.
+4. (Opcional, recomendado) Em **Config.**, cole a chave da API da Anthropic para ativar a IA (Claude).
 
 Sem chave da IA a plataforma funciona normalmente com sugestões heurísticas (palavras‑chave, similaridade
 com o histórico e decisões anteriores). O selo no canto superior direito mostra se a IA está ativa.
 
-### Variáveis opcionais
-
-| Variável | Padrão | Uso |
-|---|---|---|
-| `GOV_WORKSPACE` | `./workspace` | Pasta local onde ficam a base de dados e as pastas de projetos/riscos (pode ser uma pasta do OneDrive/SharePoint sincronizada) |
-| `GOV_MODEL` | `claude-opus-5-5` | Modelo Claude |
-| `GOV_PORT` / `GOV_HOST` | `8765` / `127.0.0.1` | Endereço do servidor |
-| `GOV_AI` | `on` | `off` desliga a IA |
+**Onde ficam as coisas**
+- Tudo (base `db.json`, pastas de projetos, riscos, reuniões e summaries) fica **na pasta que você escolheu**.
+  Pode ser uma pasta do OneDrive/SharePoint sincronizada, para ter backup.
+- A chave da IA fica guardada **só no navegador** deste computador (não vai para a pasta).
+- A IA precisa de internet com acesso a `api.anthropic.com`; o resto funciona offline.
 
 ## Módulos
 
@@ -80,13 +79,17 @@ Cada summary é salvo também como HTML na pasta `SUMMARIES` (pode ser impresso 
 ## Estrutura
 
 ```
-governance/
-  server.py     # servidor HTTP local + regras de governança (fluxo, alertas, summaries, exportação)
-  ai.py         # integração com Claude + heurísticas offline + aprendizado por feedback
-  storage.py    # base JSON e pastas locais
-  static/       # interface HTML/CSS/JS
-workspace/      # (gerado) db.json, PROJECTS/, RISKS/, MEETINGS/, SUMMARIES/
+index.html        # abra este arquivo
+app/
+  store.js        # acesso à pasta escolhida (File System Access API) e configurações do navegador
+  xlsx.js         # leitura de .xlsx/.csv sem bibliotecas externas
+  ai.js           # integração com Claude + heurísticas offline + aprendizado por feedback
+  core.js         # base de dados e regras de governança (fluxo, alertas, summaries, exportação)
+  ui.js           # interface
+  style.css
 ```
+
+Na pasta de trabalho escolhida são criados: `db.json`, `PROJECTS/`, `RISKS/`, `MEETINGS/`, `SUMMARIES/`.
 
 ## Próximos passos sugeridos
 - Ajustar o layout do summary ao modelo que você enviar.

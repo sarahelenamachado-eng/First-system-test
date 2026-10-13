@@ -1,3 +1,0 @@
-# Opcionais: a plataforma roda só com Python 3.10+ (biblioteca padrão).
-anthropic>=0.70   # IA (Claude) — sem ele, a plataforma usa heurísticas locais
-openpyxl>=3.1     # leitura de master schedules .xlsx

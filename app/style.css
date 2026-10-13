@@ -65,3 +65,4 @@ button:disabled { opacity: .5; cursor: wait; }
 .summary-doc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 24px; }
 .summary-doc h2 { border-bottom: 2px solid var(--brand); padding-bottom: 4px; margin-top: 22px; }
 @media print { .top, .no-print { display: none !important; } main { padding: 0; } .summary-doc { border: 0; } }
+.badge:empty { display: none; }
