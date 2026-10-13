@@ -442,6 +442,9 @@ function welcome(remembered) {
   const ok = Store.supported();
   $("#view").innerHTML = `<div class="card" style="max-width:640px;margin:40px auto">
     <h1>Plataforma de Governança</h1>
+    ${/\/(temp|tmp)\//i.test(decodeURI(location.href)) ? `<div class="alert lv-media">Parece que você abriu este arquivo <b>de dentro do .zip</b>.
+      Funciona, mas o Windows apaga essa cópia temporária depois. Para usar sempre, clique com o botão direito no .zip →
+      <b>Extrair tudo…</b> e abra o <code>index.html</code> da pasta extraída.</div>` : ""}
     ${ok ? `<p>Escolha a <b>pasta do seu computador</b> onde a plataforma vai guardar a base de dados, as master schedules,
       os documentos de riscos e os summaries. Pode ser uma pasta nova e vazia, ou uma pasta do OneDrive/SharePoint sincronizada.</p>
       <p class="muted">O navegador vai pedir permissão para "ver e editar arquivos" dessa pasta. Sempre que você reabrir a plataforma,

@@ -79,14 +79,16 @@ Cada summary é salvo também como HTML na pasta `SUMMARIES` (pode ser impresso 
 ## Estrutura
 
 ```
-index.html        # abra este arquivo
-app/
+index.html        # abra este arquivo (gerado: contém todo o CSS/JS embutido, funciona sozinho)
+src/              # código-fonte — edite aqui e rode `node tools/build.mjs` para gerar o index.html
+  index.html
   store.js        # acesso à pasta escolhida (File System Access API) e configurações do navegador
   xlsx.js         # leitura de .xlsx/.csv sem bibliotecas externas
   ai.js           # integração com Claude + heurísticas offline + aprendizado por feedback
   core.js         # base de dados e regras de governança (fluxo, alertas, summaries, exportação)
   ui.js           # interface
   style.css
+tools/build.mjs   # junta src/ em um único index.html
 ```
 
 Na pasta de trabalho escolhida são criados: `db.json`, `PROJECTS/`, `RISKS/`, `MEETINGS/`, `SUMMARIES/`.
