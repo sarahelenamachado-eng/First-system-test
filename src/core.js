@@ -28,11 +28,12 @@ function defaultSettings() {
     project_meeting_cadence_days: 15,
     links_for_project_alert: 3,
     meeting_lead_days: 3,
+    due_soon_days: 3,
     areas: ["Operação", "Manutenção", "RH", "Financeiro", "Jurídico", "Compras", "SSMA", "TI", "Comercial", "Engenharia"],
     lists: {
       sources: ["Diretora", "Reunião", "Departamento", "HQ", "Outro"],
       input_kinds: ["Pedido pontual", "Direcionamento / estratégia (reclamação, opinião)", "Nova solicitação do HQ", "Decisão conjunta entre departamentos", "Atualização de item existente", "Outro"],
-      impact_types: ["Custo", "Eficiência", "Operação", "Compliance", "People"],
+      impact_types: ["Custo", "Eficiência", "Operação", "Compliance", "People", "Qualidade"],
       flow_edge_labels: ["origina", "afeta", "impacta", "mitiga", "depende de", "se realizado", "se não realizado", "se concretizar", "se tratado"],
       meeting_levels: ["Gerencial", "Diretoria", "Operacional", "Técnica"],
       meeting_types: ["Reporte", "Acompanhamento de projeto", "Decisão", "Alinhamento", "Outro"],
@@ -76,11 +77,11 @@ const TRANSLATABLE = {
   meetings: ["title", "agenda", "minutes", "notes"],
   mandatory: ["title", "notes"],
 };
-const SUB_TRANSLATABLE = { pitems: ["title", "objective", "progress_desc"], activities: ["notes"], scenarios: ["description"], inputs_log: ["text"], actions: ["text", "gap_reason"], history: ["text"] };
+const SUB_TRANSLATABLE = { item_actions: ["text", "progress"], pitems: ["title", "objective", "progress_desc"], activities: ["notes"], scenarios: ["description"], inputs_log: ["text"], actions: ["text", "gap_reason"], history: ["text"] };
 function strHash(s) { let h = 5381; s = String(s); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
-const SUB_LISTS = { projects: ["pitems", "activities", "scenarios"], risks: ["inputs_log", "scenarios"] };
-const SUB_PREFIX = { pitems: "IT", activities: "AT", scenarios: "SC", inputs_log: "RI" };
-const SUB_LABEL = { pitems: "Itens do projeto", activities: "Atividades", scenarios: "Impactos e riscos", inputs_log: "Inputs do risco" };
+const SUB_LISTS = { projects: ["pitems", "activities", "scenarios"], risks: ["inputs_log", "scenarios"], items: ["item_actions"] };
+const SUB_PREFIX = { pitems: "IT", activities: "AT", scenarios: "SC", inputs_log: "RI", item_actions: "AC" };
+const SUB_LABEL = { pitems: "Itens do projeto", activities: "Atividades", scenarios: "Impactos e riscos", inputs_log: "Inputs do risco", item_actions: "Ações do item" };
 
 const Core = {
   db: null,
@@ -112,6 +113,9 @@ const Core = {
     db.risk_lessons ??= [];
     db.meeting_suggestions ??= [];
     db.settings.work_hours = { ...d.work_hours, ...(db.settings.work_hours || {}) };
+    // migração: nova área de impacto "Qualidade" em listas já personalizadas (uma vez só)
+    if (!db.settings.migrated_quality) { if (!db.settings.lists.impact_types.includes("Qualidade")) db.settings.lists.impact_types.push("Qualidade"); db.settings.migrated_quality = true; }
+    for (const it of db.items) { it.item_actions ??= []; it.sub_seq ??= 0; }
   },
   /** % de conclusão do projeto = itens do projeto finalizados / total. */
   projectPct(p) {
@@ -187,6 +191,7 @@ const Core = {
 
   /** Etapas 2 e 3 do fluxo: registra a classificação e a definição, cria/atualiza o item e os módulos ligados. */
   async commitInput(inp, body) {
+    if (inp.status === "Registrado" && inp.item_id) throw new ApiError(t("Esta entrada já foi registrada em {id}.", { id: inp.item_id }));
     const a = body.assessment || {}, defs = body.definitions || [], related = body.related || [];
     const mode = body.relation_mode || "novo";
     let item = mode === "incluir_existente" ? this.find("items", body.include_in || "") : null;
@@ -275,6 +280,8 @@ const Core = {
       if ((L.items || []).length >= n && !(L.projects || []).length)
         add("alta", it.id, "{id} está interligado a {n} itens: avaliar criação de um projeto com overview maior.", { id: it.id, n: L.items.length });
       if (it.due_date && it.due_date < today) add("alta", it.id, "{id} — {title}: prazo vencido em {date}.", { id: it.id, title: it.title, date: it.due_date });
+      else if (it.due_date && it.due_date <= addDays(today, +s.due_soon_days || 3)) add("media", it.id, "{id} — {title}: vence em {date}.", { id: it.id, title: it.title, date: it.due_date });
+      for (const a of it.item_actions || []) if (a.due && a.due < today && a.status !== "Concluída") add("alta", it.id, "{id}: ação {act} ({text}) vencida em {date}.", { id: it.id, act: a.id, text: a.text, date: a.due });
       if ((L.inputs || []).length >= n) add("media", it.id, "{id} recebeu {n} entradas: tema recorrente.", { id: it.id, n: L.inputs.length });
     }
     for (const r of db.risks) {
@@ -537,6 +544,37 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       n.y = 40 + (count[c] - 1) * 90;
     }
     return { nodes, edges };
+  },
+
+  // ------------------------------------------------------------ duplicidade
+  /** Itens da lista geral com o mesmo título (ou quase) — possíveis duplicados. */
+  findDuplicates(title, excludeId = null) {
+    const n = AI.norm(title).replace(/\s+/g, " ").trim();
+    if (!n) return [];
+    return this.db.items.filter((it) => it.id !== excludeId && it.status !== "Concluído" &&
+      (AI.norm(it.title).replace(/\s+/g, " ").trim() === n || AI.similarity(title, it.title) >= 0.9)).map((it) => it.id);
+  },
+  /** Junta o item `from` no item `into`: vínculos, entradas, histórico e ações; depois remove `from`. */
+  mergeItems(from, into) {
+    const a = this.find("items", from), b = this.find("items", into);
+    if (!a || !b || a === b) throw new ApiError(t("{id} não encontrado", { id: !b ? into : from }));
+    for (const [col, ids] of Object.entries(a.links || {})) for (const id of ids) { if (!(col === "items" && id === into)) this.link("items", into, col, id); }
+    for (const col of COLLECTIONS) for (const r of this.db[col]) {
+      const l = r.links?.items; if (l?.includes(from)) { l.splice(l.indexOf(from), 1); if (r.id !== into && !l.includes(into)) l.push(into); }
+    }
+    b.links.items = (b.links.items || []).filter((x) => x !== from && x !== into);
+    for (const inp of this.db.inputs) if (inp.item_id === from) inp.item_id = into;
+    for (const p of this.db.projects) for (const act of p.actions || []) if (act.item_id === from) act.item_id = into;
+    b.history = [...(b.history || []), ...(a.history || [])].sort((x, y) => (x.date || "").localeCompare(y.date || ""));
+    for (const act of a.item_actions || []) b.item_actions.push({ ...act, id: this.subId(b, "item_actions") });
+    b.definitions = [...new Set([...(b.definitions || []), ...(a.definitions || [])])];
+    b.impacts = [...new Set([...(b.impacts || []), ...(a.impacts || [])])];
+    if (!b.due_date || (a.due_date && a.due_date < b.due_date)) b.due_date = a.due_date || b.due_date;
+    this.db.items = this.db.items.filter((x) => x.id !== from);
+    this.hist(b, "{from} mesclado neste item (duplicado)", { from });
+    this.touch(b);
+    this.log("items.merged", into, "{from} mesclado em {into}", { from, into });
+    return b;
   },
 
   // ------------------------------------------------------------ reuniões obrigatórias
@@ -816,6 +854,7 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     if (method === "POST" && !rid) {
       const data = { ...body };
       delete data.id;
+      if (col === "meetings" && data.status === "Solicitada") data.requested_at ??= todayISO();
       const rec = await this.createRecord(col, data);
       if (col === "inputs") {
         rec.status = "Novo";
@@ -839,7 +878,7 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     if (method === "GET" && rec && !action) return rec;
     if (method === "PATCH" && rec && !action) {
       const data = { ...body };
-      for (const k of ["id", "created_at", "links", "folder", "pitems", "activities", "scenarios", "inputs_log", "actions", "schedules"]) delete data[k];
+      for (const k of ["id", "created_at", "links", "folder", "pitems", "activities", "scenarios", "inputs_log", "actions", "schedules", "item_actions"]) delete data[k];
       const note = data._note, silent = data._silent;
       delete data._note; delete data._silent;
       Object.assign(rec, data);
@@ -967,6 +1006,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
         rec.held_at = body.date || rec.date || todayISO();
         if (proj) { proj.next_meeting = addDays(rec.held_at, +db.settings.project_meeting_cadence_days || 15); proj.last_monitored = todayISO(); }
         this.log("meetings.done", rid, "Reunião {id} confirmada como realizada", { id: rid });
+      } else if (body.status === "Cancelada") {
+        this.log("meetings.cancelled", rid, "Reunião {id} cancelada", { id: rid });
       } else if (body.status === "Não realizada") {
         if (proj) proj.next_meeting = body.new_date || addDays(todayISO(), 7);
         this.log("meetings.not_done", rid, "Reunião {id} não realizada", { id: rid });
@@ -982,6 +1023,17 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       rec.nodes = g.nodes; rec.edges = g.edges; rec.engine = g.engine || "dados";
       this.touch(rec);
       this.log("flows.generated", rid, "Fluxo {id} gerado", { id: rid });
+      return rec;
+    }
+    if (col === "items" && action === "merge") return this.mergeItems(rid, (body.into || "").toUpperCase());
+    if (col === "items" && action === "progress") {
+      // registro de progresso (histórico geral do item), opcionalmente ligado a uma ação do item
+      const act = body.action_id ? rec.item_actions.find((x) => x.id === body.action_id) : null;
+      if (act) { act.progress = body.text; act.updated_at = nowISO(); if (body.status) act.status = body.status; }
+      (rec.history ??= []).push({ date: nowISO(), text: body.text, action_id: body.action_id || "", kind: "progress" });
+      if (body.status_item) rec.status = body.status_item;
+      this.touch(rec);
+      this.log("items.progress", rid, "{id} atualizado: {note}", { id: rid, note: body.text });
       return rec;
     }
     if (action === "teach" && ["items", "risks", "inputs"].includes(col)) {

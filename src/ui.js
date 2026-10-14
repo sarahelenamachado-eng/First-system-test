@@ -6,7 +6,7 @@ let S = null; // estado vindo de Core.api("state")
 const STATUS_ITEM = ["Aberto", "Em andamento", "Aguardando", "Concluído"];
 const LEVELS = ["Alta", "Média", "Baixa"];
 const PITEM_STATUS = ["Aberto", "Em andamento", "Finalizado"];
-const MEETING_STATUS = ["Agendada", "Pendente", "Solicitada", "Realizada", "Não realizada"];
+const MEETING_STATUS = ["Agendada", "Pendente", "Solicitada", "Realizada", "Não realizada", "Cancelada"];
 const MODULES = ["painel", "entradas", "lista", "projetos", "reunioes", "riscos", "fluxos", "summaries"];
 const SCENARIOS = { projects: ["se realizado", "se não realizado"], risks: ["se concretizar", "se tratado"] };
 const ACT_FIELDS = { scope: "Scope", target: "Target", item: "Item", n: "Nº", subitem: "Subitem", last_progress: "Last Progress",
@@ -189,12 +189,22 @@ function render() {
   const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, reunioes: viewReunioes, riscos: viewRiscos,
     fluxos: viewFluxos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
   $("#view").innerHTML = V(id, tab);
+  renderDueStrip(view);
   if (V === viewEntradas && id) openTriage(id);
   if (V === viewLista && id) openItem(id);
   if (V === viewFluxos && id) FlowEd.mount();
   if (V === viewRiscos && id && (tab || "geral") === "docs") loadRiskFiles(id);
 }
 window.addEventListener("hashchange", render);
+/** Faixa de aviso em todas as telas quando há itens com prazo vencido ou vencendo. */
+function renderDueStrip(view) {
+  const over = S.db.items.filter((i) => isOverdue(i) || lateActions(i).length), soon = S.db.items.filter(isDueSoon);
+  const el = $("#due-strip");
+  if (!el) return;
+  el.classList.toggle("hidden", !(over.length || soon.length) || view === "lista");
+  el.innerHTML = `⚠ ${t("{over} itens com prazo vencido e {soon} vencendo nos próximos dias.", { over: over.length, soon: soon.length })}
+    <a href="#lista" onclick="F.due='${over.length ? "vencidos" : "proximos"}';F.page=0">${t("Ver na lista geral")}</a>`;
+}
 
 // ------------------------------------------------------------------ painel
 function viewPainel() {
@@ -222,17 +232,26 @@ function viewPainel() {
 }
 
 // ------------------------------------------------------------------ entradas (demand management)
+let FI = { all: false, page: 0, q: "" };
 function viewEntradas() {
-  const list = S.db.inputs.slice().reverse();
+  const q = FI.q.toLowerCase();
+  const all = S.db.inputs.filter((i) => (FI.all || i.status !== "Registrado") && (!q || (i.id + " " + i.title + " " + lc(i, "title")).toLowerCase().includes(q))).reverse();
+  const pages = Math.max(1, Math.ceil(all.length / 25));
+  FI.page = Math.min(FI.page, pages - 1);
+  const list = all.slice(FI.page * 25, (FI.page + 1) * 25);
   return `<h1>${t("Inputs management")}</h1>
   <div class="steps"><span class="step on">${t("1. Entrada da informação")}</span><span class="step">${t("2. Assessment (relação + classificação)")}</span><span class="step">${t("3. Definição")}</span><span class="step">${t("4. Lista geral + módulos")}</span></div>
   <div class="grid" style="grid-template-columns: minmax(320px, 1.1fr) minmax(300px, 1fr)">
   <div class="card"><h2>${t("Nova entrada")}</h2>${inputForm()}
     <div class="actions"><button onclick="busy(this, saveInput)">${t("Registrar e avaliar com IA")}</button></div></div>
-  <div class="card"><h2>${t("Entradas")}</h2><table>${th(["ID", "Entrada", "Origem", "Status"])}
+  <div class="card"><h2>${t(FI.all ? "Entradas" : "Entradas pendentes")} (${all.length})</h2>
+    <div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(FI.q)}" onchange="FI.q=this.value;FI.page=0;render()">
+      <label class="inline-check"><input type="checkbox" ${FI.all ? "checked" : ""} onchange="FI.all=this.checked;FI.page=0;render()"> ${t("Mostrar registradas")}</label></div>
+    <table>${th(["ID", "Entrada", "Origem", "Status"])}
     ${list.map((i) => `<tr class="click" onclick="location.hash='entradas/${i.id}'"><td>${i.id}</td><td>${esc(lc(i, "title"))}</td><td>${esc(tv(i.source))}</td>
-      <td>${pill(tv(i.status), i.status === "Registrado" ? "p-Baixa" : "p-Média")} ${i.item_id ? pill(i.item_id) : ""}</td></tr>`).join("") || `<tr><td colspan=4 class="muted">${t("Nenhuma entrada.")}</td></tr>`}
-  </table></div></div>`;
+      <td>${pill(tv(i.status), i.status === "Registrado" ? "p-Baixa" : "p-Média")} ${i.item_id ? pill(i.item_id) : ""}</td></tr>`).join("") || `<tr><td colspan=4 class="muted">${t(FI.all ? "Nenhuma entrada." : "Nenhuma entrada pendente.")}</td></tr>`}
+  </table>
+  ${pages > 1 ? `<div class="pager"><span></span><span><button class="small ghost" ${FI.page === 0 ? "disabled" : ""} onclick="FI.page--;render()">←</button> ${FI.page + 1} / ${pages} <button class="small ghost" ${FI.page >= pages - 1 ? "disabled" : ""} onclick="FI.page++;render()">→</button></span></div>` : ""}</div></div>`;
 }
 function inputForm(pre = {}) {
   const meetings = S.db.meetings.slice().reverse();
@@ -257,32 +276,64 @@ function readInputForm() {
 async function saveInput() {
   const data = readInputForm();
   if (!data.title) throw new Error(t("Informe o título."));
+  // evita registrar a mesma demanda duas vezes
+  const dupItems = Core.findDuplicates(data.title);
+  const norm = (x) => AI.norm(x).replace(/\s+/g, " ").trim();
+  const dupInputs = S.db.inputs.filter((i) => i.status !== "Registrado" && norm(i.title) === norm(data.title));
+  if ((dupItems.length || dupInputs.length) && !confirm(t("DUP_CONFIRM", { ids: [...dupItems, ...dupInputs.map((i) => i.id)].join(", ") }))) return;
   const rec = await api("inputs", "POST", data);
   await api(`inputs/${rec.id}/suggest`, "POST");
   await refresh();
   location.hash = "entradas/" + rec.id;
 }
 
+/* Itens relacionados escolhidos na avaliação (busca em vez de listar a lista geral inteira). */
+let TRI = { rel: new Set(), include: "" };
+function itemMatches(q, limit = 8, exclude = []) {
+  const n = AI.norm(q).trim();
+  if (!n) return [];
+  return S.db.items.filter((i) => !exclude.includes(i.id))
+    .map((i) => [i.id.toLowerCase() === n || AI.norm(i.title).includes(n) || AI.norm(lc(i, "title")).includes(n) ? 2 : AI.similarity(q, AI.itemText(i)), i])
+    .filter(([sc]) => sc > 0.15).sort((a, b) => b[0] - a[0]).slice(0, limit).map(([, i]) => i);
+}
+function triRelBox() {
+  const chips = [...TRI.rel].filter((id) => id !== TRI.include).map((id) => { const i = byId("items", id); return `<span class="chip">${id} · ${esc(i ? lc(i, "title") : "")}<button class="mini" onclick="TRI.rel.delete('${id}');$('#t-rel-box').innerHTML=triRelBox()">×</button></span>`; }).join("");
+  const inc = TRI.include ? byId("items", TRI.include) : null;
+  return `<div class="chips">${inc ? `<span class="chip direct">${t("Relação direta")}: ${inc.id} · ${esc(lc(inc, "title"))}<button class="mini" onclick="TRI.include='';$('#t-mode').value='novo';$('#t-rel-box').innerHTML=triRelBox()">×</button></span>` : ""}
+    ${chips || (inc ? "" : `<span class="muted">${t("Nenhum item vinculado.")}</span>`)}</div>`;
+}
+function triSearch(q) {
+  const res = itemMatches(q, 8, [...TRI.rel, TRI.include]);
+  $("#t-rel-results").innerHTML = res.map((i) => `<div class="search-row"><span>${i.id} · ${esc(lc(i, "title"))} <span class="muted">${esc(tv(i.status))}</span></span>
+    <span class="nowrap"><button class="small ghost" onclick="TRI.rel.add('${i.id}');$('#t-rel-box').innerHTML=triRelBox();triSearch($('#t-rel-q').value)">${t("Vincular")}</button>
+    <button class="small" onclick="TRI.include='${i.id}';$('#t-mode').value='incluir_existente';$('#t-rel-box').innerHTML=triRelBox();triSearch($('#t-rel-q').value)">${t("Relação direta")}</button></span></div>`).join("")
+    || (q.trim() ? `<p class="muted">${t("Nenhum item encontrado.")}</p>` : "");
+}
 function openTriage(id) {
   const inp = byId("inputs", id);
   if (!inp) return;
   const sug = inp.ai_suggestion, a = inp.assessment || sug || {};
   const defs = inp.definitions || a.definitions || [];
   const done = inp.status === "Registrado";
-  const items = S.db.items, projects = S.db.projects;
-  const rel = (iid) => (a.related || []).find((r) => r.id === iid);
+  const projects = S.db.projects;
+  const dups = Core.findDuplicates(inp.title).filter((x) => x !== inp.item_id);
+  TRI = { rel: new Set((a.related || []).map((r) => r.id).filter((x) => byId("items", x))), include: a.relation_mode === "incluir_existente" ? a.include_in || "" : "" };
+  if (!done && dups.length && !TRI.include) TRI.include = dups[0];
+  const suggestions = (a.related || []).filter((r) => byId("items", r.id));
   openModal(`<h2>${inp.id} · ${esc(lc(inp, "title"))} ${trButton("inputs", inp.id)}</h2>
   <p class="muted">${[tv(inp.source), tv(inp.source_detail), fmt(inp.created_at), inp.origin ? t("veio de") + " " + inp.origin : ""].filter(Boolean).map(esc).join(" · ")}</p>
   <p>${esc(lc(inp, "description"))}</p>${inp.background ? `<p class="muted"><b>${t("Contexto:")}</b> ${esc(lc(inp, "background"))}</p>` : ""}
+  ${!done && dups.length ? `<div class="alert lv-alta">⚠ ${t("Possível duplicidade: já existe {ids} com o mesmo título. A entrada será incluída no item existente, a menos que você mude a relação.", { ids: dups.join(", ") })}</div>` : ""}
   ${sug ? `<div class="ai-box"><b>${t("Sugestão da IA")}</b> (${esc(tv(sug.engine))}): ${esc(sug.msg ? msg(sug) : sug.rationale)}${sug.gap_analysis ? "\n" + t("Gaps:") + " " + esc(sug.gap_analysis) : ""}${sug.relation_explanation ? "\n" + t("Relação:") + " " + esc(t(sug.relation_explanation)) : ""}</div>`
         : `<div class="actions"><button onclick="busy(this, async()=>{await api('inputs/${id}/suggest','POST'); await refresh();})">${t("Pedir sugestão da IA")}</button></div>`}
   <div class="steps"><span class="step on">${t("2. Assessment")}</span></div>
   <h3>${t("2.1 Tem relação com item já levantado?")}</h3>
-  <div class="row"><div>${L("Relação")}<select id="t-mode">
-    <option value="novo" ${a.relation_mode !== "incluir_existente" ? "selected" : ""}>${t("Não / relação só em impacto → criar item novo")}</option>
-    <option value="incluir_existente" ${a.relation_mode === "incluir_existente" ? "selected" : ""}>${t("Sim, relação direta → incluir no item on going")}</option></select></div>
-    <div>${L("Item on going (relação direta)")}<select id="t-include"><option value="">—</option>${items.map((i) => `<option value="${i.id}" ${i.id === a.include_in ? "selected" : ""}>${i.id} · ${esc(lc(i, "title"))}</option>`).join("")}</select></div></div>
-  ${L("Itens relacionados (vincular)")}<div class="checks" style="max-height:140px;overflow:auto">${items.map((i) => `<label><input type="checkbox" class="t-rel" value="${i.id}" ${rel(i.id) ? "checked" : ""}> ${i.id} · ${esc(lc(i, "title"))} ${rel(i.id) ? `<span class="muted">(${esc(rel(i.id).relation)})</span>` : ""}</label>`).join("") || `<span class="muted">${t("Lista geral vazia.")}</span>`}</div>
+  <div class="row"><div>${L("Relação")}<select id="t-mode" onchange="if(this.value==='novo'){TRI.include='';$('#t-rel-box').innerHTML=triRelBox();}">
+    <option value="novo" ${!TRI.include ? "selected" : ""}>${t("Não / relação só em impacto → criar item novo")}</option>
+    <option value="incluir_existente" ${TRI.include ? "selected" : ""}>${t("Sim, relação direta → incluir no item on going")}</option></select></div></div>
+  ${suggestions.length ? `${L("Sugeridos pela IA")}<div class="chips">${suggestions.map((r) => { const i = byId("items", r.id); return `<span class="chip sug">${r.id} · ${esc(lc(i, "title"))} <span class="muted">(${esc(r.relation)})</span></span>`; }).join("")}</div>` : ""}
+  ${L("Itens vinculados / relação direta")}<div id="t-rel-box">${triRelBox()}</div>
+  <input id="t-rel-q" placeholder="${esc(t("Buscar item por ID ou palavra para vincular…"))}" oninput="triSearch(this.value)" autocomplete="off"><div id="t-rel-results" class="search-results"></div>
   <h3>${t("2.2 Classificação")}</h3>
   <div class="row"><div>${L("Escopo — o que é?")}<input id="t-scope" value="${esc(a.scope)}"></div><div>${L("O que deve ser feito com isso?")}<input id="t-scope-act" value="${esc(a.scope_action)}"></div></div>
   <div class="row"><div>${L("Prioridade")}<select id="t-prio">${opts(LEVELS, a.priority || "Média")}</select></div>
@@ -306,13 +357,15 @@ async function commitTriage(id) {
   const vals = (cls) => [...document.querySelectorAll("." + cls)].filter((c) => c.checked).map((c) => c.value);
   const definitions = vals("t-def");
   if (!definitions.length) throw new Error(t("Escolha ao menos uma definição."));
+  const mode = $("#t-mode").value;
   const body = {
-    relation_mode: $("#t-mode").value, include_in: $("#t-include").value, related: vals("t-rel"), definitions,
+    relation_mode: mode, include_in: mode === "incluir_existente" ? TRI.include : "", related: [...TRI.rel].filter((x) => x !== TRI.include), definitions,
     project_id: $("#t-proj").value, new_project_name: $("#t-newproj").value,
     assessment: { scope: $("#t-scope").value, scope_action: $("#t-scope-act").value, priority: $("#t-prio").value, urgency: $("#t-urg").value,
       origin: $("#t-origin").value, risk_reason: $("#t-risk").value, impacts: vals("t-imp"), impact_details: $("#t-impd").value, gap_analysis: $("#t-gap").value },
   };
-  if (body.relation_mode === "incluir_existente" && !body.include_in) throw new Error(t("Selecione o item on going."));
+  if (mode === "incluir_existente" && !body.include_in) throw new Error(t("Selecione o item on going."));
+  if (mode === "novo" && Core.findDuplicates(byId("inputs", id).title).length && !confirm(t("DUP_NEW_CONFIRM"))) return;
   const c = (await api(`inputs/${id}/commit`, "POST", body)).created;
   const teach = $("#t-teach").value.trim();
   if (teach) await api(`items/${c.item}/teach`, "POST", { analysis: teach, level: body.assessment.urgency, factors: body.assessment.impacts });
@@ -323,45 +376,118 @@ async function commitTriage(id) {
 }
 
 // ------------------------------------------------------------------ lista geral
-let F = { q: "", status: "", prio: "", src: "", def: "" };
+let F = { q: "", status: "", prio: "", src: "", def: "", due: "", done: false, page: 0 };
+const PAGE = 40;
+const dueSoon = () => addDays(S.today, +S.db.settings.due_soon_days || 3);
+const isOverdue = (i) => i.status !== "Concluído" && i.due_date && i.due_date < S.today;
+const isDueSoon = (i) => i.status !== "Concluído" && i.due_date && i.due_date >= S.today && i.due_date <= dueSoon();
+const lateActions = (i) => (i.item_actions || []).filter((a) => a.due && a.due < S.today && a.status !== "Concluída");
+const lastProgress = (i) => (i.history || []).filter((h) => !h.msg && h.text).at(-1);
+function dueCell(i) {
+  if (isOverdue(i)) return pill(`⚠ ${i.due_date}`, "p-Alta") + `<br><small class="late-txt">${t("{n} dias de atraso", { n: daysSince(i.due_date) })}</small>`;
+  if (isDueSoon(i)) return pill(i.due_date, "p-Média") + `<br><small class="muted">${t("vence em breve")}</small>`;
+  return esc(i.due_date);
+}
 function viewLista() {
-  const rows = S.db.items.filter((i) => (!F.status || i.status === F.status) && (!F.prio || i.priority === F.prio) && (!F.src || i.source === F.src)
-    && (!F.def || (i.definitions || []).includes(F.def)) && (!F.q || JSON.stringify(i).toLowerCase().includes(F.q.toLowerCase()))).reverse();
+  const q = F.q.toLowerCase();
+  const all = S.db.items.filter((i) => (F.done || F.status === "Concluído" || i.status !== "Concluído") && (!F.status || i.status === F.status) && (!F.prio || i.priority === F.prio)
+    && (!F.src || i.source === F.src) && (!F.def || (i.definitions || []).includes(F.def))
+    && (!F.due || (F.due === "vencidos" ? isOverdue(i) || lateActions(i).length : isDueSoon(i)))
+    && (!q || (i.id + " " + JSON.stringify(i)).toLowerCase().includes(q) || lc(i, "title").toLowerCase().includes(q))).reverse();
+  const pages = Math.max(1, Math.ceil(all.length / PAGE));
+  F.page = Math.min(F.page, pages - 1);
+  const rows = all.slice(F.page * PAGE, (F.page + 1) * PAGE);
+  const nOver = S.db.items.filter((i) => isOverdue(i) || lateActions(i).length).length, nSoon = S.db.items.filter(isDueSoon).length;
   return `<h1>${t("Lista geral de governança")}</h1>
-  <div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(F.q)}" onchange="F.q=this.value;render()">
-    <select onchange="F.status=this.value;render()"><option value="">${t("Status")}</option>${opts(STATUS_ITEM, F.status)}</select>
-    <select onchange="F.prio=this.value;render()"><option value="">${t("Prioridade")}</option>${opts(LEVELS, F.prio)}</select>
-    <select onchange="F.src=this.value;render()"><option value="">${t("Origem")}</option>${opts(LIST("sources"), F.src)}</select>
-    <select onchange="F.def=this.value;render()"><option value="">${t("Definição")}</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${esc(t(v))}</option>`).join("")}</select>
+  ${nOver || nSoon ? `<div class="alert lv-alta due-banner">⚠ ${t("{over} itens com prazo vencido e {soon} vencendo nos próximos dias.", { over: nOver, soon: nSoon })}
+    <button class="small" onclick="F.due='vencidos';F.page=0;render()">${t("Ver vencidos")}</button> <button class="small ghost" onclick="F.due='proximos';F.page=0;render()">${t("Ver próximos")}</button></div>` : ""}
+  <div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(F.q)}" onchange="F.q=this.value;F.page=0;render()">
+    <select onchange="F.status=this.value;F.page=0;render()"><option value="">${t("Status")}</option>${opts(STATUS_ITEM, F.status)}</select>
+    <select onchange="F.prio=this.value;F.page=0;render()"><option value="">${t("Prioridade")}</option>${opts(LEVELS, F.prio)}</select>
+    <select onchange="F.src=this.value;F.page=0;render()"><option value="">${t("Origem")}</option>${opts(LIST("sources"), F.src)}</select>
+    <select onchange="F.def=this.value;F.page=0;render()"><option value="">${t("Definição")}</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${esc(t(v))}</option>`).join("")}</select>
+    <select onchange="F.due=this.value;F.page=0;render()"><option value="">${t("Prazo")}</option><option value="vencidos" ${F.due === "vencidos" ? "selected" : ""}>${t("Vencidos")}</option><option value="proximos" ${F.due === "proximos" ? "selected" : ""}>${t("Vencem em breve")}</option></select>
+    <label class="inline-check"><input type="checkbox" ${F.done ? "checked" : ""} onchange="F.done=this.checked;F.page=0;render()"> ${t("Mostrar concluídos")}</label>
     <button class="ghost" onclick="exportCsv()">${t("Baixar planilha (CSV)")}</button></div>
-  <div class="card" style="overflow:auto"><table>${th(["ID", "Item", "Origem", "Responsável", "Emitido", "Prazo", "Prioridade", "Impactos", "Definição", "Vínculos", "Status"])}
-  ${rows.map((i) => `<tr class="click" onclick="location.hash='lista/${i.id}'"><td>${i.id}</td><td>${esc(lc(i, "title"))}</td><td>${esc(tv(i.source))}</td><td>${esc(i.owner)}</td>
-    <td>${esc(i.emitted_at || (i.created_at || "").slice(0, 10))}</td><td>${i.due_date && i.due_date < S.today && i.status !== "Concluído" ? pill(i.due_date, "p-Alta") : esc(i.due_date)}</td>
+  <div class="card" style="overflow:auto"><table>${th(["ID", "Item", "Origem", "Responsável", "Prazo", "Prioridade", "Impactos", "Definição", "Último progresso", "Status"])}
+  ${rows.map((i) => { const lp = lastProgress(i), la = lateActions(i); return `<tr class="click ${isOverdue(i) || la.length ? "overdue" : ""}" onclick="location.hash='lista/${i.id}'"><td>${i.id}</td><td>${esc(lc(i, "title"))}</td><td>${esc(tv(i.source))}</td><td>${esc(i.owner)}</td>
+    <td>${dueCell(i)}${la.length ? `<br><small class="late-txt">${t("{n} ações vencidas", { n: la.length })}</small>` : ""}</td>
     <td>${prio(i.priority)}</td><td>${(i.impacts || []).map((x) => pill(t(x))).join("")}</td><td>${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}</td>
-    <td class="muted">${Object.entries(i.links || {}).filter(([, v]) => v.length).map(([k, v]) => v.length + " " + t(k)).join(", ")}</td><td>${esc(tv(i.status))}</td></tr>`).join("") || `<tr><td colspan=11 class="muted">${t("Nenhum item.")}</td></tr>`}
-  </table></div>`;
+    <td class="lp">${lp ? `<span class="muted">${esc((lp.date || "").slice(0, 10))}</span> ${esc(lc(lp, "text").slice(0, 120))}` : '<span class="muted">—</span>'}</td><td>${esc(tv(i.status))}</td></tr>`; }).join("") || `<tr><td colspan=10 class="muted">${t("Nenhum item.")}</td></tr>`}
+  </table>
+  <div class="pager"><span class="muted">${t("{n} itens", { n: all.length })}${!F.done ? " · " + t("concluídos ocultos") : ""}</span>
+    ${pages > 1 ? `<button class="small ghost" ${F.page === 0 ? "disabled" : ""} onclick="F.page--;render()">←</button> ${F.page + 1} / ${pages} <button class="small ghost" ${F.page >= pages - 1 ? "disabled" : ""} onclick="F.page++;render()">→</button>` : ""}</div></div>`;
 }
 function openItem(id) {
   const i = byId("items", id);
   if (!i) return;
+  const dups = Core.findDuplicates(i.title, i.id);
+  const acts = i.item_actions || [];
   openModal(`<h2>${i.id} · ${esc(lc(i, "title"))} ${trButton("items", i.id)}</h2>
-  <p>${prio(i.priority)} ${pill(t("Urgência") + " " + (tv(i.urgency) || "—"))} ${(i.impacts || []).map((x) => pill(t(x))).join("")} ${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}</p>
+  <p>${prio(i.priority)} ${pill(t("Urgência") + " " + (tv(i.urgency) || "—"))} ${(i.impacts || []).map((x) => pill(t(x))).join("")} ${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}
+    ${isOverdue(i) ? pill(`⚠ ${t("Prazo vencido em {date}", { date: i.due_date })}`, "p-Alta") : isDueSoon(i) ? pill(t("Vence em {date}", { date: i.due_date }), "p-Média") : ""}</p>
+  ${dups.length ? `<div class="alert lv-alta">⚠ ${t("Possível duplicado de {ids}.", { ids: dups.join(", ") })} <button class="small" onclick="busy(this, ()=>mergeItem('${i.id}','${dups[0]}'))">${t("Mesclar este item em {id}", { id: dups[0] })}</button></div>` : ""}
   <p>${esc(lc(i, "description"))}</p>
-  <div class="row"><div>${L("Escopo")}${esc(i.scope)}<br><span class="muted">${esc(i.scope_action)}</span></div><div>${L("Origem")}${esc(tv(i.source))} · ${esc(i.origin)}</div><div>${L("Áreas")}${esc(i.area_main)} ${i.areas_impacted ? "→ " + esc(i.areas_impacted) : ""}</div></div>
-  ${i.risk_reason ? L("Riscos / urgência") + esc(i.risk_reason) : ""}${i.impact_details ? L("Impactos") + esc(i.impact_details) : ""}${i.gap_analysis ? L("Gaps") + esc(i.gap_analysis) : ""}
+  <div class="row"><div>${L("Escopo")}${esc(lc(i, "scope"))}<br><span class="muted">${esc(lc(i, "scope_action"))}</span></div><div>${L("Origem")}${esc(tv(i.source))} · ${esc(i.origin)}</div><div>${L("Áreas")}${esc(i.area_main)} ${i.areas_impacted ? "→ " + esc(i.areas_impacted) : ""}</div></div>
+  ${i.risk_reason ? L("Riscos / urgência") + esc(lc(i, "risk_reason")) : ""}${i.impact_details ? L("Impactos") + esc(lc(i, "impact_details")) : ""}${i.gap_analysis ? L("Gaps") + esc(lc(i, "gap_analysis")) : ""}
   ${L("Vínculos")}<div>${linksHtml(i)}</div>${linkForm("items", i.id)}
   <div class="row"><div>${L("Status")}<select id="i-status">${opts(STATUS_ITEM, i.status)}</select></div><div>${L("Responsável")}<input id="i-owner" value="${esc(i.owner)}"></div>
     <div>${L("Prazo")}<input type="date" id="i-due" value="${esc(i.due_date)}"></div><div>${L("Prioridade")}<select id="i-prio">${opts(LEVELS, i.priority)}</select></div></div>
-  ${L("Registrar atualização")}<textarea id="i-note" style="min-height:50px" placeholder="${esc(t("O que aconteceu? (entra no histórico e no summary)"))}"></textarea>
   <div class="checks"><label><input type="checkbox" id="i-report" ${i.report ? "checked" : ""}> ${t("Info a ser reportada (entra no summary)")}</label></div>
   <div class="actions"><button onclick="busy(this, ()=>saveItem('${i.id}'))">${t("Salvar")}</button></div>
+
+  <h3>${t("Ações do item")}</h3>
+  <div style="overflow:auto"><table>${th(["ID", "Ação", "Responsável", "Prazo", "Status", "Progresso", ""])}
+  ${acts.map((a) => `<tr class="${a.due && a.due < S.today && a.status !== "Concluída" ? "overdue" : ""}"><td>${a.id}</td><td><input id="ia-t-${a.id}" value="${esc(a.text)}"></td><td><input id="ia-w-${a.id}" value="${esc(a.owner)}" style="width:110px"></td>
+    <td><input type="date" id="ia-d-${a.id}" value="${esc(a.due)}"></td><td><select id="ia-s-${a.id}">${opts(["Aberta", "Em andamento", "Concluída"], a.status)}</select></td>
+    <td><textarea id="ia-p-${a.id}" rows="2" placeholder="${esc(t("Novo progresso…"))}">${esc(a.progress)}</textarea></td>
+    <td class="nowrap"><button class="small" onclick="busy(this, ()=>saveItemAction('${i.id}','${a.id}'))">${t("Salvar")}</button><button class="small ghost danger" onclick="busy(this, ()=>subRemove('items','${i.id}','item_actions','${a.id}').then(()=>reopenItem('${i.id}')))">×</button></td></tr>`).join("")
+    || `<tr><td colspan=7 class="muted">${t("Nenhuma ação.")}</td></tr>`}</table></div>
+  <div class="row"><div>${L("Nova ação")}<input id="ia-new-t"></div><div>${L("Responsável")}<input id="ia-new-w"></div><div>${L("Prazo")}<input type="date" id="ia-new-d"></div></div>
+  <div class="actions"><button class="small" onclick="busy(this, ()=>addItemAction('${i.id}'))">${t("Adicionar ação")}</button></div>
+
+  <h3>${t("Progresso e histórico geral")}</h3>
+  <div class="row"><div style="grid-column: span 2">${L("Registrar progresso")}<textarea id="i-note" style="min-height:60px" placeholder="${esc(t("O que aconteceu? (entra no histórico e no summary)"))}"></textarea></div>
+    <div>${L("Referente à ação")}<select id="i-note-act"><option value="">—</option>${acts.map((a) => `<option value="${a.id}">${a.id} · ${esc(a.text)}</option>`).join("")}</select></div></div>
+  <div class="actions"><button onclick="busy(this, ()=>addProgress('${i.id}'))">${t("Registrar progresso")}</button></div>
+  <ul class="tl">${timeline((i.history || []).slice().reverse())}</ul>
   ${teachBox("items", i)}
-  <h3>${t("Histórico")}</h3><ul class="tl">${timeline((i.history || []).slice().reverse())}</ul>`);
+  <details class="merge"><summary>${t("Mesclar com outro item (duplicado)")}</summary>
+    <div class="toolbar" style="margin-top:8px"><input id="i-merge" placeholder="GOV003"><button class="small ghost" onclick="busy(this, ()=>mergeItem('${i.id}', $('#i-merge').value.trim().toUpperCase()))">${t("Mesclar este item no informado")}</button></div>
+    <p class="muted">${t("Vínculos, entradas, ações e histórico deste item passam para o item informado, e este é removido.")}</p></details>`);
 }
+/* Após salvar, o próprio render() reabre o item quando o endereço é lista/ID — não reabrir de novo aqui
+ * (senão o detalhe voltaria a abrir depois que o usuário já saiu dele). */
+function reopenItem() {}
 async function saveItem(id) {
-  await api("items/" + id, "PATCH", { status: $("#i-status").value, owner: $("#i-owner").value, due_date: $("#i-due").value, priority: $("#i-prio").value,
-    report: $("#i-report").checked, _note: $("#i-note").value.trim() || undefined });
-  toast(t("Item atualizado")); closeModal(); location.hash = "lista"; await refresh();
+  await api("items/" + id, "PATCH", { status: $("#i-status").value, owner: $("#i-owner").value, due_date: $("#i-due").value, priority: $("#i-prio").value, report: $("#i-report").checked });
+  toast(t("Item atualizado")); await refresh(); reopenItem(id);
+}
+async function addProgress(id) {
+  const text = $("#i-note").value.trim();
+  if (!text) throw new Error(t("Escreva o progresso."));
+  await api(`items/${id}/progress`, "POST", { text, action_id: $("#i-note-act").value });
+  toast(t("Progresso registrado")); await refresh(); reopenItem(id);
+}
+async function addItemAction(id) {
+  const text = $("#ia-new-t").value.trim();
+  if (!text) throw new Error(t("Informe o título."));
+  await api(`items/${id}/sub`, "POST", { list: "item_actions", entry: { text, owner: $("#ia-new-w").value, due: $("#ia-new-d").value, status: "Aberta", progress: "" } });
+  await refresh(); reopenItem(id);
+}
+async function saveItemAction(id, aid) {
+  const g = (k) => $(`#ia-${k}-${aid}`).value;
+  const old = byId("items", id).item_actions.find((a) => a.id === aid);
+  await api(`items/${id}/sub`, "POST", { list: "item_actions", entry: { id: aid, text: g("t"), owner: g("w"), due: g("d"), status: g("s"), progress: g("p") } });
+  if (g("p").trim() && g("p") !== old.progress) await api(`items/${id}/progress`, "POST", { text: `${aid}: ${g("p")}`, action_id: aid });
+  toast(t("Item atualizado")); await refresh(); reopenItem(id);
+}
+async function mergeItem(from, into) {
+  if (!into) throw new Error(t("Informe o ID do item."));
+  if (!confirm(t("Mesclar {from} em {into}? {from} será removido.", { from, into }))) return;
+  await api(`items/${from}/merge`, "POST", { into });
+  toast(t("{from} mesclado em {into}", { from, into }));
+  closeModal(); location.hash = "lista/" + into; await refresh();
 }
 
 // ------------------------------------------------------------------ impactos e riscos (cenários) — projetos e riscos
@@ -573,9 +699,11 @@ let M_FILTER = "";
 function viewReunioes(id) {
   if (id && /^MEET/.test(id)) return meetingDetail(byId("meetings", id));
   const tab = id || "dash";
-  const pend = S.db.meetings.filter((m) => ["Pendente", "Solicitada"].includes(m.status) || (m.status === "Agendada" && m.date <= S.today)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  const T = [["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`], ["confirmar", `${t("Confirmar e solicitar")} (${pend.length})`], ["todas", t("Todas as reuniões")]];
-  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, confirmar: () => meetingsConfirmView(pend), todas: meetingsAllView }[tab] || dashMeetingsView;
+  const pend = S.db.meetings.filter((m) => m.status === "Pendente" || (["Solicitada", "Agendada"].includes(m.status) && m.date && m.date <= S.today)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const reqOpen = S.db.meetings.filter((m) => m.kind === "Solicitada" && ["Solicitada", "Agendada", "Pendente"].includes(m.status)).length;
+  const T = [["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`], ["solicitadas", `${t("Solicitadas")} (${reqOpen})`],
+    ["confirmar", `${t("Confirmar e registrar ata")} (${pend.length})`], ["todas", t("Todas as reuniões")]];
+  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, confirmar: () => meetingsConfirmView(pend), todas: meetingsAllView }[tab] || dashMeetingsView;
   return `<h1>${t("Gerenciamento de reuniões")}</h1>${tabs("reunioes", T, tab)}${body()}`;
 }
 function meetingsConfirmView(pend) {
@@ -589,13 +717,6 @@ function meetingsConfirmView(pend) {
       <td class="nowrap"><button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
         <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nada a confirmar.")}</td></tr>`}</table></div>
   <div class="grid">
-  <div class="card"><h2>${t("Solicitar reunião")}</h2>
-    <div class="row"><div>${L("Título / pauta")}<input id="rq-title"></div><div>${L("Data prevista")}<input type="date" id="rq-date" value="${S.today}"></div><div>${L("Horário")}<input type="time" id="rq-time"></div></div>
-    <div class="row"><div>${L("Solicitada por")}<input id="rq-by" list="rq-sources"></div><div>${L("Participantes")}<input id="rq-part"></div><div>${L("Projeto")}${projSel("rq-proj")}</div></div>
-    ${meetingFields({ scheduling: "Urgente" }).replace(/mq-/g, "rq-")}
-    <datalist id="rq-sources">${LIST("sources").map((x) => `<option value="${esc(t(x))}">`).join("")}</datalist>
-    ${L("Pauta / objetivo")}<textarea id="rq-agenda" style="min-height:60px"></textarea>
-    <div class="actions"><button onclick="busy(this, requestMeeting)">${t("Registrar solicitação")}</button></div></div>
   <div class="card"><h2>${t("Nova ata / anotação")}</h2>
     <div class="row"><div>${L("Título")}<input id="m-title"></div><div>${L("Data")}<input type="date" id="m-date" value="${S.today}"></div><div>${L("Horário")}<input type="time" id="m-time"></div></div>
     <div class="row"><div>${L("Participantes")}<input id="m-part"></div><div>${L("Departamentos")}<input id="m-dept"></div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
@@ -603,6 +724,41 @@ function meetingsConfirmView(pend) {
     ${L("Ata")}<textarea id="m-min" style="min-height:120px" placeholder="${esc(t("MINUTES_HINT"))}"></textarea>
     ${L("Anotações pessoais")}<textarea id="m-notes"></textarea>
     <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>`;
+}
+let RQ_FILTER = "abertas";
+function requestedView() {
+  const projSel = `<select id="rq-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}">${p.id} · ${esc(lc(p, "name"))}</option>`).join("")}</select>`;
+  const list = S.db.meetings.filter((m) => m.kind === "Solicitada" && (RQ_FILTER === "todas" || ["Solicitada", "Agendada", "Pendente"].includes(m.status)))
+    .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+  return `<div class="grid" style="grid-template-columns: minmax(320px,1fr) minmax(320px,1.6fr)">
+  <div class="card"><h2>${t("Solicitar reunião")}</h2>
+    <p class="muted">${t("Reuniões pedidas por alguém (diretora, HQ, departamentos), fora das obrigatórias.")}</p>
+    ${L("Título / pauta")}<input id="rq-title">
+    <div class="row"><div>${L("Solicitada por")}<input id="rq-by" list="rq-sources"></div><div>${L("Data desejada")}<input type="date" id="rq-date"></div><div>${L("Horário")}<input type="time" id="rq-time"></div></div>
+    <div class="row"><div>${L("Participantes")}<input id="rq-part"></div><div>${L("Projeto")}${projSel}</div></div>
+    ${meetingFields({ scheduling: "Urgente" }).replace(/mq-/g, "rq-")}
+    <datalist id="rq-sources">${LIST("sources").map((x) => `<option value="${esc(t(x))}">`).join("")}</datalist>
+    ${L("Pauta / objetivo")}<textarea id="rq-agenda" style="min-height:60px"></textarea>
+    <div class="actions"><button onclick="busy(this, requestMeeting)">${t("Registrar solicitação")}</button></div></div>
+  <div class="card" style="overflow:auto"><h2>${t("Reuniões solicitadas")}</h2>
+    <div class="toolbar"><button class="small ${RQ_FILTER === "abertas" ? "" : "ghost"}" onclick="RQ_FILTER='abertas';render()">${t("Em aberto")}</button><button class="small ${RQ_FILTER === "todas" ? "" : "ghost"}" onclick="RQ_FILTER='todas';render()">${t("Todas")}</button></div>
+    <table>${th(["ID", "Reunião", "Solicitada por", "Pedido em", "Data", "Agendamento", "Status", ""])}
+    ${list.map((m) => { const open = ["Solicitada", "Agendada", "Pendente"].includes(m.status); return `<tr class="${m.date && m.date < S.today && open ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}</td><td>${esc(tv(m.requested_by))}</td>
+      <td>${esc(m.requested_at || (m.created_at || "").slice(0, 10))}</td><td>${esc(m.date || "—")} ${esc(m.time || "")}</td><td>${esc(tv(m.scheduling))}</td><td>${statusPill(m.status)}</td>
+      <td><div class="act-cell">${open ? `<button class="small ghost" onclick="scheduleRequested('${m.id}')">${t("Agendar")}</button>
+        <button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
+        <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button>
+        <button class="small ghost" onclick="busy(this, ()=>cancelMeeting('${m.id}'))">${t("Cancelar")}</button>` : ""}</div></td></tr>`; }).join("") || `<tr><td colspan=8 class="muted">${t("Nenhuma reunião solicitada.")}</td></tr>`}</table></div></div>`;
+}
+function scheduleRequested(id) {
+  const m = byId("meetings", id);
+  openModal(`<h2>${t("Agendar")} · ${esc(titleOf(m))}</h2>
+    <div class="row"><div>${L("Data")}<input type="date" id="sc-date" value="${esc(m.date || S.today)}"></div><div>${L("Horário")}<input type="time" id="sc-time" value="${esc(m.time || S.db.settings.work_hours.start)}"></div></div>
+    <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${id}','PATCH',{date:$('#sc-date').value,time:$('#sc-time').value,status:'Agendada'}); closeModal(); toast(t('Reunião agendada')); await refresh();})">${t("Salvar")}</button></div>`);
+}
+async function cancelMeeting(id) {
+  if (!confirm(t("Cancelar esta reunião?"))) return;
+  await api(`meetings/${id}/status`, "POST", { status: "Cancelada" }); await refresh();
 }
 function meetingsAllView() {
   const all = S.db.meetings.filter((m) => !M_FILTER || m.status === M_FILTER).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -615,7 +771,7 @@ async function requestMeeting() {
   const title = $("#rq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
   await api("meetings", "POST", { title, date: $("#rq-date").value, time: $("#rq-time").value, requested_by: $("#rq-by").value, participants: $("#rq-part").value,
-    project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: "Solicitada", kind: "Solicitada",
+    project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: $("#rq-date").value && $("#rq-time").value ? "Agendada" : "Solicitada", kind: "Solicitada",
     level: $("#rq-level").value, mtype: $("#rq-type").value, scheduling: $("#rq-sched").value });
   toast(t("Solicitação registrada")); await refresh();
 }
@@ -956,6 +1112,8 @@ async function reconnect() {
 async function boot() {
   await Core.load();
   await refresh();
+  const n = S.db.items.filter((i) => isOverdue(i) || lateActions(i).length).length;
+  if (n) toast(t("Atenção: {n} itens com prazo vencido.", { n }));
 }
 (async () => {
   try {

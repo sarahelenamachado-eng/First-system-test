@@ -189,3 +189,25 @@ h1 .tr-btn, h2 .tr-btn { font-weight: 600; }
 .tr-preview { font-size: .85rem; color: #444; background: #f6f6f7; border-left: 3px solid #b9bcc2; padding: 6px 8px; margin-top: 4px; border-radius: 3px; white-space: pre-wrap; }
 .tr-field { margin-bottom: 12px; }
 .tr-table td { width: 33%; font-size: .9rem; }
+
+/* ---------- lista geral, busca de itens, prazos */
+.due-strip { background: #fde8e8; color: #7a0000; padding: 6px 22px; font-weight: 600; font-size: .9rem; border-top: 1px solid #f3c2c2; }
+.due-strip a { margin-left: 10px; }
+.due-banner { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-weight: 600; }
+.late-txt { color: var(--high); font-weight: 700; }
+tr.overdue td { background: #fff6f6; }
+.pager { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; }
+.inline-check { display: inline-flex; gap: 6px; align-items: center; font-weight: 400; font-size: .9rem; margin: 0; color: var(--ink); }
+.inline-check input { width: auto; }
+td.lp { max-width: 280px; font-size: .88rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: #f1f1f2; border-radius: 999px; padding: 3px 4px 3px 10px; font-size: .85rem; }
+.chip.direct { background: var(--soft); color: var(--brand); font-weight: 600; }
+.chip.sug { background: #fff; border: 1px dashed #bbb; padding-right: 10px; }
+.chip .mini { padding: 0 6px; font-size: .75rem; line-height: 1.4; border-radius: 999px; }
+.search-results { border: 1px solid var(--line); border-top: 0; border-radius: 0 0 4px 4px; max-height: 260px; overflow: auto; }
+.search-results:empty { display: none; }
+.search-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 6px 8px; border-top: 1px solid var(--line); }
+details.merge { margin-top: 14px; } details.merge summary { cursor: pointer; color: var(--muted); }
+.toolbar .inline-check input { min-width: 0; width: auto; }
+.act-cell { display: flex; flex-wrap: wrap; gap: 4px; min-width: 150px; }

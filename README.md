@@ -41,7 +41,13 @@ definição (risco a monitorar/investigar, info a reportar, novo projeto, ação
 A IA sugere, você confirma ou corrige, e a decisão fica guardada para a IA aprender.
 
 ### 2. Lista geral de governança
-Filtros, histórico, vínculos entre itens/projetos/riscos/reuniões e download em planilha (CSV).
+Filtros (status, prioridade, origem, definição, prazo), busca, paginação (concluídos ocultos por padrão), coluna
+"Último progresso" e download em planilha (CSV). Em cada item: **Ações do item** (responsável, prazo, status e
+progresso) e **Progresso e histórico geral**.
+- **Prazos:** itens vencidos ficam em vermelho com os dias de atraso; os que vencem em breve, em amarelo. Uma faixa de
+  aviso aparece em todas as telas, e um aviso é mostrado ao abrir a plataforma.
+- **Duplicidade:** ao registrar uma entrada com o mesmo título de um item existente, a plataforma avisa e sugere
+  incluir no item existente. Duplicados já criados podem ser juntados com **Mesclar**.
 
 ### Dashboards (Projetos, Reuniões e Riscos)
 Cada módulo abre com um dashboard: frase-resumo, indicadores e gráficos, e o botão **Analisar com IA**, que
@@ -68,7 +74,7 @@ Abas de cada projeto:
 
 ### 4. Reuniões
 Abas: Dashboard · **Calendário** (clique num dia para inserir; sugestões da IA tracejadas) · **Obrigatórias** ·
-Confirmar e solicitar · Todas.
+**Solicitadas** (pedidas por alguém: agendar, realizada, não realizada, cancelar) · Confirmar e registrar ata · Todas.
 - **Reuniões obrigatórias:** cadastre frequência, dias e horário preferidos, duração e nível. A IA sugere as datas e
   horários do mês que faltam, seguindo as **regras e observações** que você escrever (ex.: "diretora só à tarde").
 - Cada reunião tem **nível** (Gerencial, Diretoria…), **tipo** (Reporte, Decisão…) e **agendamento** (Pré-agendada / Urgente).

@@ -153,6 +153,7 @@ critério da organização e siga-os quando aplicáveis.`; },
     Operação: ["operacao", "gerador", "equipamento", "parada", "parado", "manutencao", "pecas", "yard", "patio", "energia", "voltage"],
     Compliance: ["ministerio", "lei", "auditoria", "norma", "compliance", "regulatorio", "fiscalizacao", "investigacao", "legal"],
     People: ["turnover", "funcionarios", "ambiente", "rh", "saude", "pessoas", "colaboradores", "ventiladores", "treinamento", "clima"],
+    Qualidade: ["qualidade", "defeito", "retrabalho", "refugo", "nao conformidade", "padronizacao", "standard", "quality", "auditoria de produto", "reclamacao de cliente"],
   },
 
   heuristicAssess(db, inp, related) {
@@ -168,11 +169,12 @@ critério da organização e siga-os quando aplicáveis.`; },
     if (project) defs.push("acao_projeto");
     else if (related.length >= (db.settings.links_for_project_alert || 3)) defs.push("novo_projeto");
     if (!defs.length) defs.push("acao_geral");
-    const mode = related.length && related[0].score >= 0.55 ? "incluir_existente" : "novo";
+    const dup = Core.findDuplicates(inp.title || "")[0];
+    const mode = dup || (related.length && related[0].score >= 0.55) ? "incluir_existente" : "novo";
     const out = {
       related: related.map((r) => ({ id: r.id, relation: `${t("similaridade")} ${r.score}` })),
       relation_mode: mode,
-      include_in: mode === "incluir_existente" ? related[0].id : "",
+      include_in: mode === "incluir_existente" ? dup || related[0].id : "",
       relation_explanation: mode === "incluir_existente" ? "Relação direta (alta similaridade) com item on going."
         : related.length ? "Relacionado em impacto, mas não diretamente: criar item novo e vincular." : "Nenhum item relacionado encontrado.",
       scope: inp.title || "", scope_action: "", priority, urgency: priority, risk_reason: "", impacts, impact_details: "",
@@ -209,6 +211,7 @@ critério da organização e siga-os quando aplicáveis.`; },
     const prompt = "Nova demanda (input):\n" + JSON.stringify(pick(inp, ["source", "source_detail", "title", "description", "background", "origin", "area_main", "areas_impacted", "areas_impacting", "owner", "due_date"]), null, 1)
       + "\n\nItens on going na lista geral de governança:\n" + J(ongoing)
       + "\n\nCandidatos mais parecidos (similaridade textual):\n" + J(related)
+      + "\n\nPossíveis DUPLICADOS (mesmo título — se for a mesma demanda, use relation_mode=incluir_existente):\n" + J(Core.findDuplicates(inp.title || ""))
       + "\n\nProjetos existentes:\n" + J(projects)
       + "\n\nDecisões anteriores do usuário em demandas parecidas (aprenda com elas):\n" + J(examples)
       + "\n\nCritérios de avaliação de risco definidos pelo usuário (siga com prioridade):\n" + (db.settings.risk_guidelines || "(nenhum)")
