@@ -189,22 +189,12 @@ function render() {
   const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, reunioes: viewReunioes, riscos: viewRiscos,
     fluxos: viewFluxos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
   $("#view").innerHTML = V(id, tab);
-  renderDueStrip(view);
   if (V === viewEntradas && id) openTriage(id);
-  if (V === viewLista && id) openItem(id);
+  if (V === viewLista && id && id !== "departamentos") openItem(id);
   if (V === viewFluxos && id) FlowEd.mount();
   if (V === viewRiscos && id && (tab || "geral") === "docs") loadRiskFiles(id);
 }
 window.addEventListener("hashchange", render);
-/** Faixa de aviso em todas as telas quando há itens com prazo vencido ou vencendo. */
-function renderDueStrip(view) {
-  const over = S.db.items.filter((i) => isOverdue(i) || lateActions(i).length), soon = S.db.items.filter(isDueSoon);
-  const el = $("#due-strip");
-  if (!el) return;
-  el.classList.toggle("hidden", !(over.length || soon.length) || view === "lista");
-  el.innerHTML = `⚠ ${t("{over} itens com prazo vencido e {soon} vencendo nos próximos dias.", { over: over.length, soon: soon.length })}
-    <a href="#lista" onclick="F.due='${over.length ? "vencidos" : "proximos"}';F.page=0">${t("Ver na lista geral")}</a>`;
-}
 
 // ------------------------------------------------------------------ painel
 function viewPainel() {
@@ -262,7 +252,7 @@ function inputForm(pre = {}) {
   ${L("Background / contexto")}<textarea id="f-bg" style="min-height:60px">${esc(pre.background)}</textarea>
   <div class="row"><div>${L("De onde a demanda veio (pessoa / fórum)")}<input id="f-origin" value="${esc(pre.origin)}"></div>
     <div>${L("Reunião")}<select id="f-meeting"><option value="">—</option>${meetings.map((m) => `<option value="${m.id}" ${m.id === pre.meeting_id ? "selected" : ""}>${m.id} · ${esc(titleOf(m))}</option>`).join("")}</select></div></div>
-  <div class="row"><div>${L("Área principal")}<input id="f-area" list="areas" value="${esc(pre.area_main)}"></div>
+  <div class="row"><div>${L("Departamento (área principal)")}<input id="f-area" list="areas" value="${esc(pre.area_main)}"></div>
     <div>${L("Áreas impactadas")}<input id="f-areas-imp" value="${esc(pre.areas_impacted)}"></div>
     <div>${L("Áreas que impactam")}<input id="f-areas-by" value="${esc(pre.areas_impacting)}"></div></div>
   <datalist id="areas">${(S.db.settings.areas || []).map((a) => `<option>${esc(a)}</option>`).join("")}</datalist>
@@ -388,35 +378,68 @@ function dueCell(i) {
   if (isDueSoon(i)) return pill(i.due_date, "p-Média") + `<br><small class="muted">${t("vence em breve")}</small>`;
   return esc(i.due_date);
 }
-function viewLista() {
+function filteredItems(extra = () => true) {
   const q = F.q.toLowerCase();
-  const all = S.db.items.filter((i) => (F.done || F.status === "Concluído" || i.status !== "Concluído") && (!F.status || i.status === F.status) && (!F.prio || i.priority === F.prio)
+  return S.db.items.filter((i) => (F.done || F.status === "Concluído" || i.status !== "Concluído") && (!F.status || i.status === F.status) && (!F.prio || i.priority === F.prio)
     && (!F.src || i.source === F.src) && (!F.def || (i.definitions || []).includes(F.def))
     && (!F.due || (F.due === "vencidos" ? isOverdue(i) || lateActions(i).length : isDueSoon(i)))
-    && (!q || (i.id + " " + JSON.stringify(i)).toLowerCase().includes(q) || lc(i, "title").toLowerCase().includes(q))).reverse();
-  const pages = Math.max(1, Math.ceil(all.length / PAGE));
-  F.page = Math.min(F.page, pages - 1);
-  const rows = all.slice(F.page * PAGE, (F.page + 1) * PAGE);
-  const nOver = S.db.items.filter((i) => isOverdue(i) || lateActions(i).length).length, nSoon = S.db.items.filter(isDueSoon).length;
-  return `<h1>${t("Lista geral de governança")}</h1>
-  ${nOver || nSoon ? `<div class="alert lv-alta due-banner">⚠ ${t("{over} itens com prazo vencido e {soon} vencendo nos próximos dias.", { over: nOver, soon: nSoon })}
-    <button class="small" onclick="F.due='vencidos';F.page=0;render()">${t("Ver vencidos")}</button> <button class="small ghost" onclick="F.due='proximos';F.page=0;render()">${t("Ver próximos")}</button></div>` : ""}
-  <div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(F.q)}" onchange="F.q=this.value;F.page=0;render()">
+    && (!q || (i.id + " " + JSON.stringify(i)).toLowerCase().includes(q) || lc(i, "title").toLowerCase().includes(q)) && extra(i)).reverse();
+}
+function listToolbar() {
+  return `<div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(F.q)}" onchange="F.q=this.value;F.page=0;render()">
     <select onchange="F.status=this.value;F.page=0;render()"><option value="">${t("Status")}</option>${opts(STATUS_ITEM, F.status)}</select>
     <select onchange="F.prio=this.value;F.page=0;render()"><option value="">${t("Prioridade")}</option>${opts(LEVELS, F.prio)}</select>
     <select onchange="F.src=this.value;F.page=0;render()"><option value="">${t("Origem")}</option>${opts(LIST("sources"), F.src)}</select>
     <select onchange="F.def=this.value;F.page=0;render()"><option value="">${t("Definição")}</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${esc(t(v))}</option>`).join("")}</select>
     <select onchange="F.due=this.value;F.page=0;render()"><option value="">${t("Prazo")}</option><option value="vencidos" ${F.due === "vencidos" ? "selected" : ""}>${t("Vencidos")}</option><option value="proximos" ${F.due === "proximos" ? "selected" : ""}>${t("Vencem em breve")}</option></select>
     <label class="inline-check"><input type="checkbox" ${F.done ? "checked" : ""} onchange="F.done=this.checked;F.page=0;render()"> ${t("Mostrar concluídos")}</label>
-    <button class="ghost" onclick="exportCsv()">${t("Baixar planilha (CSV)")}</button></div>
-  <div class="card" style="overflow:auto"><table>${th(["ID", "Item", "Origem", "Responsável", "Prazo", "Prioridade", "Impactos", "Definição", "Último progresso", "Status"])}
-  ${rows.map((i) => { const lp = lastProgress(i), la = lateActions(i); return `<tr class="click ${isOverdue(i) || la.length ? "overdue" : ""}" onclick="location.hash='lista/${i.id}'"><td>${i.id}</td><td>${esc(lc(i, "title"))}</td><td>${esc(tv(i.source))}</td><td>${esc(i.owner)}</td>
+    <button class="ghost" onclick="exportCsv()">${t("Baixar planilha (CSV)")}</button></div>`;
+}
+/** Tabela paginada de itens (usada na lista geral e no painel por departamento). */
+function itemsTable(all) {
+  const pages = Math.max(1, Math.ceil(all.length / PAGE));
+  F.page = Math.min(F.page, pages - 1);
+  const rows = all.slice(F.page * PAGE, (F.page + 1) * PAGE);
+  return `<div class="card" style="overflow:auto"><table>${th(["ID", "Item", "Departamento", "Responsável", "Prazo", "Prioridade", "Impactos", "Definição", "Último progresso", "Status"])}
+  ${rows.map((i) => { const lp = lastProgress(i), la = lateActions(i); return `<tr class="click ${isOverdue(i) || la.length ? "overdue" : ""}" onclick="location.hash='lista/${i.id}'"><td>${i.id}</td><td>${esc(lc(i, "title"))}</td><td>${esc(deptOf(i) || "—")}</td><td>${esc(i.owner)}</td>
     <td>${dueCell(i)}${la.length ? `<br><small class="late-txt">${t("{n} ações vencidas", { n: la.length })}</small>` : ""}</td>
     <td>${prio(i.priority)}</td><td>${(i.impacts || []).map((x) => pill(t(x))).join("")}</td><td>${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}</td>
     <td class="lp">${lp ? `<span class="muted">${esc((lp.date || "").slice(0, 10))}</span> ${esc(lc(lp, "text").slice(0, 120))}` : '<span class="muted">—</span>'}</td><td>${esc(tv(i.status))}</td></tr>`; }).join("") || `<tr><td colspan=10 class="muted">${t("Nenhum item.")}</td></tr>`}
   </table>
   <div class="pager"><span class="muted">${t("{n} itens", { n: all.length })}${!F.done ? " · " + t("concluídos ocultos") : ""}</span>
     ${pages > 1 ? `<button class="small ghost" ${F.page === 0 ? "disabled" : ""} onclick="F.page--;render()">←</button> ${F.page + 1} / ${pages} <button class="small ghost" ${F.page >= pages - 1 ? "disabled" : ""} onclick="F.page++;render()">→</button>` : ""}</div></div>`;
+}
+/* Departamento do item = "Área principal". Itens sem departamento ficam em "Geral". */
+const deptOf = (i) => (i.area_main || "").trim();
+const deptKey = (d) => AI.norm(d).replace(/\s+/g, " ").trim();
+function departments() {
+  const known = new Map((S.db.settings.areas || []).map((a) => [deptKey(a), a]));
+  for (const i of S.db.items) { const d = deptOf(i); if (d && !known.has(deptKey(d))) known.set(deptKey(d), d); }
+  return [...known.values()];
+}
+let DEP_SEL = null; // null = nenhum escolhido; "" = Geral (sem departamento)
+function viewLista(id) {
+  const T = [["", t("Lista geral")], ["departamentos", t("Por departamento")]];
+  const tabsHtml = `<div class="tabs">${T.map(([k, l]) => `<a href="#lista${k ? "/" + k : ""}" class="${(id === "departamentos") === (k === "departamentos") ? "on" : ""}">${l}</a>`).join("")}</div>`;
+  const nOver = S.db.items.filter((i) => isOverdue(i) || lateActions(i).length).length, nSoon = S.db.items.filter(isDueSoon).length;
+  const banner = nOver || nSoon ? `<div class="alert lv-alta due-banner">⚠ ${t("{over} itens com prazo vencido e {soon} vencendo nos próximos dias.", { over: nOver, soon: nSoon })}
+    <button class="small" onclick="F.due='vencidos';F.page=0;render()">${t("Ver vencidos")}</button> <button class="small ghost" onclick="F.due='proximos';F.page=0;render()">${t("Ver próximos")}</button></div>` : "";
+  if (id === "departamentos") return `<h1>${t("Lista geral de governança")}</h1>${tabsHtml}${deptPanel()}`;
+  return `<h1>${t("Lista geral de governança")}</h1>${tabsHtml}${banner}${listToolbar()}${itemsTable(filteredItems())}`;
+}
+function deptPanel() {
+  const deps = departments();
+  const inDep = (d) => (i) => (d === "" ? !deptOf(i) || !deps.some((x) => deptKey(x) === deptKey(deptOf(i))) : deptKey(deptOf(i)) === deptKey(d));
+  const stats = (d) => { const its = S.db.items.filter(inDep(d)), open = its.filter((i) => i.status !== "Concluído");
+    return { open: open.length, over: open.filter((i) => isOverdue(i) || lateActions(i).length).length, high: open.filter((i) => i.priority === "Alta").length, done: its.length - open.length }; };
+  const tile = (d, label) => { const st = stats(d), on = DEP_SEL === d;
+    return `<button class="dept-tile ${on ? "on" : ""} ${st.over ? "has-late" : ""}" onclick="DEP_SEL=${JSON.stringify(d).replace(/"/g, "'")};F.page=0;render()">
+      <span class="dept-name">${esc(label)}</span><b>${st.open}</b><span class="dept-sub">${t("em aberto")}</span>
+      <span class="dept-meta">${st.over ? `<span class="late-txt">⚠ ${t("{n} vencidos", { n: st.over })}</span>` : ""}${st.high ? ` · ${t("{n} alta prioridade", { n: st.high })}` : ""}${st.done ? ` · ${t("{n} concluídos", { n: st.done })}` : ""}</span></button>`; };
+  const sel = DEP_SEL === null ? "" : `<h2 style="margin-top:var(--gap)">${esc(DEP_SEL === "" ? t("Geral (sem departamento)") : DEP_SEL)}</h2>${listToolbar()}${itemsTable(filteredItems(inDep(DEP_SEL)))}`;
+  return `<p class="muted">${t("DEPT_HELP")}</p>
+    <div class="dept-grid">${deps.map((d) => tile(d, d)).join("")}${tile("", t("Geral (sem departamento)"))}</div>
+    ${DEP_SEL === null ? `<p class="muted" style="margin-top:var(--gap)">${t("Clique em um departamento para ver os itens.")}</p>` : sel}`;
 }
 function openItem(id) {
   const i = byId("items", id);
@@ -432,7 +455,8 @@ function openItem(id) {
   ${i.risk_reason ? L("Riscos / urgência") + esc(lc(i, "risk_reason")) : ""}${i.impact_details ? L("Impactos") + esc(lc(i, "impact_details")) : ""}${i.gap_analysis ? L("Gaps") + esc(lc(i, "gap_analysis")) : ""}
   ${L("Vínculos")}<div>${linksHtml(i)}</div>${linkForm("items", i.id)}
   <div class="row"><div>${L("Status")}<select id="i-status">${opts(STATUS_ITEM, i.status)}</select></div><div>${L("Responsável")}<input id="i-owner" value="${esc(i.owner)}"></div>
-    <div>${L("Prazo")}<input type="date" id="i-due" value="${esc(i.due_date)}"></div><div>${L("Prioridade")}<select id="i-prio">${opts(LEVELS, i.priority)}</select></div></div>
+    <div>${L("Prazo")}<input type="date" id="i-due" value="${esc(i.due_date)}"></div><div>${L("Prioridade")}<select id="i-prio">${opts(LEVELS, i.priority)}</select></div>
+    <div>${L("Departamento")}<input id="i-dept" list="i-depts" value="${esc(i.area_main)}" placeholder="${esc(t("Geral (sem departamento)"))}"><datalist id="i-depts">${departments().map((d) => `<option>${esc(d)}</option>`).join("")}</datalist></div></div>
   <div class="checks"><label><input type="checkbox" id="i-report" ${i.report ? "checked" : ""}> ${t("Info a ser reportada (entra no summary)")}</label></div>
   <div class="actions"><button onclick="busy(this, ()=>saveItem('${i.id}'))">${t("Salvar")}</button></div>
 
@@ -460,7 +484,7 @@ function openItem(id) {
  * (senão o detalhe voltaria a abrir depois que o usuário já saiu dele). */
 function reopenItem() {}
 async function saveItem(id) {
-  await api("items/" + id, "PATCH", { status: $("#i-status").value, owner: $("#i-owner").value, due_date: $("#i-due").value, priority: $("#i-prio").value, report: $("#i-report").checked });
+  await api("items/" + id, "PATCH", { status: $("#i-status").value, owner: $("#i-owner").value, due_date: $("#i-due").value, priority: $("#i-prio").value, report: $("#i-report").checked, area_main: $("#i-dept").value.trim() });
   toast(t("Item atualizado")); await refresh(); reopenItem(id);
 }
 async function addProgress(id) {

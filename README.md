@@ -44,8 +44,9 @@ A IA sugere, você confirma ou corrige, e a decisão fica guardada para a IA apr
 Filtros (status, prioridade, origem, definição, prazo), busca, paginação (concluídos ocultos por padrão), coluna
 "Último progresso" e download em planilha (CSV). Em cada item: **Ações do item** (responsável, prazo, status e
 progresso) e **Progresso e histórico geral**.
-- **Prazos:** itens vencidos ficam em vermelho com os dias de atraso; os que vencem em breve, em amarelo. Uma faixa de
-  aviso aparece em todas as telas, e um aviso é mostrado ao abrir a plataforma.
+- **Por departamento:** aba com um quadro por departamento (GA, BS…): clique e veja os itens daquele departamento.
+  O departamento é a "Área principal" do item; itens sem departamento ficam em **Geral**. A lista geral continua igual.
+- **Prazos:** itens vencidos ficam em vermelho com os dias de atraso; os que vencem em breve, em amarelo.
 - **Duplicidade:** ao registrar uma entrada com o mesmo título de um item existente, a plataforma avisa e sugere
   incluir no item existente. Duplicados já criados podem ser juntados com **Mesclar**.
 

@@ -702,3 +702,13 @@ Object.assign(D, {
   "Agendar": ["Schedule", "安排"], "Cancelar esta reunião?": ["Cancel this meeting?", "取消此会议？"], "Cancelada": ["Cancelled", "已取消"],
   "Nenhuma reunião solicitada.": ["No requested meetings.", "暂无申请的会议。"], "Reunião {id} cancelada": ["Meeting {id} cancelled", "会议 {id} 已取消"],
 });
+
+// ---- painel por departamento
+Object.assign(D, {
+  "Por departamento": ["By department", "按部门"], "Departamento": ["Department", "部门"], "Departamento (área principal)": ["Department (main area)", "部门（主要部门）"],
+  "Geral (sem departamento)": ["General (no department)", "总体（无部门）"], "em aberto": ["open", "未结"], "{n} vencidos": ["{n} overdue", "{n} 个逾期"], "{n} alta prioridade": ["{n} high priority", "{n} 个高优先级"],
+  "DEPT_HELP": ["Click a department to see its items. The department is the item's “Main area” (you can change it inside the item). Items without a department are under General. Departments are edited in Settings → Lists → Areas.",
+    "点击部门查看其事项。部门即事项的“主要部门”（可在事项内修改）。无部门的事项归入“总体”。部门可在 设置 → 列表 → 部门 中编辑。",
+    "Clique em um departamento para ver os itens. O departamento é a “Área principal” do item (dá para mudar dentro do item). Itens sem departamento ficam em Geral. Os departamentos são editados em Configurações → Listas → Áreas."],
+  "Clique em um departamento para ver os itens.": ["Click a department to see its items.", "点击部门查看事项。"],
+});

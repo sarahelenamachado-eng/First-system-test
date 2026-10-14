@@ -211,3 +211,15 @@ td.lp { max-width: 280px; font-size: .88rem; }
 details.merge { margin-top: 14px; } details.merge summary { cursor: pointer; color: var(--muted); }
 .toolbar .inline-check input { min-width: 0; width: auto; }
 .act-cell { display: flex; flex-wrap: wrap; gap: 4px; min-width: 150px; }
+
+/* ---------- painel por departamento */
+.dept-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.dept-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; background: #fff; color: var(--ink); border: 1px solid var(--line);
+  border-top: 4px solid #b9bcc2; border-radius: 6px; padding: 12px; font-weight: 400; cursor: pointer; }
+.dept-tile:hover { filter: none; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.dept-tile.has-late { border-top-color: var(--brand); }
+.dept-tile.on { outline: 2px solid var(--brand); background: var(--soft); }
+.dept-name { font-weight: 800; font-size: 1.05rem; color: var(--brand); }
+.dept-tile b { font-size: 1.7rem; line-height: 1.1; }
+.dept-sub { font-size: .78rem; color: var(--muted); }
+.dept-meta { font-size: .78rem; color: var(--muted); min-height: 1em; }
