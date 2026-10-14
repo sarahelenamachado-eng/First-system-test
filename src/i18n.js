@@ -712,3 +712,23 @@ Object.assign(D, {
     "Clique em um departamento para ver os itens. O departamento é a “Área principal” do item (dá para mudar dentro do item). Itens sem departamento ficam em Geral. Os departamentos são editados em Configurações → Listas → Áreas."],
   "Clique em um departamento para ver os itens.": ["Click a department to see its items.", "点击部门查看事项。"],
 });
+
+// ---- duração, participantes e tempo em reuniões
+Object.assign(D, {
+  "Participantes cadastrados": ["Registered participants", "已登记参会人"], "Nenhuma pessoa cadastrada.": ["No people registered.", "尚未登记人员。"],
+  "Cadastrar pessoas (gerentes, sr managers, diretor)": ["Register people (managers, sr managers, director)", "登记人员（经理、高级经理、总监）"],
+  "Tempo em reuniões": ["Time in meetings", "会议时间"], "Período": ["Period", "期间"], "Cargo": ["Role", "职务"], "Todos": ["All", "全部"], "Só o diretor": ["Director only", "仅总监"], "Pessoa": ["Person", "人员"],
+  "Diretor": ["Director", "总监"], "Sr Manager": ["Sr Manager", "高级经理"], "Gerente": ["Manager", "经理"], "Coordenador": ["Coordinator", "主管"],
+  "todas as pessoas cadastradas": ["all registered people", "所有已登记人员"],
+  "TIME_HERO": ["{who}: {hours} in {n} meetings held in the period ({pct}% of working hours).", "{who}：本期召开的 {n} 次会议共 {hours}（占工作时间的 {pct}%）。", "{who}: {hours} em {n} reuniões realizadas no período ({pct}% do expediente)."],
+  "Horas em reunião": ["Hours in meetings", "会议小时数"], "Reuniões realizadas": ["Meetings held", "已召开会议"], "Duração média": ["Average duration", "平均时长"],
+  "Do expediente": ["Of working hours", "占工作时间"], "{h} h úteis no período": ["{h} working hours in the period", "本期工作时间 {h} 小时"], "Em reuniões urgentes": ["In urgent meetings", "紧急会议"],
+  "Sem duração informada": ["Without duration", "未填写时长"], "contadas como 60 min": ["counted as 60 min", "按 60 分钟计算"],
+  "Horas por pessoa": ["Hours per person", "按人员统计小时数"], "Horas por cargo": ["Hours per role", "按职务统计小时数"], "Horas por tipo de reunião": ["Hours per meeting type", "按会议类型统计小时数"],
+  "Nenhuma reunião com participantes cadastrados no período.": ["No meetings with registered participants in the period.", "本期没有登记参会人的会议。"],
+  "Reuniões do período": ["Meetings in the period", "本期会议"], "Duração": ["Duration", "时长"],
+  "Pessoas (participantes)": ["People (participants)", "人员（参会人）"],
+  "Cadastre gerentes, sr managers e o diretor para marcar quem participou de cada reunião e medir o tempo gasto.": ["Register managers, sr managers and the director to mark who attended each meeting and measure the time spent.", "登记经理、高级经理和总监，以标记每次会议的参会人并统计所花时间。"],
+  "Adicionar pessoa": ["Add person", "添加人员"], "Informe o nome.": ["Enter the name.", "请填写姓名。"], "Essa pessoa já está cadastrada.": ["This person is already registered.", "此人员已登记。"],
+  "Cargos dos participantes": ["Participant roles", "参会人职务"], "Ex.: Diretor, Sr Manager, Gerente…": ["E.g.: Director, Sr Manager, Manager…", "例如：总监、高级经理、经理…"],
+});

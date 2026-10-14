@@ -231,6 +231,15 @@ details.merge { margin-top: 14px; } details.merge summary { cursor: pointer; col
 .dept-tile b { font-size: 1.7rem; line-height: 1.1; }
 .dept-sub { font-size: .78rem; color: var(--muted); }
 .dept-meta { font-size: .78rem; color: var(--muted); min-height: 1em; }
+
+/* ---------- participantes e tempo em reuniões */
+.att-picker { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: #fafafa; }
+.att-group { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.att-group b { font-size: .78rem; color: var(--brand); text-transform: uppercase; letter-spacing: .3px; margin-right: 2px; }
+.att-group label { display: inline-flex; gap: 5px; align-items: center; font-weight: 400; margin: 0; color: var(--ink); font-size: .9rem; }
+.att-group input { width: auto; accent-color: var(--brand); }
+.director-btn { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+.director-btn.on { background: var(--brand); border-color: var(--brand); }
 </style>
 </head>
 <body data-density="normal">
@@ -1097,6 +1106,26 @@ Object.assign(D, {
     "Clique em um departamento para ver os itens. O departamento é a “Área principal” do item (dá para mudar dentro do item). Itens sem departamento ficam em Geral. Os departamentos são editados em Configurações → Listas → Áreas."],
   "Clique em um departamento para ver os itens.": ["Click a department to see its items.", "点击部门查看事项。"],
 });
+
+// ---- duração, participantes e tempo em reuniões
+Object.assign(D, {
+  "Participantes cadastrados": ["Registered participants", "已登记参会人"], "Nenhuma pessoa cadastrada.": ["No people registered.", "尚未登记人员。"],
+  "Cadastrar pessoas (gerentes, sr managers, diretor)": ["Register people (managers, sr managers, director)", "登记人员（经理、高级经理、总监）"],
+  "Tempo em reuniões": ["Time in meetings", "会议时间"], "Período": ["Period", "期间"], "Cargo": ["Role", "职务"], "Todos": ["All", "全部"], "Só o diretor": ["Director only", "仅总监"], "Pessoa": ["Person", "人员"],
+  "Diretor": ["Director", "总监"], "Sr Manager": ["Sr Manager", "高级经理"], "Gerente": ["Manager", "经理"], "Coordenador": ["Coordinator", "主管"],
+  "todas as pessoas cadastradas": ["all registered people", "所有已登记人员"],
+  "TIME_HERO": ["{who}: {hours} in {n} meetings held in the period ({pct}% of working hours).", "{who}：本期召开的 {n} 次会议共 {hours}（占工作时间的 {pct}%）。", "{who}: {hours} em {n} reuniões realizadas no período ({pct}% do expediente)."],
+  "Horas em reunião": ["Hours in meetings", "会议小时数"], "Reuniões realizadas": ["Meetings held", "已召开会议"], "Duração média": ["Average duration", "平均时长"],
+  "Do expediente": ["Of working hours", "占工作时间"], "{h} h úteis no período": ["{h} working hours in the period", "本期工作时间 {h} 小时"], "Em reuniões urgentes": ["In urgent meetings", "紧急会议"],
+  "Sem duração informada": ["Without duration", "未填写时长"], "contadas como 60 min": ["counted as 60 min", "按 60 分钟计算"],
+  "Horas por pessoa": ["Hours per person", "按人员统计小时数"], "Horas por cargo": ["Hours per role", "按职务统计小时数"], "Horas por tipo de reunião": ["Hours per meeting type", "按会议类型统计小时数"],
+  "Nenhuma reunião com participantes cadastrados no período.": ["No meetings with registered participants in the period.", "本期没有登记参会人的会议。"],
+  "Reuniões do período": ["Meetings in the period", "本期会议"], "Duração": ["Duration", "时长"],
+  "Pessoas (participantes)": ["People (participants)", "人员（参会人）"],
+  "Cadastre gerentes, sr managers e o diretor para marcar quem participou de cada reunião e medir o tempo gasto.": ["Register managers, sr managers and the director to mark who attended each meeting and measure the time spent.", "登记经理、高级经理和总监，以标记每次会议的参会人并统计所花时间。"],
+  "Adicionar pessoa": ["Add person", "添加人员"], "Informe o nome.": ["Enter the name.", "请填写姓名。"], "Essa pessoa já está cadastrada.": ["This person is already registered.", "此人员已登记。"],
+  "Cargos dos participantes": ["Participant roles", "参会人职务"], "Ex.: Diretor, Sr Manager, Gerente…": ["E.g.: Director, Sr Manager, Manager…", "例如：总监、高级经理、经理…"],
+});
 </script>
 <script>
 /* Leitor mínimo de .xlsx (primeira planilha) e .csv, sem bibliotecas externas.
@@ -1769,9 +1798,11 @@ function defaultSettings() {
       flow_edge_labels: ["origina", "afeta", "impacta", "mitiga", "depende de", "se realizado", "se não realizado", "se concretizar", "se tratado"],
       meeting_levels: ["Gerencial", "Diretoria", "Operacional", "Técnica"],
       meeting_types: ["Reporte", "Acompanhamento de projeto", "Decisão", "Alinhamento", "Outro"],
+      people_roles: ["Diretor", "Sr Manager", "Gerente", "Coordenador", "Outro"],
     },
     meeting_rules: "",
     work_hours: { start: "08:00", end: "18:00" },
+    people: [],
     risk_guidelines: "",
     auto_translate: true,
     show_translated: true,
@@ -2428,6 +2459,38 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       toConfirm: this.db.meetings.filter((m) => OPEN_MEETING.includes(m.status) && m.date && m.date <= today).length,
     };
   },
+  /** Tempo em reuniões realizadas por pessoa/cargo no período (duração não informada conta 60 min). */
+  dashTime({ from, to, role = "", person = "" }) {
+    const people = this.db.settings.people || [];
+    const roleOf = Object.fromEntries(people.map((p) => [p.name, p.role || "Outro"]));
+    const inScope = (name) => (person ? name === person : role ? roleOf[name] === role : name in roleOf);
+    const ms = this.db.meetings.filter((m) => m.status === "Realizada" && m.date && m.date >= from && m.date <= to && (m.attendees || []).some(inScope))
+      .sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
+    const dur = (m) => +m.duration || 60;
+    const per = {}, perRole = {}, perType = {};
+    let totalMin = 0, urgentMin = 0;
+    for (const m of ms) {
+      const who = (m.attendees || []).filter(inScope);
+      for (const n of who) { per[n] = (per[n] || 0) + dur(m); perRole[roleOf[n]] = (perRole[roleOf[n]] || 0) + dur(m); }
+      // horas do grupo filtrado: soma por pessoa quando são várias; para uma pessoa, é o tempo dela
+      totalMin += person ? dur(m) : dur(m) * who.length;
+      if (m.scheduling === "Urgente") urgentMin += person ? dur(m) : dur(m) * who.length;
+      perType[m.mtype || "Outro"] = (perType[m.mtype || "Outro"] || 0) + dur(m) * (person ? 1 : who.length);
+    }
+    let wd = 0;
+    for (let d = from; d <= to && wd < 4000; d = addDays(d, 1)) if (![0, 6].includes(this.weekday(d))) wd++;
+    const [hs, ms2] = (this.db.settings.work_hours.start || "08:00").split(":").map(Number), [he, me] = (this.db.settings.work_hours.end || "18:00").split(":").map(Number);
+    const dayH = Math.max(1, (he * 60 + me - hs * 60 - ms2) / 60);
+    const nPeople = person ? 1 : people.filter((p) => inScope(p.name)).length || 1;
+    const workHours = Math.round(wd * dayH * nPeople);
+    return {
+      totalMin, urgentMin, meetings: ms, noDuration: ms.filter((m) => !m.duration).length, workHours,
+      pctWork: workHours ? Math.round((totalMin / 60 / workHours) * 100) : 0,
+      byPerson: Object.entries(per).sort((a, b) => b[1] - a[1]),
+      byRole: Object.entries(perRole).sort((a, b) => b[1] - a[1]),
+      byType: Object.entries(perType).sort((a, b) => b[1] - a[1]),
+    };
+  },
   dashRisks() {
     const open = this.db.risks.filter((r) => r.status !== "Fechado"), s = this.db.settings;
     const P = ["Alta", "Média", "Baixa"], I = ["Alto", "Médio", "Baixo"];
@@ -2538,7 +2601,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
         if (!sg) continue;
         const m = db.mandatory.find((x) => x.id === sg.mandatory_id) || {};
         const rec = await this.createRecord("meetings", { title: sg.title || m.title, date: sg.date, time: sg.time, status: "Agendada", mandatory_id: m.id,
-          level: m.level || "Gerencial", mtype: m.mtype || "Reporte", scheduling: "Pré-agendada", participants: m.participants || "", agenda: m.notes || "", duration: m.duration || 60 });
+          level: m.level || "Gerencial", mtype: m.mtype || "Reporte", scheduling: "Pré-agendada", participants: m.participants || "", agenda: m.notes || "", duration: m.duration || 60,
+          attendees: m.attendees || [] });
         created.push(rec.id);
       }
       db.meeting_suggestions = db.meeting_suggestions.filter((x) => !(body.ids || []).includes(x.id) && !(body.discard || []).includes(x.id));
@@ -3082,11 +3146,11 @@ function statTile(value, label, sub = "", href = "") {
   return `<${tag} class="kpi" ${href ? `href="#${href}"` : ""}><b>${value ?? "—"}</b><span>${esc(label)}</span>${sub ? `<small>${esc(sub)}</small>` : ""}</${tag}>`;
 }
 /** Barras horizontais de uma série (uma cor), valor na ponta. rows: [[rótulo, valor, dica?]] */
-function hbars(rows, { color = "var(--brand)", empty = "—" } = {}) {
+function hbars(rows, { color = "var(--brand)", empty = "—", fmtv = (v) => v } = {}) {
   const max = Math.max(1, ...rows.map((r) => r[1]));
   if (!rows.length) return `<p class="muted">${empty}</p>`;
-  return `<div class="hbars">${rows.map(([label, v, hint]) => `<div class="hb-row" title="${esc(label)}: ${v}${hint ? " — " + esc(hint) : ""}">
-    <span class="hb-label">${esc(label)}</span><span class="hb-track"><span class="hb-bar" style="width:${(v / max) * 100}%;background:${v ? color : "transparent"}"></span><span class="hb-val">${v}</span></span></div>`).join("")}</div>`;
+  return `<div class="hbars">${rows.map(([label, v, hint]) => `<div class="hb-row" title="${esc(label)}: ${esc(fmtv(v))}${hint ? " — " + esc(hint) : ""}">
+    <span class="hb-label">${esc(label)}</span><span class="hb-track"><span class="hb-bar" style="width:${(v / max) * 100}%;background:${v ? color : "transparent"}"></span><span class="hb-val">${esc(fmtv(v))}</span></span></div>`).join("")}</div>`;
 }
 /** Barra empilhada (partes de um todo) + legenda com valores. segs: [{label, value, color}] */
 function stackBar(segs) {
@@ -3214,27 +3278,40 @@ function calendarView() {
   <div class="cal">${WEEKDAYS.map((w) => `<div class="cal-head">${t(w)}</div>`).join("")}${"<div class='cal-day empty'></div>".repeat(lead)}${days.map(cell).join("")}</div>
   <div class="legend">${["Agendada", "Pendente", "Solicitada", "Realizada", "Não realizada"].map((s) => `<span><i class="st-${s.replace(/\W/g, "")}"></i>${esc(t(s))}</span>`).join("")}<span><i class="sug"></i>${t("Sugestão")}</span></div>`;
 }
+/** Campos comuns das reuniões: nível, tipo, agendamento, duração e participantes cadastrados (gerentes, sr managers, diretor…). */
 function meetingFields(pre = {}) {
   return `<div class="row"><div>${L("Nível")}<select id="mq-level">${opts(LIST("meeting_levels"), pre.level || "Gerencial")}</select></div>
     <div>${L("Tipo")}<select id="mq-type">${opts(LIST("meeting_types"), pre.mtype || "Reporte")}</select></div>
-    <div>${L("Agendamento")}<select id="mq-sched">${opts(["Pré-agendada", "Urgente"], pre.scheduling || "Pré-agendada")}</select></div></div>`;
+    <div>${L("Agendamento")}<select id="mq-sched">${opts(["Pré-agendada", "Urgente"], pre.scheduling || "Pré-agendada")}</select></div>
+    <div>${L("Duração (min)")}<input type="number" min="5" step="5" id="mq-dur" value="${esc(pre.duration || 60)}"></div></div>
+  ${L("Participantes cadastrados")}${attendeesPicker(pre.attendees || [], "mq-")}`;
 }
-const readMeetingFields = () => ({ level: $("#mq-level").value, mtype: $("#mq-type").value, scheduling: $("#mq-sched").value });
+function attendeesPicker(selected, prefix) {
+  const people = S.db.settings.people || [];
+  if (!people.length) return `<p class="muted small">${t("Nenhuma pessoa cadastrada.")} <a href="#reunioes/tempo">${t("Cadastrar pessoas (gerentes, sr managers, diretor)")}</a></p>`;
+  const roles = [...new Set(people.map((p) => p.role || "Outro"))];
+  return `<div class="att-picker">${roles.map((r) => `<div class="att-group"><b>${esc(t(r))}</b>${people.filter((p) => (p.role || "Outro") === r).map((p) =>
+    `<label><input type="checkbox" class="${prefix}att" value="${esc(p.name)}" ${selected.includes(p.name) ? "checked" : ""}> ${esc(p.name)}</label>`).join("")}</div>`).join("")}</div>`;
+}
+const readAttendees = (prefix) => [...document.querySelectorAll(`.${prefix}att`)].filter((c) => c.checked).map((c) => c.value);
+const readMeetingFields = (prefix = "mq-") => ({ level: $(`#${prefix}level`).value, mtype: $(`#${prefix}type`).value, scheduling: $(`#${prefix}sched`).value,
+  duration: Math.max(5, +$(`#${prefix}dur`).value || 60), attendees: readAttendees(prefix) });
 function quickMeeting(date) {
   openModal(`<h2>${t("Nova reunião em {date}", { date })}</h2>
-    <div class="row"><div>${L("Título")}<input id="mq-title"></div><div>${L("Horário")}<input type="time" id="mq-time" value="${esc(S.db.settings.work_hours.start)}"></div><div>${L("Duração (min)")}<input type="number" id="mq-dur" value="60"></div></div>
+    <div class="row"><div>${L("Título")}<input id="mq-title"></div><div>${L("Horário")}<input type="time" id="mq-time" value="${esc(S.db.settings.work_hours.start)}"></div></div>
     ${meetingFields()}
     <div class="row"><div>${L("Reunião obrigatória")}<select id="mq-mand"><option value="">—</option>${S.db.mandatory.map((m) => `<option value="${m.id}">${esc(m.title)}</option>`).join("")}</select></div>
       <div>${L("Projeto")}<select id="mq-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}">${p.id} · ${esc(p.name)}</option>`).join("")}</select></div>
       <div>${L("Participantes")}<input id="mq-part"></div></div>
     ${L("Pauta / objetivo")}<textarea id="mq-agenda" style="min-height:60px"></textarea>
     <div class="actions"><button onclick="busy(this, ()=>saveQuickMeeting('${date}'))">${t("Salvar")}</button><button class="ghost" onclick="closeModal()">${t("Cancelar")}</button></div>`);
-  $("#mq-mand").onchange = () => { const m = S.db.mandatory.find((x) => x.id === $("#mq-mand").value); if (m) { $("#mq-title").value ||= m.title; $("#mq-level").value = m.level || "Gerencial"; $("#mq-type").value = m.mtype || "Reporte"; if (m.preferred_time) $("#mq-time").value = m.preferred_time; } };
+  $("#mq-mand").onchange = () => { const m = S.db.mandatory.find((x) => x.id === $("#mq-mand").value); if (m) { $("#mq-title").value ||= m.title; $("#mq-level").value = m.level || "Gerencial"; $("#mq-type").value = m.mtype || "Reporte"; if (m.preferred_time) $("#mq-time").value = m.preferred_time;
+    $("#mq-dur").value = m.duration || 60; document.querySelectorAll(".mq-att").forEach((c) => { c.checked = (m.attendees || []).includes(c.value); }); } };
 }
 async function saveQuickMeeting(date) {
   const title = $("#mq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
-  await api("meetings", "POST", { title, date, time: $("#mq-time").value, duration: +$("#mq-dur").value || 60, ...readMeetingFields(), mandatory_id: $("#mq-mand").value,
+  await api("meetings", "POST", { title, date, time: $("#mq-time").value, ...readMeetingFields(), mandatory_id: $("#mq-mand").value,
     project_id: $("#mq-proj").value, participants: $("#mq-part").value, agenda: $("#mq-agenda").value, status: date < S.today ? "Pendente" : "Agendada" });
   closeModal(); toast(t("Reunião agendada")); await refresh();
 }
@@ -3270,6 +3347,7 @@ function mandatoryView() {
     ${L("Dias preferidos")}<div class="checks inline">${[1, 2, 3, 4, 5].map((d) => `<label><input type="checkbox" class="mo-day" value="${d}" ${(e.preferred_days || []).map(Number).includes(d) ? "checked" : ""}> ${t(dayNames[d])}</label>`).join("")}</div>
     <div class="row"><div>${L("Nível")}<select id="mo-level">${opts(LIST("meeting_levels"), e.level || "Gerencial")}</select></div><div>${L("Tipo")}<select id="mo-type">${opts(LIST("meeting_types"), e.mtype || "Reporte")}</select></div>
       <div>${L("Participantes")}<input id="mo-part" value="${esc(e.participants)}"></div></div>
+    ${L("Participantes cadastrados")}${attendeesPicker(e.attendees || [], "mo-")}
     ${L("Requisito / observações")}<textarea id="mo-notes" style="min-height:50px">${esc(e.notes)}</textarea>
     <div class="checks"><label><input type="checkbox" id="mo-active" ${e.active === false ? "" : "checked"}> ${t("Ativa")}</label></div>
     <div class="actions"><button onclick="busy(this, saveMandatory)">${t("Salvar")}</button>${MAND_EDIT ? `<button class="ghost" onclick="MAND_EDIT=null;render()">${t("Cancelar")}</button>` : ""}</div></div>
@@ -3289,7 +3367,7 @@ async function saveMandatory() {
   if (!title) throw new Error(t("Informe o título."));
   const data = { title, frequency: $("#mo-freq").value, times_per_month: +$("#mo-times").value || 1, preferred_time: $("#mo-time").value, duration: +$("#mo-dur").value || 60,
     preferred_days: [...document.querySelectorAll(".mo-day")].filter((c) => c.checked).map((c) => +c.value), level: $("#mo-level").value, mtype: $("#mo-type").value,
-    participants: $("#mo-part").value, notes: $("#mo-notes").value, active: $("#mo-active").checked };
+    participants: $("#mo-part").value, attendees: readAttendees("mo-"), notes: $("#mo-notes").value, active: $("#mo-active").checked };
   if (MAND_EDIT) await api(`mandatory/${MAND_EDIT}`, "PATCH", data); else await api("mandatory", "POST", data);
   MAND_EDIT = null; toast(t("Salvo")); await refresh();
 }
@@ -3318,6 +3396,63 @@ async function saveTeach(col, id) {
   toast(t("Análise salva: a IA vai usar o seu raciocínio nas próximas avaliações."));
   if (col === "items") { closeModal(); location.hash = "lista"; }
   await refresh();
+}
+
+// ------------------------------------------------------------------ tempo em reuniões (gerentes, sr managers, diretor)
+let TM = { period: "month", from: "", to: "", role: "", person: "" };
+function timeView() {
+  const people = S.db.settings.people || [];
+  const roles = LIST("people_roles");
+  let range = TM.period === "custom" ? [TM.from || S.today, TM.to || S.today] : Core.periodRange(TM.period);
+  const d = Core.dashTime({ from: range[0], to: range[1], role: TM.role, person: TM.person });
+  const h = (min) => (min / 60).toLocaleString(I18N.htmlLang(), { maximumFractionDigits: 1 }) + " h";
+  const directorRole = roles.find((r) => AI.norm(r).startsWith("diretor")) || "Diretor";
+  const sameRole = TM.role ? people.filter((p) => p.role === TM.role) : [];
+  const who = TM.person || (sameRole.length === 1 ? `${sameRole[0].name} (${t(TM.role)})` : TM.role ? t(TM.role) : t("todas as pessoas cadastradas"));
+  return `<div class="toolbar">${[["week", "Esta semana"], ["month", "Este mês"], ["custom", "Período"]].map(([k, l]) => `<button class="small ${TM.period === k ? "" : "ghost"}" onclick="TM.period='${k}';render()">${t(l)}</button>`).join("")}
+      ${TM.period === "custom" ? `<input type="date" value="${esc(TM.from)}" onchange="TM.from=this.value;render()"> – <input type="date" value="${esc(TM.to)}" onchange="TM.to=this.value;render()">` : `<span class="muted">${esc(range[0])} – ${esc(range[1])}</span>`}</div>
+    <div class="toolbar"><span class="muted">${t("Cargo")}:</span>
+      <button class="small ${!TM.role && !TM.person ? "" : "ghost"}" onclick="TM.role='';TM.person='';render()">${t("Todos")}</button>
+      ${roles.map((r) => `<button class="small ${TM.role === r && !TM.person ? "" : "ghost"}" onclick="TM.role='${esc(r)}';TM.person='';render()">${esc(t(r))}</button>`).join("")}
+      <button class="small director-btn ${TM.role === directorRole && !TM.person ? "on" : ""}" onclick="TM.role='${esc(directorRole)}';TM.person='';render()">★ ${t("Só o diretor")}</button>
+      <select onchange="TM.person=this.value;render()"><option value="">${t("Pessoa")}…</option>${people.map((p) => `<option value="${esc(p.name)}" ${TM.person === p.name ? "selected" : ""}>${esc(p.name)} (${esc(t(p.role || "Outro"))})</option>`).join("")}</select></div>
+    <div class="hero">${t("TIME_HERO", { who, hours: h(d.totalMin), n: d.meetings.length, pct: d.pctWork })}</div>
+    <div class="kpis">${statTile(h(d.totalMin), t("Horas em reunião"))}${statTile(d.meetings.length, t("Reuniões realizadas"))}${statTile(d.meetings.length ? Math.round(d.totalMin / d.meetings.length) + " min" : "—", t("Duração média"))}
+      ${statTile(d.pctWork + "%", t("Do expediente"), t("{h} h úteis no período", { h: d.workHours }))}${statTile(h(d.urgentMin), t("Em reuniões urgentes"))}${statTile(d.noDuration, t("Sem duração informada"), t("contadas como 60 min"))}</div>
+    <div class="grid">
+      <div class="card"><h2>${t("Horas por pessoa")}</h2>${hbars(d.byPerson.map(([n, m]) => [n, m]), { empty: t("Nenhuma reunião com participantes cadastrados no período."), fmtv: h })}</div>
+      <div class="card"><h2>${t("Horas por cargo")}</h2>${hbars(d.byRole.map(([n, m]) => [t(n), m]), { fmtv: h })}</div>
+      <div class="card"><h2>${t("Horas por tipo de reunião")}</h2>${hbars(d.byType.map(([n, m]) => [t(n), m]), { fmtv: h })}</div>
+    </div>
+    <div class="grid" style="margin-top:var(--gap)">
+      <div class="card" style="overflow:auto"><h2>${t("Reuniões do período")}</h2><table>${th(["ID", "Reunião", "Data", "Duração", "Tipo", "Participantes"])}
+        ${d.meetings.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)} ${esc(m.time || "")}</td>
+          <td>${m.duration ? m.duration + " min" : `<span class="muted">60 min*</span>`}</td><td>${esc(tv(m.mtype))}</td><td>${(m.attendees || []).map((x) => pill(x)).join("")}</td></tr>`).join("") || `<tr><td colspan=6 class="muted">—</td></tr>`}</table></div>
+      ${peopleCard()}
+    </div>`;
+}
+function peopleCard() {
+  const people = S.db.settings.people || [];
+  return `<div class="card"><h2>${t("Pessoas (participantes)")}</h2>
+    <p class="muted">${t("Cadastre gerentes, sr managers e o diretor para marcar quem participou de cada reunião e medir o tempo gasto.")}</p>
+    <table>${th(["Nome", "Cargo", "Departamento", ""])}${people.map((p, k) => `<tr><td>${esc(p.name)}</td><td>${esc(t(p.role || "Outro"))}</td><td>${esc(p.dept)}</td>
+      <td><button class="small ghost danger" onclick="busy(this, ()=>removePerson(${k}))">×</button></td></tr>`).join("") || `<tr><td colspan=4 class="muted">${t("Nenhuma pessoa cadastrada.")}</td></tr>`}</table>
+    <div class="row"><div>${L("Nome")}<input id="pp-name"></div><div>${L("Cargo")}<select id="pp-role">${opts(LIST("people_roles"), "Gerente")}</select></div><div>${L("Departamento")}<input id="pp-dept" list="pp-depts"></div></div>
+    <datalist id="pp-depts">${(S.db.settings.areas || []).map((a) => `<option>${esc(a)}</option>`).join("")}</datalist>
+    <div class="actions"><button class="small" onclick="busy(this, addPerson)">${t("Adicionar pessoa")}</button></div></div>`;
+}
+async function addPerson() {
+  const name = $("#pp-name").value.trim();
+  if (!name) throw new Error(t("Informe o nome."));
+  const people = [...(S.db.settings.people || [])];
+  if (people.some((p) => AI.norm(p.name) === AI.norm(name))) throw new Error(t("Essa pessoa já está cadastrada."));
+  people.push({ name, role: $("#pp-role").value, dept: $("#pp-dept").value.trim() });
+  await api("settings", "PATCH", { people }); await refresh();
+}
+async function removePerson(k) {
+  if (!confirm(t("Excluir este registro?"))) return;
+  const people = [...(S.db.settings.people || [])]; people.splice(k, 1);
+  await api("settings", "PATCH", { people }); await refresh();
 }
 </script>
 <script>
@@ -4049,8 +4184,8 @@ function viewReunioes(id) {
   const pend = S.db.meetings.filter((m) => m.status === "Pendente" || (["Solicitada", "Agendada"].includes(m.status) && m.date && m.date <= S.today)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   const reqOpen = S.db.meetings.filter((m) => m.kind === "Solicitada" && ["Solicitada", "Agendada", "Pendente"].includes(m.status)).length;
   const T = [["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`], ["solicitadas", `${t("Solicitadas")} (${reqOpen})`],
-    ["confirmar", `${t("Confirmar e registrar ata")} (${pend.length})`], ["todas", t("Todas as reuniões")]];
-  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, confirmar: () => meetingsConfirmView(pend), todas: meetingsAllView }[tab] || dashMeetingsView;
+    ["confirmar", `${t("Confirmar e registrar ata")} (${pend.length})`], ["tempo", t("Tempo em reuniões")], ["todas", t("Todas as reuniões")]];
+  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, confirmar: () => meetingsConfirmView(pend), tempo: timeView, todas: meetingsAllView }[tab] || dashMeetingsView;
   return `<h1>${t("Gerenciamento de reuniões")}</h1>${tabs("reunioes", T, tab)}${body()}`;
 }
 function meetingsConfirmView(pend) {
@@ -4110,16 +4245,16 @@ async function cancelMeeting(id) {
 function meetingsAllView() {
   const all = S.db.meetings.filter((m) => !M_FILTER || m.status === M_FILTER).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   return `<div class="card"><div class="toolbar"><select onchange="M_FILTER=this.value;render()"><option value="">${t("Status")}</option>${opts(MEETING_STATUS, M_FILTER)}</select></div>
-    <table>${th(["ID", "Reunião", "Data", "Nível", "Tipo", "Agendamento", "Projeto", "Status"])}
-    ${all.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)} ${esc(m.time || "")}</td><td>${esc(tv(m.level))}</td><td>${esc(tv(m.mtype))}</td>
-      <td>${esc(tv(m.scheduling))}</td><td>${esc(m.project_id)}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
+    <table>${th(["ID", "Reunião", "Data", "Duração", "Nível", "Tipo", "Agendamento", "Participantes", "Status"])}
+    ${all.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)} ${esc(m.time || "")}</td><td>${m.duration ? m.duration + " min" : "—"}</td><td>${esc(tv(m.level))}</td><td>${esc(tv(m.mtype))}</td>
+      <td>${esc(tv(m.scheduling))}</td><td>${(m.attendees || []).map((x) => pill(x)).join("")}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=9 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
 }
 async function requestMeeting() {
   const title = $("#rq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
   await api("meetings", "POST", { title, date: $("#rq-date").value, time: $("#rq-time").value, requested_by: $("#rq-by").value, participants: $("#rq-part").value,
     project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: $("#rq-date").value && $("#rq-time").value ? "Agendada" : "Solicitada", kind: "Solicitada",
-    level: $("#rq-level").value, mtype: $("#rq-type").value, scheduling: $("#rq-sched").value });
+    ...readMeetingFields("rq-") });
   toast(t("Solicitação registrada")); await refresh();
 }
 async function meetingDone(id) {
@@ -4138,7 +4273,7 @@ async function meetingNotDone(id) {
 async function saveMeeting() {
   const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, time: $("#m-time").value, participants: $("#m-part").value,
     departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value, status: "Realizada",
-    level: $("#m-level").value, mtype: $("#m-type").value, scheduling: $("#m-sched").value });
+    ...readMeetingFields("m-") });
   await api(`meetings/${r.id}/extract`, "POST");
   await refresh(); location.hash = "reunioes/" + r.id;
 }
@@ -4153,7 +4288,7 @@ function meetingDetail(m) {
     <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></div>` : ""}
   ${m.agenda ? `<div class="card" style="margin-bottom:14px"><b>${t("Pauta / objetivo")}:</b> ${esc(lc(m, "agenda"))}</div>` : ""}
   <div class="card" style="margin-bottom:14px"><div class="row"><div>${L("Data")}<input type="date" id="me-date" value="${esc(m.date)}"></div><div>${L("Horário")}<input type="time" id="me-time" value="${esc(m.time)}"></div></div>
-    ${meetingFields(m)}<div class="actions"><button class="small" onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{date:$('#me-date').value,time:$('#me-time').value,...readMeetingFields()}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>
+    ${meetingFields(m).replace(/mq-/g, "me-")}<div class="actions"><button class="small" onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{date:$('#me-date').value,time:$('#me-time').value,...readMeetingFields('me-')}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>
   <div class="grid">
   <div class="card"><h2>${t("Ata")}</h2><textarea id="md-min" style="min-height:200px">${esc(m.minutes)}</textarea>${trPreview(m, "minutes")}${L("Anotações")}<textarea id="md-notes">${esc(m.notes)}</textarea>
     <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{minutes:$('#md-min').value,notes:$('#md-notes').value}); await api('meetings/${m.id}/extract','POST'); await refresh();})">${t("Salvar e reprocessar")}</button></div>
@@ -4370,12 +4505,13 @@ function cfgLists(st) {
   <div class="grid">${box("sources", "Origens das demandas", "Ex.: Diretora, HQ, Departamento…")}${box("input_kinds", "Tipos de entrada", "Ex.: Pedido pontual, Nova solicitação do HQ…")}
     ${box("impact_types", "Categorias de impacto", "Usadas na classificação, nos riscos e nos fluxos.")}${box("areas", "Áreas", "Sugestões no campo Área principal.")}
     ${box("flow_edge_labels", "Rótulos das ligações dos fluxos", "Ex.: causa, impacta, mitiga…")}
-    ${box("meeting_levels", "Níveis de reunião", "Ex.: Gerencial, Diretoria, Operacional…")}${box("meeting_types", "Tipos de reunião", "Ex.: Reporte, Decisão, Alinhamento…")}</div>
+    ${box("meeting_levels", "Níveis de reunião", "Ex.: Gerencial, Diretoria, Operacional…")}${box("meeting_types", "Tipos de reunião", "Ex.: Reporte, Decisão, Alinhamento…")}
+    ${box("people_roles", "Cargos dos participantes", "Ex.: Diretor, Sr Manager, Gerente…")}</div>
   <div class="actions"><button onclick="busy(this, saveLists)">${t("Salvar listas")}</button></div>`;
 }
 async function saveLists() {
   const v = (k) => $(`#ls-${k}`).value.split("\n").map((x) => x.trim()).filter(Boolean);
-  await api("settings", "PATCH", { areas: v("areas"), lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels"), meeting_levels: v("meeting_levels"), meeting_types: v("meeting_types") } });
+  await api("settings", "PATCH", { areas: v("areas"), lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels"), meeting_levels: v("meeting_levels"), meeting_types: v("meeting_types"), people_roles: v("people_roles") } });
   toast(t("Salvo")); await refresh();
 }
 function cfgRules(st) {

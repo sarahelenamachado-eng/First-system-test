@@ -37,9 +37,11 @@ function defaultSettings() {
       flow_edge_labels: ["origina", "afeta", "impacta", "mitiga", "depende de", "se realizado", "se não realizado", "se concretizar", "se tratado"],
       meeting_levels: ["Gerencial", "Diretoria", "Operacional", "Técnica"],
       meeting_types: ["Reporte", "Acompanhamento de projeto", "Decisão", "Alinhamento", "Outro"],
+      people_roles: ["Diretor", "Sr Manager", "Gerente", "Coordenador", "Outro"],
     },
     meeting_rules: "",
     work_hours: { start: "08:00", end: "18:00" },
+    people: [],
     risk_guidelines: "",
     auto_translate: true,
     show_translated: true,
@@ -696,6 +698,38 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       toConfirm: this.db.meetings.filter((m) => OPEN_MEETING.includes(m.status) && m.date && m.date <= today).length,
     };
   },
+  /** Tempo em reuniões realizadas por pessoa/cargo no período (duração não informada conta 60 min). */
+  dashTime({ from, to, role = "", person = "" }) {
+    const people = this.db.settings.people || [];
+    const roleOf = Object.fromEntries(people.map((p) => [p.name, p.role || "Outro"]));
+    const inScope = (name) => (person ? name === person : role ? roleOf[name] === role : name in roleOf);
+    const ms = this.db.meetings.filter((m) => m.status === "Realizada" && m.date && m.date >= from && m.date <= to && (m.attendees || []).some(inScope))
+      .sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
+    const dur = (m) => +m.duration || 60;
+    const per = {}, perRole = {}, perType = {};
+    let totalMin = 0, urgentMin = 0;
+    for (const m of ms) {
+      const who = (m.attendees || []).filter(inScope);
+      for (const n of who) { per[n] = (per[n] || 0) + dur(m); perRole[roleOf[n]] = (perRole[roleOf[n]] || 0) + dur(m); }
+      // horas do grupo filtrado: soma por pessoa quando são várias; para uma pessoa, é o tempo dela
+      totalMin += person ? dur(m) : dur(m) * who.length;
+      if (m.scheduling === "Urgente") urgentMin += person ? dur(m) : dur(m) * who.length;
+      perType[m.mtype || "Outro"] = (perType[m.mtype || "Outro"] || 0) + dur(m) * (person ? 1 : who.length);
+    }
+    let wd = 0;
+    for (let d = from; d <= to && wd < 4000; d = addDays(d, 1)) if (![0, 6].includes(this.weekday(d))) wd++;
+    const [hs, ms2] = (this.db.settings.work_hours.start || "08:00").split(":").map(Number), [he, me] = (this.db.settings.work_hours.end || "18:00").split(":").map(Number);
+    const dayH = Math.max(1, (he * 60 + me - hs * 60 - ms2) / 60);
+    const nPeople = person ? 1 : people.filter((p) => inScope(p.name)).length || 1;
+    const workHours = Math.round(wd * dayH * nPeople);
+    return {
+      totalMin, urgentMin, meetings: ms, noDuration: ms.filter((m) => !m.duration).length, workHours,
+      pctWork: workHours ? Math.round((totalMin / 60 / workHours) * 100) : 0,
+      byPerson: Object.entries(per).sort((a, b) => b[1] - a[1]),
+      byRole: Object.entries(perRole).sort((a, b) => b[1] - a[1]),
+      byType: Object.entries(perType).sort((a, b) => b[1] - a[1]),
+    };
+  },
   dashRisks() {
     const open = this.db.risks.filter((r) => r.status !== "Fechado"), s = this.db.settings;
     const P = ["Alta", "Média", "Baixa"], I = ["Alto", "Médio", "Baixo"];
@@ -806,7 +840,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
         if (!sg) continue;
         const m = db.mandatory.find((x) => x.id === sg.mandatory_id) || {};
         const rec = await this.createRecord("meetings", { title: sg.title || m.title, date: sg.date, time: sg.time, status: "Agendada", mandatory_id: m.id,
-          level: m.level || "Gerencial", mtype: m.mtype || "Reporte", scheduling: "Pré-agendada", participants: m.participants || "", agenda: m.notes || "", duration: m.duration || 60 });
+          level: m.level || "Gerencial", mtype: m.mtype || "Reporte", scheduling: "Pré-agendada", participants: m.participants || "", agenda: m.notes || "", duration: m.duration || 60,
+          attendees: m.attendees || [] });
         created.push(rec.id);
       }
       db.meeting_suggestions = db.meeting_suggestions.filter((x) => !(body.ids || []).includes(x.id) && !(body.discard || []).includes(x.id));

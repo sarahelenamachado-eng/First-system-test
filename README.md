@@ -78,7 +78,10 @@ Abas: Dashboard · **Calendário** (clique num dia para inserir; sugestões da I
 **Solicitadas** (pedidas por alguém: agendar, realizada, não realizada, cancelar) · Confirmar e registrar ata · Todas.
 - **Reuniões obrigatórias:** cadastre frequência, dias e horário preferidos, duração e nível. A IA sugere as datas e
   horários do mês que faltam, seguindo as **regras e observações** que você escrever (ex.: "diretora só à tarde").
-- Cada reunião tem **nível** (Gerencial, Diretoria…), **tipo** (Reporte, Decisão…) e **agendamento** (Pré-agendada / Urgente).
+- Cada reunião tem **nível** (Gerencial, Diretoria…), **tipo** (Reporte, Decisão…), **agendamento** (Pré-agendada / Urgente),
+  **duração** e **participantes** cadastrados.
+- **Tempo em reuniões:** cadastre as pessoas (Diretor, Sr Manager, Gerente…) e veja as horas gastas em reuniões realizadas
+  por pessoa, por cargo e por tipo, na semana, no mês ou num período — com o botão **Só o diretor**.
 - Projetos principais geram sozinhos a **necessidade de reunião de acompanhamento** (cadência configurável).
 - **Solicitar reunião** — registre reuniões pedidas por alguém.
 - Em **Aguardando confirmação**, marque *Foi realizada* ou *Não foi realizada* (com nova data para projetos).

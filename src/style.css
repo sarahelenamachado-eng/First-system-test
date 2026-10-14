@@ -223,3 +223,12 @@ details.merge { margin-top: 14px; } details.merge summary { cursor: pointer; col
 .dept-tile b { font-size: 1.7rem; line-height: 1.1; }
 .dept-sub { font-size: .78rem; color: var(--muted); }
 .dept-meta { font-size: .78rem; color: var(--muted); min-height: 1em; }
+
+/* ---------- participantes e tempo em reuniões */
+.att-picker { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: #fafafa; }
+.att-group { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.att-group b { font-size: .78rem; color: var(--brand); text-transform: uppercase; letter-spacing: .3px; margin-right: 2px; }
+.att-group label { display: inline-flex; gap: 5px; align-items: center; font-weight: 400; margin: 0; color: var(--ink); font-size: .9rem; }
+.att-group input { width: auto; accent-color: var(--brand); }
+.director-btn { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+.director-btn.on { background: var(--brand); border-color: var(--brand); }

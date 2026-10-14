@@ -726,8 +726,8 @@ function viewReunioes(id) {
   const pend = S.db.meetings.filter((m) => m.status === "Pendente" || (["Solicitada", "Agendada"].includes(m.status) && m.date && m.date <= S.today)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   const reqOpen = S.db.meetings.filter((m) => m.kind === "Solicitada" && ["Solicitada", "Agendada", "Pendente"].includes(m.status)).length;
   const T = [["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`], ["solicitadas", `${t("Solicitadas")} (${reqOpen})`],
-    ["confirmar", `${t("Confirmar e registrar ata")} (${pend.length})`], ["todas", t("Todas as reuniões")]];
-  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, confirmar: () => meetingsConfirmView(pend), todas: meetingsAllView }[tab] || dashMeetingsView;
+    ["confirmar", `${t("Confirmar e registrar ata")} (${pend.length})`], ["tempo", t("Tempo em reuniões")], ["todas", t("Todas as reuniões")]];
+  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, confirmar: () => meetingsConfirmView(pend), tempo: timeView, todas: meetingsAllView }[tab] || dashMeetingsView;
   return `<h1>${t("Gerenciamento de reuniões")}</h1>${tabs("reunioes", T, tab)}${body()}`;
 }
 function meetingsConfirmView(pend) {
@@ -787,16 +787,16 @@ async function cancelMeeting(id) {
 function meetingsAllView() {
   const all = S.db.meetings.filter((m) => !M_FILTER || m.status === M_FILTER).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   return `<div class="card"><div class="toolbar"><select onchange="M_FILTER=this.value;render()"><option value="">${t("Status")}</option>${opts(MEETING_STATUS, M_FILTER)}</select></div>
-    <table>${th(["ID", "Reunião", "Data", "Nível", "Tipo", "Agendamento", "Projeto", "Status"])}
-    ${all.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)} ${esc(m.time || "")}</td><td>${esc(tv(m.level))}</td><td>${esc(tv(m.mtype))}</td>
-      <td>${esc(tv(m.scheduling))}</td><td>${esc(m.project_id)}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
+    <table>${th(["ID", "Reunião", "Data", "Duração", "Nível", "Tipo", "Agendamento", "Participantes", "Status"])}
+    ${all.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)} ${esc(m.time || "")}</td><td>${m.duration ? m.duration + " min" : "—"}</td><td>${esc(tv(m.level))}</td><td>${esc(tv(m.mtype))}</td>
+      <td>${esc(tv(m.scheduling))}</td><td>${(m.attendees || []).map((x) => pill(x)).join("")}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=9 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
 }
 async function requestMeeting() {
   const title = $("#rq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
   await api("meetings", "POST", { title, date: $("#rq-date").value, time: $("#rq-time").value, requested_by: $("#rq-by").value, participants: $("#rq-part").value,
     project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: $("#rq-date").value && $("#rq-time").value ? "Agendada" : "Solicitada", kind: "Solicitada",
-    level: $("#rq-level").value, mtype: $("#rq-type").value, scheduling: $("#rq-sched").value });
+    ...readMeetingFields("rq-") });
   toast(t("Solicitação registrada")); await refresh();
 }
 async function meetingDone(id) {
@@ -815,7 +815,7 @@ async function meetingNotDone(id) {
 async function saveMeeting() {
   const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, time: $("#m-time").value, participants: $("#m-part").value,
     departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value, status: "Realizada",
-    level: $("#m-level").value, mtype: $("#m-type").value, scheduling: $("#m-sched").value });
+    ...readMeetingFields("m-") });
   await api(`meetings/${r.id}/extract`, "POST");
   await refresh(); location.hash = "reunioes/" + r.id;
 }
@@ -830,7 +830,7 @@ function meetingDetail(m) {
     <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></div>` : ""}
   ${m.agenda ? `<div class="card" style="margin-bottom:14px"><b>${t("Pauta / objetivo")}:</b> ${esc(lc(m, "agenda"))}</div>` : ""}
   <div class="card" style="margin-bottom:14px"><div class="row"><div>${L("Data")}<input type="date" id="me-date" value="${esc(m.date)}"></div><div>${L("Horário")}<input type="time" id="me-time" value="${esc(m.time)}"></div></div>
-    ${meetingFields(m)}<div class="actions"><button class="small" onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{date:$('#me-date').value,time:$('#me-time').value,...readMeetingFields()}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>
+    ${meetingFields(m).replace(/mq-/g, "me-")}<div class="actions"><button class="small" onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{date:$('#me-date').value,time:$('#me-time').value,...readMeetingFields('me-')}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>
   <div class="grid">
   <div class="card"><h2>${t("Ata")}</h2><textarea id="md-min" style="min-height:200px">${esc(m.minutes)}</textarea>${trPreview(m, "minutes")}${L("Anotações")}<textarea id="md-notes">${esc(m.notes)}</textarea>
     <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{minutes:$('#md-min').value,notes:$('#md-notes').value}); await api('meetings/${m.id}/extract','POST'); await refresh();})">${t("Salvar e reprocessar")}</button></div>
@@ -1047,12 +1047,13 @@ function cfgLists(st) {
   <div class="grid">${box("sources", "Origens das demandas", "Ex.: Diretora, HQ, Departamento…")}${box("input_kinds", "Tipos de entrada", "Ex.: Pedido pontual, Nova solicitação do HQ…")}
     ${box("impact_types", "Categorias de impacto", "Usadas na classificação, nos riscos e nos fluxos.")}${box("areas", "Áreas", "Sugestões no campo Área principal.")}
     ${box("flow_edge_labels", "Rótulos das ligações dos fluxos", "Ex.: causa, impacta, mitiga…")}
-    ${box("meeting_levels", "Níveis de reunião", "Ex.: Gerencial, Diretoria, Operacional…")}${box("meeting_types", "Tipos de reunião", "Ex.: Reporte, Decisão, Alinhamento…")}</div>
+    ${box("meeting_levels", "Níveis de reunião", "Ex.: Gerencial, Diretoria, Operacional…")}${box("meeting_types", "Tipos de reunião", "Ex.: Reporte, Decisão, Alinhamento…")}
+    ${box("people_roles", "Cargos dos participantes", "Ex.: Diretor, Sr Manager, Gerente…")}</div>
   <div class="actions"><button onclick="busy(this, saveLists)">${t("Salvar listas")}</button></div>`;
 }
 async function saveLists() {
   const v = (k) => $(`#ls-${k}`).value.split("\n").map((x) => x.trim()).filter(Boolean);
-  await api("settings", "PATCH", { areas: v("areas"), lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels"), meeting_levels: v("meeting_levels"), meeting_types: v("meeting_types") } });
+  await api("settings", "PATCH", { areas: v("areas"), lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels"), meeting_levels: v("meeting_levels"), meeting_types: v("meeting_types"), people_roles: v("people_roles") } });
   toast(t("Salvo")); await refresh();
 }
 function cfgRules(st) {

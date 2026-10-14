@@ -12,11 +12,11 @@ function statTile(value, label, sub = "", href = "") {
   return `<${tag} class="kpi" ${href ? `href="#${href}"` : ""}><b>${value ?? "—"}</b><span>${esc(label)}</span>${sub ? `<small>${esc(sub)}</small>` : ""}</${tag}>`;
 }
 /** Barras horizontais de uma série (uma cor), valor na ponta. rows: [[rótulo, valor, dica?]] */
-function hbars(rows, { color = "var(--brand)", empty = "—" } = {}) {
+function hbars(rows, { color = "var(--brand)", empty = "—", fmtv = (v) => v } = {}) {
   const max = Math.max(1, ...rows.map((r) => r[1]));
   if (!rows.length) return `<p class="muted">${empty}</p>`;
-  return `<div class="hbars">${rows.map(([label, v, hint]) => `<div class="hb-row" title="${esc(label)}: ${v}${hint ? " — " + esc(hint) : ""}">
-    <span class="hb-label">${esc(label)}</span><span class="hb-track"><span class="hb-bar" style="width:${(v / max) * 100}%;background:${v ? color : "transparent"}"></span><span class="hb-val">${v}</span></span></div>`).join("")}</div>`;
+  return `<div class="hbars">${rows.map(([label, v, hint]) => `<div class="hb-row" title="${esc(label)}: ${esc(fmtv(v))}${hint ? " — " + esc(hint) : ""}">
+    <span class="hb-label">${esc(label)}</span><span class="hb-track"><span class="hb-bar" style="width:${(v / max) * 100}%;background:${v ? color : "transparent"}"></span><span class="hb-val">${esc(fmtv(v))}</span></span></div>`).join("")}</div>`;
 }
 /** Barra empilhada (partes de um todo) + legenda com valores. segs: [{label, value, color}] */
 function stackBar(segs) {
@@ -144,27 +144,40 @@ function calendarView() {
   <div class="cal">${WEEKDAYS.map((w) => `<div class="cal-head">${t(w)}</div>`).join("")}${"<div class='cal-day empty'></div>".repeat(lead)}${days.map(cell).join("")}</div>
   <div class="legend">${["Agendada", "Pendente", "Solicitada", "Realizada", "Não realizada"].map((s) => `<span><i class="st-${s.replace(/\W/g, "")}"></i>${esc(t(s))}</span>`).join("")}<span><i class="sug"></i>${t("Sugestão")}</span></div>`;
 }
+/** Campos comuns das reuniões: nível, tipo, agendamento, duração e participantes cadastrados (gerentes, sr managers, diretor…). */
 function meetingFields(pre = {}) {
   return `<div class="row"><div>${L("Nível")}<select id="mq-level">${opts(LIST("meeting_levels"), pre.level || "Gerencial")}</select></div>
     <div>${L("Tipo")}<select id="mq-type">${opts(LIST("meeting_types"), pre.mtype || "Reporte")}</select></div>
-    <div>${L("Agendamento")}<select id="mq-sched">${opts(["Pré-agendada", "Urgente"], pre.scheduling || "Pré-agendada")}</select></div></div>`;
+    <div>${L("Agendamento")}<select id="mq-sched">${opts(["Pré-agendada", "Urgente"], pre.scheduling || "Pré-agendada")}</select></div>
+    <div>${L("Duração (min)")}<input type="number" min="5" step="5" id="mq-dur" value="${esc(pre.duration || 60)}"></div></div>
+  ${L("Participantes cadastrados")}${attendeesPicker(pre.attendees || [], "mq-")}`;
 }
-const readMeetingFields = () => ({ level: $("#mq-level").value, mtype: $("#mq-type").value, scheduling: $("#mq-sched").value });
+function attendeesPicker(selected, prefix) {
+  const people = S.db.settings.people || [];
+  if (!people.length) return `<p class="muted small">${t("Nenhuma pessoa cadastrada.")} <a href="#reunioes/tempo">${t("Cadastrar pessoas (gerentes, sr managers, diretor)")}</a></p>`;
+  const roles = [...new Set(people.map((p) => p.role || "Outro"))];
+  return `<div class="att-picker">${roles.map((r) => `<div class="att-group"><b>${esc(t(r))}</b>${people.filter((p) => (p.role || "Outro") === r).map((p) =>
+    `<label><input type="checkbox" class="${prefix}att" value="${esc(p.name)}" ${selected.includes(p.name) ? "checked" : ""}> ${esc(p.name)}</label>`).join("")}</div>`).join("")}</div>`;
+}
+const readAttendees = (prefix) => [...document.querySelectorAll(`.${prefix}att`)].filter((c) => c.checked).map((c) => c.value);
+const readMeetingFields = (prefix = "mq-") => ({ level: $(`#${prefix}level`).value, mtype: $(`#${prefix}type`).value, scheduling: $(`#${prefix}sched`).value,
+  duration: Math.max(5, +$(`#${prefix}dur`).value || 60), attendees: readAttendees(prefix) });
 function quickMeeting(date) {
   openModal(`<h2>${t("Nova reunião em {date}", { date })}</h2>
-    <div class="row"><div>${L("Título")}<input id="mq-title"></div><div>${L("Horário")}<input type="time" id="mq-time" value="${esc(S.db.settings.work_hours.start)}"></div><div>${L("Duração (min)")}<input type="number" id="mq-dur" value="60"></div></div>
+    <div class="row"><div>${L("Título")}<input id="mq-title"></div><div>${L("Horário")}<input type="time" id="mq-time" value="${esc(S.db.settings.work_hours.start)}"></div></div>
     ${meetingFields()}
     <div class="row"><div>${L("Reunião obrigatória")}<select id="mq-mand"><option value="">—</option>${S.db.mandatory.map((m) => `<option value="${m.id}">${esc(m.title)}</option>`).join("")}</select></div>
       <div>${L("Projeto")}<select id="mq-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}">${p.id} · ${esc(p.name)}</option>`).join("")}</select></div>
       <div>${L("Participantes")}<input id="mq-part"></div></div>
     ${L("Pauta / objetivo")}<textarea id="mq-agenda" style="min-height:60px"></textarea>
     <div class="actions"><button onclick="busy(this, ()=>saveQuickMeeting('${date}'))">${t("Salvar")}</button><button class="ghost" onclick="closeModal()">${t("Cancelar")}</button></div>`);
-  $("#mq-mand").onchange = () => { const m = S.db.mandatory.find((x) => x.id === $("#mq-mand").value); if (m) { $("#mq-title").value ||= m.title; $("#mq-level").value = m.level || "Gerencial"; $("#mq-type").value = m.mtype || "Reporte"; if (m.preferred_time) $("#mq-time").value = m.preferred_time; } };
+  $("#mq-mand").onchange = () => { const m = S.db.mandatory.find((x) => x.id === $("#mq-mand").value); if (m) { $("#mq-title").value ||= m.title; $("#mq-level").value = m.level || "Gerencial"; $("#mq-type").value = m.mtype || "Reporte"; if (m.preferred_time) $("#mq-time").value = m.preferred_time;
+    $("#mq-dur").value = m.duration || 60; document.querySelectorAll(".mq-att").forEach((c) => { c.checked = (m.attendees || []).includes(c.value); }); } };
 }
 async function saveQuickMeeting(date) {
   const title = $("#mq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
-  await api("meetings", "POST", { title, date, time: $("#mq-time").value, duration: +$("#mq-dur").value || 60, ...readMeetingFields(), mandatory_id: $("#mq-mand").value,
+  await api("meetings", "POST", { title, date, time: $("#mq-time").value, ...readMeetingFields(), mandatory_id: $("#mq-mand").value,
     project_id: $("#mq-proj").value, participants: $("#mq-part").value, agenda: $("#mq-agenda").value, status: date < S.today ? "Pendente" : "Agendada" });
   closeModal(); toast(t("Reunião agendada")); await refresh();
 }
@@ -200,6 +213,7 @@ function mandatoryView() {
     ${L("Dias preferidos")}<div class="checks inline">${[1, 2, 3, 4, 5].map((d) => `<label><input type="checkbox" class="mo-day" value="${d}" ${(e.preferred_days || []).map(Number).includes(d) ? "checked" : ""}> ${t(dayNames[d])}</label>`).join("")}</div>
     <div class="row"><div>${L("Nível")}<select id="mo-level">${opts(LIST("meeting_levels"), e.level || "Gerencial")}</select></div><div>${L("Tipo")}<select id="mo-type">${opts(LIST("meeting_types"), e.mtype || "Reporte")}</select></div>
       <div>${L("Participantes")}<input id="mo-part" value="${esc(e.participants)}"></div></div>
+    ${L("Participantes cadastrados")}${attendeesPicker(e.attendees || [], "mo-")}
     ${L("Requisito / observações")}<textarea id="mo-notes" style="min-height:50px">${esc(e.notes)}</textarea>
     <div class="checks"><label><input type="checkbox" id="mo-active" ${e.active === false ? "" : "checked"}> ${t("Ativa")}</label></div>
     <div class="actions"><button onclick="busy(this, saveMandatory)">${t("Salvar")}</button>${MAND_EDIT ? `<button class="ghost" onclick="MAND_EDIT=null;render()">${t("Cancelar")}</button>` : ""}</div></div>
@@ -219,7 +233,7 @@ async function saveMandatory() {
   if (!title) throw new Error(t("Informe o título."));
   const data = { title, frequency: $("#mo-freq").value, times_per_month: +$("#mo-times").value || 1, preferred_time: $("#mo-time").value, duration: +$("#mo-dur").value || 60,
     preferred_days: [...document.querySelectorAll(".mo-day")].filter((c) => c.checked).map((c) => +c.value), level: $("#mo-level").value, mtype: $("#mo-type").value,
-    participants: $("#mo-part").value, notes: $("#mo-notes").value, active: $("#mo-active").checked };
+    participants: $("#mo-part").value, attendees: readAttendees("mo-"), notes: $("#mo-notes").value, active: $("#mo-active").checked };
   if (MAND_EDIT) await api(`mandatory/${MAND_EDIT}`, "PATCH", data); else await api("mandatory", "POST", data);
   MAND_EDIT = null; toast(t("Salvo")); await refresh();
 }
@@ -248,4 +262,61 @@ async function saveTeach(col, id) {
   toast(t("Análise salva: a IA vai usar o seu raciocínio nas próximas avaliações."));
   if (col === "items") { closeModal(); location.hash = "lista"; }
   await refresh();
+}
+
+// ------------------------------------------------------------------ tempo em reuniões (gerentes, sr managers, diretor)
+let TM = { period: "month", from: "", to: "", role: "", person: "" };
+function timeView() {
+  const people = S.db.settings.people || [];
+  const roles = LIST("people_roles");
+  let range = TM.period === "custom" ? [TM.from || S.today, TM.to || S.today] : Core.periodRange(TM.period);
+  const d = Core.dashTime({ from: range[0], to: range[1], role: TM.role, person: TM.person });
+  const h = (min) => (min / 60).toLocaleString(I18N.htmlLang(), { maximumFractionDigits: 1 }) + " h";
+  const directorRole = roles.find((r) => AI.norm(r).startsWith("diretor")) || "Diretor";
+  const sameRole = TM.role ? people.filter((p) => p.role === TM.role) : [];
+  const who = TM.person || (sameRole.length === 1 ? `${sameRole[0].name} (${t(TM.role)})` : TM.role ? t(TM.role) : t("todas as pessoas cadastradas"));
+  return `<div class="toolbar">${[["week", "Esta semana"], ["month", "Este mês"], ["custom", "Período"]].map(([k, l]) => `<button class="small ${TM.period === k ? "" : "ghost"}" onclick="TM.period='${k}';render()">${t(l)}</button>`).join("")}
+      ${TM.period === "custom" ? `<input type="date" value="${esc(TM.from)}" onchange="TM.from=this.value;render()"> – <input type="date" value="${esc(TM.to)}" onchange="TM.to=this.value;render()">` : `<span class="muted">${esc(range[0])} – ${esc(range[1])}</span>`}</div>
+    <div class="toolbar"><span class="muted">${t("Cargo")}:</span>
+      <button class="small ${!TM.role && !TM.person ? "" : "ghost"}" onclick="TM.role='';TM.person='';render()">${t("Todos")}</button>
+      ${roles.map((r) => `<button class="small ${TM.role === r && !TM.person ? "" : "ghost"}" onclick="TM.role='${esc(r)}';TM.person='';render()">${esc(t(r))}</button>`).join("")}
+      <button class="small director-btn ${TM.role === directorRole && !TM.person ? "on" : ""}" onclick="TM.role='${esc(directorRole)}';TM.person='';render()">★ ${t("Só o diretor")}</button>
+      <select onchange="TM.person=this.value;render()"><option value="">${t("Pessoa")}…</option>${people.map((p) => `<option value="${esc(p.name)}" ${TM.person === p.name ? "selected" : ""}>${esc(p.name)} (${esc(t(p.role || "Outro"))})</option>`).join("")}</select></div>
+    <div class="hero">${t("TIME_HERO", { who, hours: h(d.totalMin), n: d.meetings.length, pct: d.pctWork })}</div>
+    <div class="kpis">${statTile(h(d.totalMin), t("Horas em reunião"))}${statTile(d.meetings.length, t("Reuniões realizadas"))}${statTile(d.meetings.length ? Math.round(d.totalMin / d.meetings.length) + " min" : "—", t("Duração média"))}
+      ${statTile(d.pctWork + "%", t("Do expediente"), t("{h} h úteis no período", { h: d.workHours }))}${statTile(h(d.urgentMin), t("Em reuniões urgentes"))}${statTile(d.noDuration, t("Sem duração informada"), t("contadas como 60 min"))}</div>
+    <div class="grid">
+      <div class="card"><h2>${t("Horas por pessoa")}</h2>${hbars(d.byPerson.map(([n, m]) => [n, m]), { empty: t("Nenhuma reunião com participantes cadastrados no período."), fmtv: h })}</div>
+      <div class="card"><h2>${t("Horas por cargo")}</h2>${hbars(d.byRole.map(([n, m]) => [t(n), m]), { fmtv: h })}</div>
+      <div class="card"><h2>${t("Horas por tipo de reunião")}</h2>${hbars(d.byType.map(([n, m]) => [t(n), m]), { fmtv: h })}</div>
+    </div>
+    <div class="grid" style="margin-top:var(--gap)">
+      <div class="card" style="overflow:auto"><h2>${t("Reuniões do período")}</h2><table>${th(["ID", "Reunião", "Data", "Duração", "Tipo", "Participantes"])}
+        ${d.meetings.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)} ${esc(m.time || "")}</td>
+          <td>${m.duration ? m.duration + " min" : `<span class="muted">60 min*</span>`}</td><td>${esc(tv(m.mtype))}</td><td>${(m.attendees || []).map((x) => pill(x)).join("")}</td></tr>`).join("") || `<tr><td colspan=6 class="muted">—</td></tr>`}</table></div>
+      ${peopleCard()}
+    </div>`;
+}
+function peopleCard() {
+  const people = S.db.settings.people || [];
+  return `<div class="card"><h2>${t("Pessoas (participantes)")}</h2>
+    <p class="muted">${t("Cadastre gerentes, sr managers e o diretor para marcar quem participou de cada reunião e medir o tempo gasto.")}</p>
+    <table>${th(["Nome", "Cargo", "Departamento", ""])}${people.map((p, k) => `<tr><td>${esc(p.name)}</td><td>${esc(t(p.role || "Outro"))}</td><td>${esc(p.dept)}</td>
+      <td><button class="small ghost danger" onclick="busy(this, ()=>removePerson(${k}))">×</button></td></tr>`).join("") || `<tr><td colspan=4 class="muted">${t("Nenhuma pessoa cadastrada.")}</td></tr>`}</table>
+    <div class="row"><div>${L("Nome")}<input id="pp-name"></div><div>${L("Cargo")}<select id="pp-role">${opts(LIST("people_roles"), "Gerente")}</select></div><div>${L("Departamento")}<input id="pp-dept" list="pp-depts"></div></div>
+    <datalist id="pp-depts">${(S.db.settings.areas || []).map((a) => `<option>${esc(a)}</option>`).join("")}</datalist>
+    <div class="actions"><button class="small" onclick="busy(this, addPerson)">${t("Adicionar pessoa")}</button></div></div>`;
+}
+async function addPerson() {
+  const name = $("#pp-name").value.trim();
+  if (!name) throw new Error(t("Informe o nome."));
+  const people = [...(S.db.settings.people || [])];
+  if (people.some((p) => AI.norm(p.name) === AI.norm(name))) throw new Error(t("Essa pessoa já está cadastrada."));
+  people.push({ name, role: $("#pp-role").value, dept: $("#pp-dept").value.trim() });
+  await api("settings", "PATCH", { people }); await refresh();
+}
+async function removePerson(k) {
+  if (!confirm(t("Excluir este registro?"))) return;
+  const people = [...(S.db.settings.people || [])]; people.splice(k, 1);
+  await api("settings", "PATCH", { people }); await refresh();
 }
