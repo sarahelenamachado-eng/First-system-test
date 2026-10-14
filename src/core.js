@@ -35,7 +35,7 @@ function defaultSettings() {
       input_kinds: ["Pedido pontual", "Direcionamento / estratégia (reclamação, opinião)", "Nova solicitação do HQ", "Decisão conjunta entre departamentos", "Atualização de item existente", "Outro"],
       impact_types: ["Custo", "Eficiência", "Operação", "Compliance", "People", "Qualidade"],
       flow_edge_labels: ["origina", "afeta", "impacta", "mitiga", "depende de", "se realizado", "se não realizado", "se concretizar", "se tratado"],
-      meeting_levels: ["Gerencial", "Diretoria", "Operacional", "Técnica"],
+      meeting_levels: ["Companhia", "Gerencial", "Diretoria", "Operacional", "Técnica"],
       meeting_types: ["Reporte", "Acompanhamento de projeto", "Decisão", "Alinhamento", "Outro"],
       people_roles: ["Diretor", "Sr Manager", "Gerente", "Coordenador", "Outro"],
     },
@@ -117,6 +117,7 @@ const Core = {
     db.settings.work_hours = { ...d.work_hours, ...(db.settings.work_hours || {}) };
     // migração: nova área de impacto "Qualidade" em listas já personalizadas (uma vez só)
     if (!db.settings.migrated_quality) { if (!db.settings.lists.impact_types.includes("Qualidade")) db.settings.lists.impact_types.push("Qualidade"); db.settings.migrated_quality = true; }
+    if (!db.settings.migrated_company) { if (!db.settings.lists.meeting_levels.includes("Companhia")) db.settings.lists.meeting_levels.unshift("Companhia"); db.settings.migrated_company = true; }
     for (const it of db.items) { it.item_actions ??= []; it.sub_seq ??= 0; }
   },
   /** % de conclusão do projeto = itens do projeto finalizados / total. */
@@ -698,37 +699,56 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       toConfirm: this.db.meetings.filter((m) => OPEN_MEETING.includes(m.status) && m.date && m.date <= today).length,
     };
   },
-  /** Tempo em reuniões realizadas por pessoa/cargo no período (duração não informada conta 60 min). */
+  /** Tempo planejado × realizado no período. Sem filtro: cada reunião conta uma vez (toda a agenda).
+   *  Com cargo/pessoa: só reuniões com participantes do filtro, somando o tempo de cada pessoa. */
   dashTime({ from, to, role = "", person = "" }) {
     const people = this.db.settings.people || [];
     const roleOf = Object.fromEntries(people.map((p) => [p.name, p.role || "Outro"]));
-    const inScope = (name) => (person ? name === person : role ? roleOf[name] === role : name in roleOf);
-    const ms = this.db.meetings.filter((m) => m.status === "Realizada" && m.date && m.date >= from && m.date <= to && (m.attendees || []).some(inScope))
+    const filtered = !!(role || person);
+    const inScope = (name) => (person ? name === person : role ? roleOf[name] === role : true);
+    const ms = this.db.meetings.filter((m) => m.status !== "Cancelada" && m.date && m.date >= from && m.date <= to && (!filtered || (m.attendees || []).some(inScope)))
       .sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
-    const dur = (m) => +m.duration || 60;
-    const per = {}, perRole = {}, perType = {};
-    let totalMin = 0, urgentMin = 0;
+    const plan = (m) => +m.duration || 60, real = (m) => +m.actual_duration || plan(m);
+    const mult = (m) => (filtered && !person ? (m.attendees || []).filter(inScope).length : 1);
+    const planned = { n: 0, min: 0 }, realized = { n: 0, actualMin: 0, plannedMin: 0 }, notHeld = { n: 0, min: 0 }, pending = { n: 0 }, per = {};
     for (const m of ms) {
-      const who = (m.attendees || []).filter(inScope);
-      for (const n of who) { per[n] = (per[n] || 0) + dur(m); perRole[roleOf[n]] = (perRole[roleOf[n]] || 0) + dur(m); }
-      // horas do grupo filtrado: soma por pessoa quando são várias; para uma pessoa, é o tempo dela
-      totalMin += person ? dur(m) : dur(m) * who.length;
-      if (m.scheduling === "Urgente") urgentMin += person ? dur(m) : dur(m) * who.length;
-      perType[m.mtype || "Outro"] = (perType[m.mtype || "Outro"] || 0) + dur(m) * (person ? 1 : who.length);
+      const k = mult(m);
+      planned.n++; planned.min += plan(m) * k;
+      if (m.status === "Realizada") { realized.n++; realized.actualMin += real(m) * k; realized.plannedMin += plan(m) * k; }
+      else if (m.status === "Não realizada") { notHeld.n++; notHeld.min += plan(m) * k; }
+      else if (OPEN_MEETING.includes(m.status)) pending.n++;
+      for (const n of (m.attendees || []).filter((x) => x in roleOf && inScope(x))) {
+        per[n] ??= { planned: 0, actual: 0 };
+        per[n].planned += plan(m);
+        if (m.status === "Realizada") per[n].actual += real(m);
+      }
     }
     let wd = 0;
     for (let d = from; d <= to && wd < 4000; d = addDays(d, 1)) if (![0, 6].includes(this.weekday(d))) wd++;
     const [hs, ms2] = (this.db.settings.work_hours.start || "08:00").split(":").map(Number), [he, me] = (this.db.settings.work_hours.end || "18:00").split(":").map(Number);
     const dayH = Math.max(1, (he * 60 + me - hs * 60 - ms2) / 60);
-    const nPeople = person ? 1 : people.filter((p) => inScope(p.name)).length || 1;
+    const nPeople = filtered && !person ? people.filter((p) => inScope(p.name)).length || 1 : 1;
     const workHours = Math.round(wd * dayH * nPeople);
     return {
-      totalMin, urgentMin, meetings: ms, noDuration: ms.filter((m) => !m.duration).length, workHours,
-      pctWork: workHours ? Math.round((totalMin / 60 / workHours) * 100) : 0,
-      byPerson: Object.entries(per).sort((a, b) => b[1] - a[1]),
-      byRole: Object.entries(perRole).sort((a, b) => b[1] - a[1]),
-      byType: Object.entries(perType).sort((a, b) => b[1] - a[1]),
+      planned, realized, notHeld, pending, list: ms, workHours,
+      pctWork: workHours ? Math.round((realized.actualMin / 60 / workHours) * 100) : 0,
+      byPerson: Object.entries(per).sort((a, b) => b[1].planned - a[1].planned),
     };
+  },
+  /** A reunião tem ata? (marcada como emitida, arquivo anexado ou texto da ata). */
+  hasMinutes(m) { return !!(m.minutes_issued || (m.minutes_files || []).length || (m.minutes || "").trim()); },
+  /** Controle de atas das reuniões realizadas de nível companhia / gerencial. */
+  dashMinutes(from, to) {
+    const levels = ["Companhia", "Gerencial"];
+    const list = this.db.meetings.filter((m) => m.status === "Realizada" && levels.includes(m.level) && m.date && m.date >= from && m.date <= to)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    const issued = list.filter((m) => this.hasMinutes(m)).length, dep = {};
+    for (const m of list) {
+      const k = m.resp_dept || ""; dep[k] ??= { pending: 0, issued: 0, total: 0 };
+      dep[k].total++; this.hasMinutes(m) ? dep[k].issued++ : dep[k].pending++;
+    }
+    return { list, levels, total: list.length, issued, pending: list.length - issued, pct: list.length ? Math.round((issued / list.length) * 100) : 0,
+      byDept: Object.entries(dep).sort((a, b) => b[1].pending - a[1].pending || b[1].total - a[1].total) };
   },
   dashRisks() {
     const open = this.db.risks.filter((r) => r.status !== "Fechado"), s = this.db.settings;
@@ -982,7 +1002,9 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       return rec;
     }
     if (["risks", "meetings", "items"].includes(col) && action === "upload") {
-      const rel = await Store.writeUnique(this.folderFor(col, rid), body.file.name, body.file);
+      const isAta = col === "meetings" && body.kind === "ata";
+      const rel = await Store.writeUnique(this.folderFor(col, rid) + (isAta ? "/ATA" : ""), body.file.name, body.file);
+      if (isAta) { (rec.minutes_files ??= []).push(rel); rec.minutes_issued = true; rec.minutes_issued_at ??= todayISO(); }
       this.touch(rec);
       this.log(`${col}.upload`, rid, "Documento anexado a {id}: {file}", { id: rid, file: rel.split("/").pop() });
       return rec;
@@ -1039,6 +1061,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       if (body.note) (rec.history ??= []).push({ date: nowISO(), text: body.note });
       if (body.status === "Realizada") {
         rec.held_at = body.date || rec.date || todayISO();
+        if (body.actual_duration) rec.actual_duration = +body.actual_duration;
+        if (Array.isArray(body.attendees)) rec.attendees = body.attendees;
         if (proj) { proj.next_meeting = addDays(rec.held_at, +db.settings.project_meeting_cadence_days || 15); proj.last_monitored = todayISO(); }
         this.log("meetings.done", rid, "Reunião {id} confirmada como realizada", { id: rid });
       } else if (body.status === "Cancelada") {

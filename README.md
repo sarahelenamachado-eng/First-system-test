@@ -75,15 +75,19 @@ Abas de cada projeto:
 
 ### 4. Reuniões
 Abas: Dashboard · **Calendário** (clique num dia para inserir; sugestões da IA tracejadas) · **Obrigatórias** ·
-**Solicitadas** (pedidas por alguém: agendar, realizada, não realizada, cancelar) · Confirmar e registrar ata · Todas.
+**Solicitadas** · Confirmar e registrar ata · **Tempo em reuniões** · **Controle de atas** · Todas.
+- **Cadastro simples:** título, data, hora, **duração planejada**, nível, depto. responsável pela ata e participantes.
+  O resto (tipo, agendamento, pauta, projeto, anotações) fica em **Mais detalhes**, só se quiser.
+- **Ao marcar "Foi realizada"** a plataforma pergunta só **quanto tempo durou** (e, se quiser, quem participou e a ata).
+- **Tempo em reuniões (planejado × realizado):** quantas reuniões foram planejadas e para quanto tempo, quantas foram
+  realizadas e quanto tempo durou de fato, diferença real × planejado, não realizadas, a confirmar e % do expediente —
+  na semana, no mês ou num período. Filtros: toda a agenda, por cargo, por pessoa e **Só o diretor**.
+- **Controle de atas:** todas as reuniões realizadas de nível **Companhia** ou **Gerencial**, com o departamento responsável,
+  se a ata foi emitida ou está pendente (e há quantos dias), % emitidas e pendências por departamento.
+  **Anexar ata** salva o arquivo em `MEETINGS/<ID>/ATA` e marca a ata como emitida.
 - **Reuniões obrigatórias:** cadastre frequência, dias e horário preferidos, duração e nível. A IA sugere as datas e
   horários do mês que faltam, seguindo as **regras e observações** que você escrever (ex.: "diretora só à tarde").
-- Cada reunião tem **nível** (Gerencial, Diretoria…), **tipo** (Reporte, Decisão…), **agendamento** (Pré-agendada / Urgente),
-  **duração** e **participantes** cadastrados.
-- **Tempo em reuniões:** cadastre as pessoas (Diretor, Sr Manager, Gerente…) e veja as horas gastas em reuniões realizadas
-  por pessoa, por cargo e por tipo, na semana, no mês ou num período — com o botão **Só o diretor**.
 - Projetos principais geram sozinhos a **necessidade de reunião de acompanhamento** (cadência configurável).
-- **Solicitar reunião** — registre reuniões pedidas por alguém.
 - Em **Aguardando confirmação**, marque *Foi realizada* ou *Não foi realizada* (com nova data para projetos).
 - Atas e anotações, com extração de decisões e demandas que vão para as Entradas.
 

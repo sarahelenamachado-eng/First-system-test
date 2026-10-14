@@ -726,8 +726,8 @@ function viewReunioes(id) {
   const pend = S.db.meetings.filter((m) => m.status === "Pendente" || (["Solicitada", "Agendada"].includes(m.status) && m.date && m.date <= S.today)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   const reqOpen = S.db.meetings.filter((m) => m.kind === "Solicitada" && ["Solicitada", "Agendada", "Pendente"].includes(m.status)).length;
   const T = [["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`], ["solicitadas", `${t("Solicitadas")} (${reqOpen})`],
-    ["confirmar", `${t("Confirmar e registrar ata")} (${pend.length})`], ["tempo", t("Tempo em reuniões")], ["todas", t("Todas as reuniões")]];
-  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, confirmar: () => meetingsConfirmView(pend), tempo: timeView, todas: meetingsAllView }[tab] || dashMeetingsView;
+    ["confirmar", `${t("Confirmar e registrar ata")} (${pend.length})`], ["tempo", t("Tempo em reuniões")], ["atas", t("Controle de atas")], ["todas", t("Todas as reuniões")]];
+  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, confirmar: () => meetingsConfirmView(pend), tempo: timeView, atas: atasView, todas: meetingsAllView }[tab] || dashMeetingsView;
   return `<h1>${t("Gerenciamento de reuniões")}</h1>${tabs("reunioes", T, tab)}${body()}`;
 }
 function meetingsConfirmView(pend) {
@@ -743,10 +743,12 @@ function meetingsConfirmView(pend) {
   <div class="grid">
   <div class="card"><h2>${t("Nova ata / anotação")}</h2>
     <div class="row"><div>${L("Título")}<input id="m-title"></div><div>${L("Data")}<input type="date" id="m-date" value="${S.today}"></div><div>${L("Horário")}<input type="time" id="m-time"></div></div>
-    <div class="row"><div>${L("Participantes")}<input id="m-part"></div><div>${L("Departamentos")}<input id="m-dept"></div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
     ${meetingFields().replace(/mq-/g, "m-")}
     ${L("Ata")}<textarea id="m-min" style="min-height:120px" placeholder="${esc(t("MINUTES_HINT"))}"></textarea>
-    ${L("Anotações pessoais")}<textarea id="m-notes"></textarea>
+    ${L("Anexar ata")}<input type="file" id="m-file" multiple>
+    <details class="more"><summary>${t("Mais detalhes")}</summary>
+      <div class="row"><div>${L("Outros participantes (texto)")}<input id="m-part"></div><div>${L("Departamentos")}<input id="m-dept"></div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
+      ${L("Anotações pessoais")}<textarea id="m-notes"></textarea></details>
     <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>`;
 }
 let RQ_FILTER = "abertas";
@@ -759,10 +761,11 @@ function requestedView() {
     <p class="muted">${t("Reuniões pedidas por alguém (diretora, HQ, departamentos), fora das obrigatórias.")}</p>
     ${L("Título / pauta")}<input id="rq-title">
     <div class="row"><div>${L("Solicitada por")}<input id="rq-by" list="rq-sources"></div><div>${L("Data desejada")}<input type="date" id="rq-date"></div><div>${L("Horário")}<input type="time" id="rq-time"></div></div>
-    <div class="row"><div>${L("Participantes")}<input id="rq-part"></div><div>${L("Projeto")}${projSel}</div></div>
     ${meetingFields({ scheduling: "Urgente" }).replace(/mq-/g, "rq-")}
     <datalist id="rq-sources">${LIST("sources").map((x) => `<option value="${esc(t(x))}">`).join("")}</datalist>
-    ${L("Pauta / objetivo")}<textarea id="rq-agenda" style="min-height:60px"></textarea>
+    <details class="more"><summary>${t("Pauta, projeto e outros participantes")}</summary>
+      <div class="row"><div>${L("Outros participantes (texto)")}<input id="rq-part"></div><div>${L("Projeto")}${projSel}</div></div>
+      ${L("Pauta / objetivo")}<textarea id="rq-agenda" style="min-height:60px"></textarea></details>
     <div class="actions"><button onclick="busy(this, requestMeeting)">${t("Registrar solicitação")}</button></div></div>
   <div class="card" style="overflow:auto"><h2>${t("Reuniões solicitadas")}</h2>
     <div class="toolbar"><button class="small ${RQ_FILTER === "abertas" ? "" : "ghost"}" onclick="RQ_FILTER='abertas';render()">${t("Em aberto")}</button><button class="small ${RQ_FILTER === "todas" ? "" : "ghost"}" onclick="RQ_FILTER='todas';render()">${t("Todas")}</button></div>
@@ -799,11 +802,7 @@ async function requestMeeting() {
     ...readMeetingFields("rq-") });
   toast(t("Solicitação registrada")); await refresh();
 }
-async function meetingDone(id) {
-  await api(`meetings/${id}/status`, "POST", { status: "Realizada", date: byId("meetings", id).date });
-  toast(t("Reunião confirmada. Registre a ata, se quiser."));
-  await refresh(); location.hash = "reunioes/" + id;
-}
+async function meetingDone(id) { confirmDone(id); }
 async function meetingNotDone(id) {
   const m = byId("meetings", id);
   const reason = prompt(t("Motivo (opcional):")) ?? "";
@@ -815,8 +814,9 @@ async function meetingNotDone(id) {
 async function saveMeeting() {
   const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, time: $("#m-time").value, participants: $("#m-part").value,
     departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value, status: "Realizada",
-    ...readMeetingFields("m-") });
-  await api(`meetings/${r.id}/extract`, "POST");
+    ...readMeetingFields("m-"), actual_duration: Math.max(5, +$("#m-dur").value || 60) });
+  for (const f of $("#m-file").files) await api(`meetings/${r.id}/upload`, "POST", { file: f, kind: "ata" });
+  if ($("#m-min").value.trim()) await api(`meetings/${r.id}/extract`, "POST");
   await refresh(); location.hash = "reunioes/" + r.id;
 }
 function meetingDetail(m) {
@@ -829,11 +829,14 @@ function meetingDetail(m) {
   ${pending ? `<div class="alert lv-media">${t("Esta reunião aguarda confirmação.")} <button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
     <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></div>` : ""}
   ${m.agenda ? `<div class="card" style="margin-bottom:14px"><b>${t("Pauta / objetivo")}:</b> ${esc(lc(m, "agenda"))}</div>` : ""}
-  <div class="card" style="margin-bottom:14px"><div class="row"><div>${L("Data")}<input type="date" id="me-date" value="${esc(m.date)}"></div><div>${L("Horário")}<input type="time" id="me-time" value="${esc(m.time)}"></div></div>
-    ${meetingFields(m).replace(/mq-/g, "me-")}<div class="actions"><button class="small" onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{date:$('#me-date').value,time:$('#me-time').value,...readMeetingFields('me-')}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>
+  <div class="card" style="margin-bottom:14px"><div class="row"><div>${L("Data")}<input type="date" id="me-date" value="${esc(m.date)}"></div><div>${L("Horário")}<input type="time" id="me-time" value="${esc(m.time)}"></div>
+    ${m.status === "Realizada" ? `<div>${L("Duração real (min)")}<input type="number" min="5" step="5" id="me-adur" value="${esc(m.actual_duration || m.duration || 60)}"></div>` : ""}</div>
+    ${meetingFields(m).replace(/mq-/g, "me-")}<div class="actions"><button class="small" onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{date:$('#me-date').value,time:$('#me-time').value,...readMeetingFields('me-'),...($('#me-adur')?{actual_duration:Math.max(5,+$('#me-adur').value||60)}:{})}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>
   <div class="grid">
   <div class="card"><h2>${t("Ata")}</h2><textarea id="md-min" style="min-height:200px">${esc(m.minutes)}</textarea>${trPreview(m, "minutes")}${L("Anotações")}<textarea id="md-notes">${esc(m.notes)}</textarea>
     <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{minutes:$('#md-min').value,notes:$('#md-notes').value}); await api('meetings/${m.id}/extract','POST'); await refresh();})">${t("Salvar e reprocessar")}</button></div>
+    ${L("Arquivo da ata")}<div class="toolbar">${(m.minutes_files || []).map((f) => fileLink(f, f.split("/").pop())).join(" · ") || `<span class="muted">—</span>`}
+      <label class="btn small ghost file-btn">${t("Anexar ata")}<input type="file" hidden multiple onchange="attachMinutes('${m.id}', this)"></label></div>
     ${L("Anexos")}<div class="toolbar"><input type="file" id="md-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('meetings/${m.id}/upload', $('#md-file')); toast(t('Anexado')); await refresh();})">${t("Upload")}</button></div>
     ${L("Vínculos")}<div>${linksHtml(m)}</div>
     <h3>${t("Histórico")}</h3><ul class="tl">${timeline((m.history || []).slice().reverse())}</ul></div>
