@@ -242,3 +242,17 @@ details.more { margin: 8px 0; } details.more > summary { cursor: pointer; color:
 .dept-in { width: 110px; padding: 4px 6px; }
 .people-box > summary { cursor: pointer; }
 .people-box[open] > summary { margin-bottom: 8px; }
+/* assistente */
+.assist-card { border-top: 3px solid var(--brand); }
+.props-t td { vertical-align: top; }
+.props-t select, .props-t .tg-in { width: 100%; margin-bottom: 4px; }
+.props-t textarea { width: 100%; min-height: 44px; }
+.tabs.mini { margin: 0 0 10px; } .tabs.mini a { padding: 6px 12px; font-size: .92rem; }
+.att-input { width: 100%; }
+.att-chips, .slots { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; align-items: center; }
+button.chip { background: #fff; color: #333; border: 1px solid var(--line); border-radius: 14px; padding: 3px 10px; font-size: .85rem; font-weight: 500; }
+button.chip:hover { border-color: var(--brand); color: var(--brand); filter: none; }
+button.chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.small-sel { padding: 3px 6px; font-size: .88rem; }
+.prog-box { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.prog-box ul { margin: 6px 0 0; }

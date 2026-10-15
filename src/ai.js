@@ -252,31 +252,42 @@ critério da organização e siga-os quando aplicáveis.`; },
     },
   },
 
+  /** Exemplos de extração corrigidos pelo usuário (ata -> demandas), os mais parecidos primeiro. */
+  similarExtractions(db, text, limit = 3) {
+    return (db.extraction_examples || []).map((x) => [this.similarity(text, x.text || ""), x]).sort((a, b) => b[0] - a[0]).slice(0, limit).map(([, x]) => x);
+  },
   async extractMeeting(db, m) {
-    const text = `${m.minutes || ""}\n${m.notes || ""}`;
+    // ata + anotações, sem repetir linhas iguais
+    const seen = new Set();
+    const text = `${m.minutes || ""}\n${m.notes || ""}`.split(/\r?\n/).filter((l) => { const k = l.trim(); if (!k) return true; if (seen.has(k)) return false; seen.add(k); return true; }).join("\n");
     if (!this.enabled()) {
       const KW = /^(a[cç][aã]o|action|to-?do|task|pend[eê]ncia|demanda|tarefa|行动|待办|任务)\s*[:：\-]\s*/i;
-      const demands = [];
-      for (const line of text.split(/\r?\n/)) {
-        const l = line.replace(/^[\s\-•*]+|[\s\-•*]+$/g, "");
-        if (!KW.test(l)) continue;
-        let title = l.replace(KW, "");
-        const OWNER = /\s*(?:resp(?:ons[aá]vel)?|owner|负责人)\s*[:：\-]\s*/i;
+      const LIST = /^\s*(\d{1,2}\s*[.)\-–]|[-•*▪●○■□►])\s*/;
+      const OWNER = /\s*(?:resp(?:ons[aá]vel)?|owner|负责人)\s*[:：\-]\s*/i;
+      const mk = (l, title) => {
         const owner = (l.match(new RegExp(OWNER.source + "([^\\d,;，；]+)", "i")) || [, ""])[1].trim();
         const due = (l.match(/(\d{4}-\d{2}-\d{2})/) || [, ""])[1];
         title = title.replace(new RegExp(OWNER.source + ".*$", "i"), "").trim() || title;
         const rel = this.relatedItems(db, title, 1, 0.4);
-        demands.push({ title: title.slice(0, 120), description: l, owner, due_date: due, area_main: "", related_item: rel[0]?.id || "" });
-      }
-      const decisions = text.split(/\r?\n/).filter((l) => /^\s*[-•*]?\s*(decis|决定|决策)/i.test(l)).map((l) => l.replace(/^[\s\-•*]+/, ""));
-      return { summary: text.slice(0, 400), decisions, demands, engine: "heuristica",
-        hint: "EXTRACT_HINT" };
+        return { title: title.slice(0, 160), description: l.replace(LIST, "").trim(), owner, due_date: due, area_main: "", related_item: rel[0]?.id || "" };
+      };
+      const lines = text.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+      let demands = lines.map((l) => l.replace(/^[\-•*]+\s*/, "")).filter((l) => KW.test(l)).map((l) => mk(l, l.replace(KW, "")));
+      // sem "Ação:" — cada linha numerada ou com marcador vira uma demanda (você corrige e a plataforma aprende)
+      if (!demands.length) demands = lines.filter((l) => LIST.test(l) && !/^\s*[-•*]?\s*(decis|决定|决策)/i.test(l.replace(LIST, ""))).map((l) => mk(l, l.replace(LIST, "")));
+      const decisions = lines.filter((l) => /^\s*[-•*]?\s*(\d+[.)]\s*)?(decis|决定|决策)/i.test(l)).map((l) => l.replace(/^[\s\-•*]+/, ""));
+      return { summary: lines.filter((l) => !LIST.test(l)).join(" ").slice(0, 400) || t("{n} pontos registrados na ata.", { n: demands.length }), decisions, demands, engine: "heuristica",
+        hint: demands.length ? "" : "EXTRACT_HINT" };
     }
     const items = db.items.slice(-120).map((it) => ({ id: it.id, title: it.title }));
-    const prompt = `Reunião: ${m.title} em ${m.date} — participantes: ${m.participants || ""}\nAta / anotações:\n${text}\n\n`
+    const examples = this.similarExtractions(db, text).map((x) => ({ ata: x.text.slice(0, 1200), demandas_corretas: x.demands }));
+    const prompt = `Reunião: ${m.title} em ${m.date} — participantes: ${(m.attendees || []).join(", ") || m.participants || ""}\nAta / anotações:\n${text}\n\n`
       + `Itens já existentes na lista de governança:\n${JSON.stringify(items)}\n\n`
+      + `Regras de extração definidas pelo usuário (siga com prioridade):\n${db.settings.extraction_rules || "(nenhuma)"}\n\n`
+      + `Extrações corrigidas pelo usuário em atas parecidas (aprenda o que ele considera uma demanda e como ele escreve o título):\n${JSON.stringify(examples)}\n\n`
       + "Resuma a reunião, liste as decisões e extraia cada demanda/ação nova ou atualização (com responsável e prazo "
-      + "quando citados). Se a demanda se refere a um item existente, informe o ID em related_item.";
+      + "quando citados). Atas costumam ser listas numeradas de pontos curtos: cada ponto que pede uma ação, um alinhamento ou uma resposta é uma demanda; "
+      + "reescreva o título de forma clara e acionável. Se a demanda se refere a um item existente, informe o ID em related_item.";
     try {
       return { ...(await this.call(prompt, this.EXTRACT_SCHEMA, "medium")), engine: this.model };
     } catch (e) {
@@ -498,10 +509,12 @@ critério da organização e siga-os quando aplicáveis.`; },
   // ---------------------------------------------------------------- summaries
   async narrative(summary) {
     const k = summary.kpis;
-    const basic = t("NARRATIVE_BASIC", { ...k, alerts: summary.alerts.length });
+    const pp = summary.project_progress || [];
+    const basic = t("NARRATIVE_BASIC", { ...k, alerts: summary.alerts.length })
+      + (pp.length ? "\n" + t("Progresso registrado em {n} projetos: {list}.", { n: pp.length, list: pp.map((p) => `${p.id} ${p.name} (${p.updates.length})`).join("; ") }) : "");
     if (!this.enabled()) return basic;
     const prompt = `Escreva os DESTAQUES deste summary de governança (${summary.type}) em até 8 bullets curtos, em ${I18N.aiLanguage()}: `
-      + "o que mudou, o que exige atenção da diretoria, riscos, decisões e próximos passos. Use Hoshin Kanri "
+      + "o que mudou (inclua os progressos registrados nos projetos e itens, e o que saiu das reuniões), o que exige atenção da diretoria, riscos, decisões e próximos passos. Use Hoshin Kanri "
       + "para conectar com os objetivos estratégicos. Dados:\n" + JSON.stringify(summary).slice(0, 80000);
     try { return await this.call(prompt, null, "low", 4000); }
     catch (e) { return `${basic}\n(${t("Destaques da IA indisponíveis:")} ${e.message})`; }

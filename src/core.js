@@ -11,6 +11,17 @@ const todayISO = () => localISO().slice(0, 10);
 const addDays = (iso, n) => { const d = new Date(iso.slice(0, 10) + "T12:00:00"); d.setDate(d.getDate() + n); return localISO(d).slice(0, 10); };
 const daysSince = (iso) => (iso ? Math.floor((new Date(todayISO() + "T12:00:00") - new Date(iso.slice(0, 10) + "T12:00:00")) / 864e5) : 0);
 
+/** "Ana, Carlos e Wang" -> ["Ana", "Carlos", "Wang"]. */
+const splitNames = (txt) => [...new Set(String(txt || "").split(/[,;\n、，/]|\s+e\s+|\s+and\s+|\s+和\s+/i).map((x) => x.trim()).filter((x) => x.length > 1 && x.length <= 40))];
+/** Acrescenta ao cadastro de pessoas os nomes que ainda não existem (cargo "Outro", ajustável depois). */
+function syncPeopleList(people, names) {
+  const norm = (x) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const known = new Set(people.map((p) => norm(p.name)));
+  const out = [...people];
+  for (const n of names || []) if (n && !known.has(norm(n))) { out.push({ name: n, role: "Outro", dept: "", auto: true }); known.add(norm(n)); }
+  return out;
+}
+
 class ApiError extends Error {}
 
 function emptyDb() {
@@ -40,6 +51,9 @@ function defaultSettings() {
       people_roles: ["Diretor", "Sr Manager", "Gerente", "Coordenador", "Outro"],
     },
     meeting_rules: "",
+    assist_rules: "",
+    extraction_rules: "",
+    assist_auto: false,
     work_hours: { start: "08:00", end: "18:00" },
     people: [],
     risk_guidelines: "",
@@ -119,6 +133,15 @@ const Core = {
     if (!db.settings.migrated_quality) { if (!db.settings.lists.impact_types.includes("Qualidade")) db.settings.lists.impact_types.push("Qualidade"); db.settings.migrated_quality = true; }
     if (!db.settings.migrated_company) { if (!db.settings.lists.meeting_levels.includes("Companhia")) db.settings.lists.meeting_levels.unshift("Companhia"); db.settings.migrated_company = true; }
     for (const it of db.items) { it.item_actions ??= []; it.sub_seq ??= 0; }
+    for (const p of db.projects) p.updates ??= [];
+    db.assist_examples ??= [];
+    db.extraction_examples ??= [];
+    // participantes digitados em texto viram participantes (e pessoas cadastradas) — uma vez só
+    if (!db.settings.migrated_people_auto) {
+      for (const m of db.meetings) if (!(m.attendees || []).length && m.participants) m.attendees = splitNames(m.participants);
+      db.settings.people = syncPeopleList(db.settings.people || [], db.meetings.flatMap((m) => m.attendees || []));
+      db.settings.migrated_people_auto = true;
+    }
   },
   /** % de conclusão do projeto = itens do projeto finalizados / total. */
   projectPct(p) {
@@ -184,6 +207,7 @@ const Core = {
     } else if (col === "meetings") {
       rec.date ||= todayISO();
       rec.status ||= "Realizada";
+      if (!rec.participants && rec.attendees?.length) rec.participants = rec.attendees.join(", ");
     } else if (col === "items") {
       rec.status ??= "Aberto";
     }
@@ -339,8 +363,13 @@ const Core = {
         pct: this.projectPct(p), activities_pct: this.activitiesPct(p),
         open_actions: (p.actions || []).filter((a) => a.status !== "Concluída").length, last_monitored: p.last_monitored })),
       risks: openR.map((r) => ({ id: r.id, title: this.loc(r, "title"), mode: r.mode, probability: r.probability, impact: r.impact, status: r.status })),
-      meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title_msg ? t(m.title_msg[0], m.title_msg[1]) : this.loc(m, "title"), date: m.date, status: m.status, decisions: m.decisions || [], items: m.links?.items || [] })),
+      meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title_msg ? t(m.title_msg[0], m.title_msg[1]) : this.loc(m, "title"), date: m.date, status: m.status, decisions: m.decisions || [], items: m.links?.items || [], outcomes: m.allocation?.results || [] })),
       report_items: open.filter((i) => i.report).map(brief),
+      project_progress: db.projects.map((p) => ({ id: p.id, name: this.loc(p, "name"), main: p.main, pct: this.projectPct(p),
+        updates: (p.updates || []).filter((u) => inr(u.date)).map((u) => ({ date: u.date, text: u.text })) })).filter((p) => p.updates.length)
+        .sort((a, b) => (b.main - a.main) || b.updates.length - a.updates.length),
+      item_progress: db.items.map((i) => ({ id: i.id, title: this.loc(i, "title"), status: i.status,
+        updates: (i.history || []).filter((h) => h.kind === "progress" && inr(h.date)).map((h) => ({ date: h.date, text: h.text })) })).filter((i) => i.updates.length),
       activity: events.slice(-200).map((ev) => ({ ts: ev.ts, msg: ev.msg, text: ev.text })),
       alerts: this.alerts(),
     };
@@ -408,14 +437,16 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
 <h1>${esc(t(s.type))}</h1><p>${esc(t("Período"))}: ${esc(s.period.start)} – ${esc(s.period.end)} · ${esc(t("gerado"))} ${esc(s.generated_at)}</p>
 <h2>1. ${esc(t("Destaques"))}</h2><div style="white-space:pre-wrap">${esc(text)}</div>
 <h2>2. ${esc(t("Indicadores"))}</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${esc(t(n))}</span>`).join("")}
-<h2>3. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
-<h2>4. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
-<h2>5. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
-<h2>6. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Próx. reunião"])}${rows(s.projects.map((p) => ({ ...p, pct: p.pct == null ? "—" : p.pct + "%" })), ["id", "name", "status", "pct", "open_actions", "next_meeting"])}</table>
-<h2>7. ${esc(t("Riscos"))}</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
-<h2>8. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)} · ${esc(t(m.status || "Realizada"))})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}</p>`).join("") || "<p>—</p>"}
-<h2>9. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
-<h2>10. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
+<h2>3. ${esc(t("Progressos dos projetos"))}</h2>${(s.project_progress || []).map((p) => `<h3>${p.main ? "★ " : ""}${esc(p.id)} · ${esc(p.name)}${p.pct != null ? ` (${p.pct}%)` : ""}</h3><ul>${p.updates.map((u) => `<li>${esc(u.text)}</li>`).join("")}</ul>`).join("") || `<p>${esc(t("Nenhum progresso registrado em projetos no período."))}</p>`}
+<h2>4. ${esc(t("Progresso dos itens da lista geral"))}</h2>${(s.item_progress || []).map((i) => `<p><b>${esc(i.id)} · ${esc(i.title)}</b><br>${i.updates.map((u) => esc(u.text)).join("<br>")}</p>`).join("") || "<p>—</p>"}
+<h2>5. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
+<h2>6. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
+<h2>7. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
+<h2>8. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Próx. reunião"])}${rows(s.projects.map((p) => ({ ...p, pct: p.pct == null ? "—" : p.pct + "%" })), ["id", "name", "status", "pct", "open_actions", "next_meeting"])}</table>
+<h2>9. ${esc(t("Riscos"))}</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
+<h2>10. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)} · ${esc(t(m.status || "Realizada"))})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}${(m.outcomes || []).filter((r) => r.kind !== "ignore").map((r) => `<br>→ ${esc(r.target)} — ${esc(r.title)}`).join("")}</p>`).join("") || "<p>—</p>"}
+<h2>11. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
+<h2>12. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
   },
 
   // ------------------------------------------------------------ reuniões automáticas de projetos principais
@@ -672,7 +703,29 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       lateBy: { items: rows.reduce((a, r) => a + r.items, 0), acts: rows.reduce((a, r) => a + r.acts, 0), adds: rows.reduce((a, r) => a + r.adds, 0) },
       buckets: [["0–25%", bucket(0, 25)], ["25–50%", bucket(25, 50)], ["50–75%", bucket(50, 75)], ["75–100%", bucket(75, 100)], ["Sem itens", rows.filter((r) => r.pct == null).length]],
       rows: rows.sort((a, b) => (b.delayRisk - a.delayRisk) || (b.late - a.late)),
+      totals: this.projectTotals(active),
     };
+  },
+  /** Totais de itens / atividades / progressos dos projetos ativos. */
+  projectTotals(active) {
+    const today = todayISO(), since = addDays(today, -7);
+    const pi = active.flatMap((p) => p.pitems || []), ac = active.flatMap((p) => p.activities || []);
+    const piDone = pi.filter((x) => x.status === "Finalizado").length;
+    return {
+      items: pi.length, itemsDone: piDone, itemsLate: pi.filter((x) => x.due && x.due < today && x.status !== "Finalizado").length,
+      itemsProgress: pi.filter((x) => x.status === "Em andamento").length, itemsPct: pi.length ? Math.round((piDone / pi.length) * 100) : 0,
+      acts: ac.length, actsDone: ac.filter((x) => (+x.progress || 0) >= 100).length, actsAvg: ac.length ? Math.round(ac.reduce((a, x) => a + (+x.progress || 0), 0) / ac.length) : 0,
+      updates7: active.reduce((a, p) => a + (p.updates || []).filter((u) => u.date.slice(0, 10) >= since).length, 0),
+      lastUpdates: active.flatMap((p) => (p.updates || []).map((u) => ({ ...u, pid: p.id, pname: p.name }))).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8),
+    };
+  },
+  /** Registro de progresso do projeto (vai para o summary diário em "Progressos dos projetos"). */
+  addProjectUpdate(p, text, source = "manual", ref = "", quiet = false) {
+    if (!text?.trim()) return;
+    (p.updates ??= []).push({ date: nowISO(), text: text.trim(), source, ref });
+    p.last_monitored = todayISO();
+    this.touch(p);
+    if (!quiet) this.log("projects.progress", p.id, "{id}: progresso registrado — {note}", { id: p.id, note: text.trim().slice(0, 140) });
   },
   periodRange(period, ref = todayISO()) {
     if (period === "today") return [ref, ref];
@@ -821,6 +874,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
   // ------------------------------------------------------------ roteador local
   async api(path, method = "GET", body = {}) {
     const res = await this.route(path.split("?")[0].replace(/^\/+|\/+$/g, "").split("/"), method, body || {});
+    // nomes novos nos participantes entram sozinhos no cadastro de pessoas
+    if (method !== "GET" && Array.isArray(body?.attendees) && /^(meetings|mandatory)/.test(path)) this.db.settings.people = syncPeopleList(this.db.settings.people || [], body.attendees);
     if (method !== "GET" || res?._dirty) await this.save();
     if (res && res._dirty) delete res._dirty;
     if (method !== "GET" && !path.startsWith("translate")) this.queueTranslation();
@@ -836,7 +891,7 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       for (const p of db.projects) dirty = (await this.syncSchedules(p)) || dirty;
       return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons"].map((k) => [k, db[k]])), events: db.events.slice(-60),
         alerts: this.alerts(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
-        summaries: db.summaries.slice(-30), today: todayISO() };
+        summaries: db.summaries.slice(-30), today: todayISO(), assist_stats: this.assistStats(), extraction_count: (db.extraction_examples || []).length };
     }
     if (head === "settings" && method === "PATCH") {
       for (const [k, v] of Object.entries(body)) {
@@ -939,6 +994,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       Object.assign(rec, data);
       if (note) (rec.history ??= []).push({ date: nowISO(), text: note });  // texto do usuário: não traduzido
       if (col === "projects") rec.last_monitored = todayISO();
+      if (col === "projects" && note) this.addProjectUpdate(rec, note, "manual", "", true);
+      if (col === "meetings" && Array.isArray(data.attendees)) rec.participants = data.attendees.join(", ");
       this.touch(rec);
       if (note) this.log(`${col}.updated`, rid, "{id} atualizado: {note}", { id: rid, note });
       else if (!silent) this.log(`${col}.updated`, rid, "{id} atualizado", { id: rid });
@@ -1025,7 +1082,13 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
         entry = list.find((x) => x.id === body.entry.id);
         if (!entry) throw new ApiError(t("{id} não encontrado", { id: body.entry.id }));
         const wasDone = entry.status === "Finalizado";
+        const before = `${entry.progress_desc || ""}|${entry.progress ?? ""}|${entry.notes || ""}`;
         Object.assign(entry, body.entry, { updated_at: nowISO() });
+        if (col === "projects" && ["pitems", "activities"].includes(body.list) && before !== `${entry.progress_desc || ""}|${entry.progress ?? ""}|${entry.notes || ""}`) {
+          const label = entry.title || [entry.item, entry.subitem].filter(Boolean).join(" · ");
+          const txt = entry.progress_desc || entry.notes || "";
+          this.addProjectUpdate(rec, `${label}${body.list === "activities" ? ` (${+entry.progress || 0}%)` : ""}${txt ? ": " + txt : ""}`, body.list, entry.id, true);
+        }
         if (body.list === "pitems" && entry.status === "Finalizado" && !wasDone) {
           entry.done_at = todayISO();
           this.log("projects.item_done", rid, "Item {sub} de {id} finalizado — projeto {pct}% concluído", { sub: entry.id, id: rid, pct: this.projectPct(rec) });
@@ -1116,6 +1179,7 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       const out = await AI.extractMeeting(db, rec);
       rec.extraction = out;
       if (out.decisions?.length) rec.decisions = out.decisions;
+      rec.allocation = out.demands?.length ? await AI.capture(db, "", { meeting: rec, demands: out.demands }) : null;
       this.touch(rec);
       return rec;
     }

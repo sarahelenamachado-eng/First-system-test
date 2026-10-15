@@ -250,6 +250,20 @@ details.more { margin: 8px 0; } details.more > summary { cursor: pointer; color:
 .dept-in { width: 110px; padding: 4px 6px; }
 .people-box > summary { cursor: pointer; }
 .people-box[open] > summary { margin-bottom: 8px; }
+/* assistente */
+.assist-card { border-top: 3px solid var(--brand); }
+.props-t td { vertical-align: top; }
+.props-t select, .props-t .tg-in { width: 100%; margin-bottom: 4px; }
+.props-t textarea { width: 100%; min-height: 44px; }
+.tabs.mini { margin: 0 0 10px; } .tabs.mini a { padding: 6px 12px; font-size: .92rem; }
+.att-input { width: 100%; }
+.att-chips, .slots { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; align-items: center; }
+button.chip { background: #fff; color: #333; border: 1px solid var(--line); border-radius: 14px; padding: 3px 10px; font-size: .85rem; font-weight: 500; }
+button.chip:hover { border-color: var(--brand); color: var(--brand); filter: none; }
+button.chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.small-sel { padding: 3px 6px; font-size: .88rem; }
+.prog-box { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.prog-box ul { margin: 6px 0 0; }
 </style>
 </head>
 <body data-density="normal">
@@ -1154,7 +1168,64 @@ Object.assign(D, {
   "Ata anexada": ["Minutes attached", "纪要已上传"], "Reunião realizada": ["Meeting held", "会议已召开"], "Quanto tempo durou? (min)": ["How long did it take? (min)", "实际用时？（分钟）"],
   "Ata (opcional)": ["Minutes (optional)", "纪要（可选）"], "Confirmar": ["Confirm", "确认"], "Reunião confirmada": ["Meeting confirmed", "会议已确认"],
   "Companhia": ["Company", "公司级"], "Controle de atas": ["Minutes control", "纪要管理"], "Duração real (min)": ["Actual duration (min)", "实际时长（分钟）"],
-  "Pauta, projeto e outros participantes": ["Agenda, project and other participants", "议程、项目和其他参会人"]
+  "Pauta, projeto e outros participantes": ["Agenda, project and other participants", "议程、项目和其他参会人"]  ,
+  "Novo item na lista geral": ["New item in the general list", "总清单新增事项"], "Progresso em item existente": ["Progress on existing item", "现有事项进展"],
+  "Progresso em projeto": ["Project progress", "项目进展"], "Enviar para Entradas (triagem)": ["Send to Inputs (triage)", "发送到输入（分诊）"],
+  "Registrar reunião realizada": ["Record meeting held", "记录已召开会议"], "Ignorar": ["Ignore", "忽略"],
+  "Como você decidiu num caso parecido: «{ex}»": ["As you decided in a similar case: «{ex}»", "与您在类似情况下的决定相同：«{ex}»"],
+  "Cita {id}": ["Mentions {id}", "提到 {id}"], "Parecido com o item {id}": ["Similar to item {id}", "与事项 {id} 相似"], "Parecido com o projeto {id}": ["Similar to project {id}", "与项目 {id} 相似"],
+  "Parece uma reunião (horário/duração citados)": ["Looks like a meeting (time/duration mentioned)", "看起来是会议（提到了时间/时长）"],
+  "Assunto novo: vira item na lista geral": ["New topic: becomes an item in the general list", "新议题：加入总清单"],
+  "Primeiro horário livre do dia, dentro do expediente e das suas regras.": ["First free slot of the day, within working hours and your rules.", "当天第一个空闲时段，符合工作时间和您的规则。"],
+  "Assistente": ["Assistant", "助手"], "Proposta do assistente": ["Assistant proposal", "助手建议"],
+  "confira o destino de cada ponto; suas correções ensinam a IA.": ["check where each point goes; your corrections teach the AI.", "请确认每一点的去向；您的修改会教会 AI。"],
+  "Onde registrar": ["Where to record", "记录位置"], "Ponto": ["Point", "要点"], "Responsável / participantes": ["Owner / participants", "负责人 / 参会人"], "Prazo / data": ["Due / date", "期限 / 日期"], "Por quê": ["Why", "原因"],
+  "Buscar ID ou nome…": ["Search ID or name…", "搜索编号或名称…"], "Aplicar": ["Apply", "应用"],
+  "Escolha o projeto ou item de destino na linha {n}.": ["Choose the target project or item on line {n}.", "请在第 {n} 行选择目标项目或事项。"],
+  "Assistente — o que aconteceu?": ["Assistant — what happened?", "助手 — 发生了什么？"],
+  "ASSIST_HINT": ["Write freely what happened today (one point per line): project progress, meetings, requests. The assistant proposes where to record each point; you confirm or correct, and it learns your criteria.", "自由写下今天发生的事（每行一点）：项目进展、会议、请求。助手会建议每一点记录到哪里；您确认或修改，它会学习您的标准。", "Escreva livremente o que aconteceu hoje (um ponto por linha): progresso de projetos, reuniões, pedidos. O assistente propõe onde registrar cada ponto; você confirma ou corrige, e ele aprende o seu critério."],
+  "ASSIST_PLACEHOLDER": ["E.g.:\nMid voltage: cables installed, test on Friday\nGPS stock meeting 14h 45min with Carlos and Wang\nHQ asked for the Xushui parts inspection report", "例如：\n中压：电缆已安装，周五测试\nGPS 库存会议 14点 45分钟，Carlos、Wang 参加\nHQ 要求提供徐水零件检验报告", "Ex.:\nMid voltage: cabos instalados, teste na sexta\nReunião GPS stock 14h 45min com Carlos e Wang\nHQ pediu o relatório de inspeção das peças de Xushui"],
+  "Analisar e propor registros": ["Analyze and propose records", "分析并建议记录"], "Descartar": ["Discard", "放弃"],
+  "Ensinar o assistente": ["Teach the assistant", "教导助手"], "acerto de {pct}% nas últimas {n} propostas": ["{pct}% right in the last {n} proposals", "最近 {n} 条建议准确率 {pct}%"],
+  "A IA acertou {ok} de {n} propostas recentes (você não precisou corrigir).": ["The AI got {ok} of {n} recent proposals right (no correction needed).", "最近 {n} 条建议中 AI 答对 {ok} 条（无需修改）。"],
+  "Ainda sem histórico: confirme ou corrija as primeiras propostas para a IA aprender o seu critério.": ["No history yet: confirm or correct the first proposals so the AI learns your criteria.", "暂无历史：请确认或修改最初的建议，让 AI 学习您的标准。"],
+  "Já dá para deixar o assistente aplicar sozinho.": ["You can now let the assistant apply on its own.", "现在可以让助手自动应用了。"],
+  "Regras para alocar (ex.: tudo de Xushui vai para o projeto PROJ002; dúvidas sem ação, ignorar)": ["Allocation rules (e.g.: everything about Xushui goes to project PROJ002; questions without action, ignore)", "分配规则（例如：所有徐水相关内容记入项目 PROJ002；没有行动的问题忽略）"],
+  "Aplicar automaticamente, sem revisar (quando todos os destinos estiverem definidos)": ["Apply automatically, without review (when every target is defined)", "自动应用，无需审核（所有目标都已确定时）"],
+  "Escreva o que aconteceu.": ["Write what happened.", "请写下发生了什么。"],
+  "Registrado automaticamente: {list}": ["Recorded automatically: {list}", "已自动记录：{list}"], "Registrado: {list}": ["Recorded: {list}", "已记录：{list}"],
+  "Anotações": ["Notes", "笔记"], "Ensinar a IA": ["Teach the AI", "教导 AI"], "Salvar e extrair demandas": ["Save and extract demands", "保存并提取需求"], "Outros anexos": ["Other attachments", "其他附件"],
+  "TEACH_EXTRACT_HINT": ["Write how the AI should have read these minutes: one demand per line, the way you would write it. The AI uses this correction (and the rules) for the next minutes.", "写下 AI 应该如何解读这份纪要：每行一个需求，按您的写法。AI 会在后续纪要中使用这个修改（以及规则）。", "Escreva como a IA deveria ter lido esta ata: uma demanda por linha, do jeito que você escreveria. A IA usa esta correção (e as regras) nas próximas atas."],
+  "Demandas corretas desta reunião (uma por linha)": ["Correct demands from this meeting (one per line)", "本次会议的正确需求（每行一个）"],
+  "Regras de extração (valem para todas as atas)": ["Extraction rules (apply to all minutes)", "提取规则（适用于所有纪要）"],
+  "TEACH_EXTRACT_PLACEHOLDER": ["E.g.: questions in the minutes are demands to answer; points about Xushui go to the PTDC project; ignore attendance lists.", "例如：纪要中的问题是需要回答的需求；徐水相关要点记入 PTDC 项目；忽略签到名单。", "Ex.: perguntas na ata são demandas a responder; pontos sobre Xushui vão para o projeto PTDC; ignorar lista de presença."],
+  "Salvar e ensinar a IA": ["Save and teach the AI", "保存并教导 AI"], "{n} atas já ensinadas": ["{n} minutes taught so far", "已教导 {n} 份纪要"],
+  "Obrigado! A IA vai usar esta correção nas próximas atas.": ["Thanks! The AI will use this correction in the next minutes.", "谢谢！AI 会在后续纪要中使用这个修改。"],
+  "Use a aba Ensinar a IA para dizer quais são os pontos desta ata.": ["Use the Teach the AI tab to say which points these minutes have.", "请在“教导 AI”标签中说明这份纪要有哪些要点。"],
+  "Extrair demandas novamente": ["Extract demands again", "重新提取需求"], "ignorado": ["ignored", "已忽略"], "Revisar alocação": ["Review allocation", "复核分配"],
+  "Pontos da reunião → lista geral e projetos": ["Meeting points → general list and projects", "会议要点 → 总清单和项目"],
+  "Nenhum horário livre encontrado nas próximas semanas.": ["No free slot found in the coming weeks.", "未来几周没有找到空闲时段。"],
+  "Valem para todas as reuniões (solicitadas, do calendário e obrigatórias).": ["They apply to all meetings (requested, calendar and mandatory).", "适用于所有会议（申请的、日历中的和必开的）。"],
+  "Progresso do projeto": ["Project progress", "项目进展"], "Cada registro aparece no summary diário em \"Progressos dos projetos\".": ["Each entry appears in the daily summary under \"Project progress\".", "每条记录都会出现在每日摘要的“项目进展”中。"],
+  "Ex.: cabos do painel de média tensão instalados; teste marcado para sexta.": ["E.g.: medium voltage panel cables installed; test scheduled for Friday.", "例如：中压柜电缆已安装；测试定于周五。"],
+  "Progresso registrado": ["Progress recorded", "进展已记录"], "Registrar progresso": ["Record progress", "记录进展"], "Nenhum progresso registrado.": ["No progress recorded.", "暂无进展记录。"],
+  "{id}: progresso registrado — {note}": ["{id}: progress recorded — {note}", "{id}：已记录进展 — {note}"],
+  "Reunião {id}: {n} pontos registrados na lista geral e nos projetos": ["Meeting {id}: {n} points recorded in the general list and projects", "会议 {id}：{n} 个要点已记入总清单和项目"],
+  "Extração da reunião {id} corrigida para a IA aprender": ["Extraction of meeting {id} corrected for the AI to learn", "会议 {id} 的提取已修正，供 AI 学习"],
+  "{n} pontos registrados na ata.": ["{n} points recorded in the minutes.", "纪要中记录了 {n} 个要点。"],
+  "Nomes separados por vírgula": ["Names separated by commas", "姓名用逗号分隔"],
+  "PEOPLE_AUTO_HINT": ["People typed as participants are added here automatically. Adjust the role (Director, Sr Manager, Manager…) to filter time by role.", "作为参会人输入的人员会自动加入这里。调整职务（总监、高级经理、经理…）即可按职务筛选时间。", "As pessoas digitadas como participantes entram aqui sozinhas. Ajuste o cargo (Diretor, Sr Manager, Gerente…) para filtrar o tempo por cargo."],
+  "Do total de {n} itens dos projetos, {done} estão completos ({pct}%), {prog} em andamento e {late} atrasados.": ["Of the {n} project items, {done} are complete ({pct}%), {prog} in progress and {late} late.", "项目共 {n} 个事项，{done} 个已完成（{pct}%），{prog} 个进行中，{late} 个延误。"],
+  "Itens dos projetos": ["Project items", "项目事项"], "Itens completos": ["Completed items", "已完成事项"], "Em andamento": ["In progress", "进行中"], "Itens atrasados": ["Late items", "延误事项"],
+  "{n} concluídas · média {pct}%": ["{n} done · avg {pct}%", "{n} 项完成 · 平均 {pct}%"], "Progressos registrados (7 dias)": ["Progress entries (7 days)", "进展记录（7 天）"],
+  "Completos": ["Complete", "已完成"], "Em andamento / abertos (no prazo)": ["In progress / open (on time)", "进行中 / 未开始（按期）"], "Atrasados": ["Late", "延误"], "Últimos progressos": ["Latest progress", "最新进展"],
+  "Solicitações": ["Requests", "会议申请"], "Sugerir horário (IA)": ["Suggest time (AI)", "建议时间（AI）"], "Pauta e projeto": ["Agenda and project", "议程和项目"],
+  "Regras para a IA sugerir horários (valem para todas as reuniões)": ["Rules for the AI to suggest times (apply to all meetings)", "AI 建议时间的规则（适用于所有会议）"],
+  "Requisitadas (em aberto)": ["Requested (open)", "已申请（未完成）"], "Realizadas / encerradas": ["Held / closed", "已召开 / 已结束"],
+  "Nenhuma reunião solicitada realizada ainda.": ["No requested meeting held yet.", "尚无已召开的申请会议。"], "Nenhuma reunião solicitada em aberto.": ["No open requested meetings.", "没有未完成的申请会议。"],
+  "Progressos dos projetos": ["Project progress", "项目进展"], "Progresso dos itens da lista geral": ["General list item progress", "总清单事项进展"],
+  "Nenhum progresso registrado em projetos no período.": ["No project progress recorded in the period.", "本期没有项目进展记录。"],
+  "Progresso registrado em {n} projetos: {list}.": ["Progress recorded in {n} projects: {list}.", "{n} 个项目记录了进展：{list}。"]
 });
 </script>
 <script>
@@ -1528,31 +1599,42 @@ critério da organização e siga-os quando aplicáveis.`; },
     },
   },
 
+  /** Exemplos de extração corrigidos pelo usuário (ata -> demandas), os mais parecidos primeiro. */
+  similarExtractions(db, text, limit = 3) {
+    return (db.extraction_examples || []).map((x) => [this.similarity(text, x.text || ""), x]).sort((a, b) => b[0] - a[0]).slice(0, limit).map(([, x]) => x);
+  },
   async extractMeeting(db, m) {
-    const text = `${m.minutes || ""}\n${m.notes || ""}`;
+    // ata + anotações, sem repetir linhas iguais
+    const seen = new Set();
+    const text = `${m.minutes || ""}\n${m.notes || ""}`.split(/\r?\n/).filter((l) => { const k = l.trim(); if (!k) return true; if (seen.has(k)) return false; seen.add(k); return true; }).join("\n");
     if (!this.enabled()) {
       const KW = /^(a[cç][aã]o|action|to-?do|task|pend[eê]ncia|demanda|tarefa|行动|待办|任务)\s*[:：\-]\s*/i;
-      const demands = [];
-      for (const line of text.split(/\r?\n/)) {
-        const l = line.replace(/^[\s\-•*]+|[\s\-•*]+$/g, "");
-        if (!KW.test(l)) continue;
-        let title = l.replace(KW, "");
-        const OWNER = /\s*(?:resp(?:ons[aá]vel)?|owner|负责人)\s*[:：\-]\s*/i;
+      const LIST = /^\s*(\d{1,2}\s*[.)\-–]|[-•*▪●○■□►])\s*/;
+      const OWNER = /\s*(?:resp(?:ons[aá]vel)?|owner|负责人)\s*[:：\-]\s*/i;
+      const mk = (l, title) => {
         const owner = (l.match(new RegExp(OWNER.source + "([^\\d,;，；]+)", "i")) || [, ""])[1].trim();
         const due = (l.match(/(\d{4}-\d{2}-\d{2})/) || [, ""])[1];
         title = title.replace(new RegExp(OWNER.source + ".*$", "i"), "").trim() || title;
         const rel = this.relatedItems(db, title, 1, 0.4);
-        demands.push({ title: title.slice(0, 120), description: l, owner, due_date: due, area_main: "", related_item: rel[0]?.id || "" });
-      }
-      const decisions = text.split(/\r?\n/).filter((l) => /^\s*[-•*]?\s*(decis|决定|决策)/i.test(l)).map((l) => l.replace(/^[\s\-•*]+/, ""));
-      return { summary: text.slice(0, 400), decisions, demands, engine: "heuristica",
-        hint: "EXTRACT_HINT" };
+        return { title: title.slice(0, 160), description: l.replace(LIST, "").trim(), owner, due_date: due, area_main: "", related_item: rel[0]?.id || "" };
+      };
+      const lines = text.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+      let demands = lines.map((l) => l.replace(/^[\-•*]+\s*/, "")).filter((l) => KW.test(l)).map((l) => mk(l, l.replace(KW, "")));
+      // sem "Ação:" — cada linha numerada ou com marcador vira uma demanda (você corrige e a plataforma aprende)
+      if (!demands.length) demands = lines.filter((l) => LIST.test(l) && !/^\s*[-•*]?\s*(decis|决定|决策)/i.test(l.replace(LIST, ""))).map((l) => mk(l, l.replace(LIST, "")));
+      const decisions = lines.filter((l) => /^\s*[-•*]?\s*(\d+[.)]\s*)?(decis|决定|决策)/i.test(l)).map((l) => l.replace(/^[\s\-•*]+/, ""));
+      return { summary: lines.filter((l) => !LIST.test(l)).join(" ").slice(0, 400) || t("{n} pontos registrados na ata.", { n: demands.length }), decisions, demands, engine: "heuristica",
+        hint: demands.length ? "" : "EXTRACT_HINT" };
     }
     const items = db.items.slice(-120).map((it) => ({ id: it.id, title: it.title }));
-    const prompt = `Reunião: ${m.title} em ${m.date} — participantes: ${m.participants || ""}\nAta / anotações:\n${text}\n\n`
+    const examples = this.similarExtractions(db, text).map((x) => ({ ata: x.text.slice(0, 1200), demandas_corretas: x.demands }));
+    const prompt = `Reunião: ${m.title} em ${m.date} — participantes: ${(m.attendees || []).join(", ") || m.participants || ""}\nAta / anotações:\n${text}\n\n`
       + `Itens já existentes na lista de governança:\n${JSON.stringify(items)}\n\n`
+      + `Regras de extração definidas pelo usuário (siga com prioridade):\n${db.settings.extraction_rules || "(nenhuma)"}\n\n`
+      + `Extrações corrigidas pelo usuário em atas parecidas (aprenda o que ele considera uma demanda e como ele escreve o título):\n${JSON.stringify(examples)}\n\n`
       + "Resuma a reunião, liste as decisões e extraia cada demanda/ação nova ou atualização (com responsável e prazo "
-      + "quando citados). Se a demanda se refere a um item existente, informe o ID em related_item.";
+      + "quando citados). Atas costumam ser listas numeradas de pontos curtos: cada ponto que pede uma ação, um alinhamento ou uma resposta é uma demanda; "
+      + "reescreva o título de forma clara e acionável. Se a demanda se refere a um item existente, informe o ID em related_item.";
     try {
       return { ...(await this.call(prompt, this.EXTRACT_SCHEMA, "medium")), engine: this.model };
     } catch (e) {
@@ -1774,10 +1856,12 @@ critério da organização e siga-os quando aplicáveis.`; },
   // ---------------------------------------------------------------- summaries
   async narrative(summary) {
     const k = summary.kpis;
-    const basic = t("NARRATIVE_BASIC", { ...k, alerts: summary.alerts.length });
+    const pp = summary.project_progress || [];
+    const basic = t("NARRATIVE_BASIC", { ...k, alerts: summary.alerts.length })
+      + (pp.length ? "\n" + t("Progresso registrado em {n} projetos: {list}.", { n: pp.length, list: pp.map((p) => `${p.id} ${p.name} (${p.updates.length})`).join("; ") }) : "");
     if (!this.enabled()) return basic;
     const prompt = `Escreva os DESTAQUES deste summary de governança (${summary.type}) em até 8 bullets curtos, em ${I18N.aiLanguage()}: `
-      + "o que mudou, o que exige atenção da diretoria, riscos, decisões e próximos passos. Use Hoshin Kanri "
+      + "o que mudou (inclua os progressos registrados nos projetos e itens, e o que saiu das reuniões), o que exige atenção da diretoria, riscos, decisões e próximos passos. Use Hoshin Kanri "
       + "para conectar com os objetivos estratégicos. Dados:\n" + JSON.stringify(summary).slice(0, 80000);
     try { return await this.call(prompt, null, "low", 4000); }
     catch (e) { return `${basic}\n(${t("Destaques da IA indisponíveis:")} ${e.message})`; }
@@ -1801,6 +1885,17 @@ const nowISO = () => localISO();
 const todayISO = () => localISO().slice(0, 10);
 const addDays = (iso, n) => { const d = new Date(iso.slice(0, 10) + "T12:00:00"); d.setDate(d.getDate() + n); return localISO(d).slice(0, 10); };
 const daysSince = (iso) => (iso ? Math.floor((new Date(todayISO() + "T12:00:00") - new Date(iso.slice(0, 10) + "T12:00:00")) / 864e5) : 0);
+
+/** "Ana, Carlos e Wang" -> ["Ana", "Carlos", "Wang"]. */
+const splitNames = (txt) => [...new Set(String(txt || "").split(/[,;\n、，/]|\s+e\s+|\s+and\s+|\s+和\s+/i).map((x) => x.trim()).filter((x) => x.length > 1 && x.length <= 40))];
+/** Acrescenta ao cadastro de pessoas os nomes que ainda não existem (cargo "Outro", ajustável depois). */
+function syncPeopleList(people, names) {
+  const norm = (x) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const known = new Set(people.map((p) => norm(p.name)));
+  const out = [...people];
+  for (const n of names || []) if (n && !known.has(norm(n))) { out.push({ name: n, role: "Outro", dept: "", auto: true }); known.add(norm(n)); }
+  return out;
+}
 
 class ApiError extends Error {}
 
@@ -1831,6 +1926,9 @@ function defaultSettings() {
       people_roles: ["Diretor", "Sr Manager", "Gerente", "Coordenador", "Outro"],
     },
     meeting_rules: "",
+    assist_rules: "",
+    extraction_rules: "",
+    assist_auto: false,
     work_hours: { start: "08:00", end: "18:00" },
     people: [],
     risk_guidelines: "",
@@ -1910,6 +2008,15 @@ const Core = {
     if (!db.settings.migrated_quality) { if (!db.settings.lists.impact_types.includes("Qualidade")) db.settings.lists.impact_types.push("Qualidade"); db.settings.migrated_quality = true; }
     if (!db.settings.migrated_company) { if (!db.settings.lists.meeting_levels.includes("Companhia")) db.settings.lists.meeting_levels.unshift("Companhia"); db.settings.migrated_company = true; }
     for (const it of db.items) { it.item_actions ??= []; it.sub_seq ??= 0; }
+    for (const p of db.projects) p.updates ??= [];
+    db.assist_examples ??= [];
+    db.extraction_examples ??= [];
+    // participantes digitados em texto viram participantes (e pessoas cadastradas) — uma vez só
+    if (!db.settings.migrated_people_auto) {
+      for (const m of db.meetings) if (!(m.attendees || []).length && m.participants) m.attendees = splitNames(m.participants);
+      db.settings.people = syncPeopleList(db.settings.people || [], db.meetings.flatMap((m) => m.attendees || []));
+      db.settings.migrated_people_auto = true;
+    }
   },
   /** % de conclusão do projeto = itens do projeto finalizados / total. */
   projectPct(p) {
@@ -1975,6 +2082,7 @@ const Core = {
     } else if (col === "meetings") {
       rec.date ||= todayISO();
       rec.status ||= "Realizada";
+      if (!rec.participants && rec.attendees?.length) rec.participants = rec.attendees.join(", ");
     } else if (col === "items") {
       rec.status ??= "Aberto";
     }
@@ -2130,8 +2238,13 @@ const Core = {
         pct: this.projectPct(p), activities_pct: this.activitiesPct(p),
         open_actions: (p.actions || []).filter((a) => a.status !== "Concluída").length, last_monitored: p.last_monitored })),
       risks: openR.map((r) => ({ id: r.id, title: this.loc(r, "title"), mode: r.mode, probability: r.probability, impact: r.impact, status: r.status })),
-      meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title_msg ? t(m.title_msg[0], m.title_msg[1]) : this.loc(m, "title"), date: m.date, status: m.status, decisions: m.decisions || [], items: m.links?.items || [] })),
+      meetings: db.meetings.filter((m) => inr(m.date)).map((m) => ({ id: m.id, title: m.title_msg ? t(m.title_msg[0], m.title_msg[1]) : this.loc(m, "title"), date: m.date, status: m.status, decisions: m.decisions || [], items: m.links?.items || [], outcomes: m.allocation?.results || [] })),
       report_items: open.filter((i) => i.report).map(brief),
+      project_progress: db.projects.map((p) => ({ id: p.id, name: this.loc(p, "name"), main: p.main, pct: this.projectPct(p),
+        updates: (p.updates || []).filter((u) => inr(u.date)).map((u) => ({ date: u.date, text: u.text })) })).filter((p) => p.updates.length)
+        .sort((a, b) => (b.main - a.main) || b.updates.length - a.updates.length),
+      item_progress: db.items.map((i) => ({ id: i.id, title: this.loc(i, "title"), status: i.status,
+        updates: (i.history || []).filter((h) => h.kind === "progress" && inr(h.date)).map((h) => ({ date: h.date, text: h.text })) })).filter((i) => i.updates.length),
       activity: events.slice(-200).map((ev) => ({ ts: ev.ts, msg: ev.msg, text: ev.text })),
       alerts: this.alerts(),
     };
@@ -2199,14 +2312,16 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
 <h1>${esc(t(s.type))}</h1><p>${esc(t("Período"))}: ${esc(s.period.start)} – ${esc(s.period.end)} · ${esc(t("gerado"))} ${esc(s.generated_at)}</p>
 <h2>1. ${esc(t("Destaques"))}</h2><div style="white-space:pre-wrap">${esc(text)}</div>
 <h2>2. ${esc(t("Indicadores"))}</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${esc(t(n))}</span>`).join("")}
-<h2>3. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
-<h2>4. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
-<h2>5. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
-<h2>6. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Próx. reunião"])}${rows(s.projects.map((p) => ({ ...p, pct: p.pct == null ? "—" : p.pct + "%" })), ["id", "name", "status", "pct", "open_actions", "next_meeting"])}</table>
-<h2>7. ${esc(t("Riscos"))}</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
-<h2>8. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)} · ${esc(t(m.status || "Realizada"))})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}</p>`).join("") || "<p>—</p>"}
-<h2>9. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
-<h2>10. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
+<h2>3. ${esc(t("Progressos dos projetos"))}</h2>${(s.project_progress || []).map((p) => `<h3>${p.main ? "★ " : ""}${esc(p.id)} · ${esc(p.name)}${p.pct != null ? ` (${p.pct}%)` : ""}</h3><ul>${p.updates.map((u) => `<li>${esc(u.text)}</li>`).join("")}</ul>`).join("") || `<p>${esc(t("Nenhum progresso registrado em projetos no período."))}</p>`}
+<h2>4. ${esc(t("Progresso dos itens da lista geral"))}</h2>${(s.item_progress || []).map((i) => `<p><b>${esc(i.id)} · ${esc(i.title)}</b><br>${i.updates.map((u) => esc(u.text)).join("<br>")}</p>`).join("") || "<p>—</p>"}
+<h2>5. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
+<h2>6. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
+<h2>7. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
+<h2>8. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Próx. reunião"])}${rows(s.projects.map((p) => ({ ...p, pct: p.pct == null ? "—" : p.pct + "%" })), ["id", "name", "status", "pct", "open_actions", "next_meeting"])}</table>
+<h2>9. ${esc(t("Riscos"))}</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
+<h2>10. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)} · ${esc(t(m.status || "Realizada"))})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}${(m.outcomes || []).filter((r) => r.kind !== "ignore").map((r) => `<br>→ ${esc(r.target)} — ${esc(r.title)}`).join("")}</p>`).join("") || "<p>—</p>"}
+<h2>11. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
+<h2>12. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
   },
 
   // ------------------------------------------------------------ reuniões automáticas de projetos principais
@@ -2463,7 +2578,29 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       lateBy: { items: rows.reduce((a, r) => a + r.items, 0), acts: rows.reduce((a, r) => a + r.acts, 0), adds: rows.reduce((a, r) => a + r.adds, 0) },
       buckets: [["0–25%", bucket(0, 25)], ["25–50%", bucket(25, 50)], ["50–75%", bucket(50, 75)], ["75–100%", bucket(75, 100)], ["Sem itens", rows.filter((r) => r.pct == null).length]],
       rows: rows.sort((a, b) => (b.delayRisk - a.delayRisk) || (b.late - a.late)),
+      totals: this.projectTotals(active),
     };
+  },
+  /** Totais de itens / atividades / progressos dos projetos ativos. */
+  projectTotals(active) {
+    const today = todayISO(), since = addDays(today, -7);
+    const pi = active.flatMap((p) => p.pitems || []), ac = active.flatMap((p) => p.activities || []);
+    const piDone = pi.filter((x) => x.status === "Finalizado").length;
+    return {
+      items: pi.length, itemsDone: piDone, itemsLate: pi.filter((x) => x.due && x.due < today && x.status !== "Finalizado").length,
+      itemsProgress: pi.filter((x) => x.status === "Em andamento").length, itemsPct: pi.length ? Math.round((piDone / pi.length) * 100) : 0,
+      acts: ac.length, actsDone: ac.filter((x) => (+x.progress || 0) >= 100).length, actsAvg: ac.length ? Math.round(ac.reduce((a, x) => a + (+x.progress || 0), 0) / ac.length) : 0,
+      updates7: active.reduce((a, p) => a + (p.updates || []).filter((u) => u.date.slice(0, 10) >= since).length, 0),
+      lastUpdates: active.flatMap((p) => (p.updates || []).map((u) => ({ ...u, pid: p.id, pname: p.name }))).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8),
+    };
+  },
+  /** Registro de progresso do projeto (vai para o summary diário em "Progressos dos projetos"). */
+  addProjectUpdate(p, text, source = "manual", ref = "", quiet = false) {
+    if (!text?.trim()) return;
+    (p.updates ??= []).push({ date: nowISO(), text: text.trim(), source, ref });
+    p.last_monitored = todayISO();
+    this.touch(p);
+    if (!quiet) this.log("projects.progress", p.id, "{id}: progresso registrado — {note}", { id: p.id, note: text.trim().slice(0, 140) });
   },
   periodRange(period, ref = todayISO()) {
     if (period === "today") return [ref, ref];
@@ -2612,6 +2749,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
   // ------------------------------------------------------------ roteador local
   async api(path, method = "GET", body = {}) {
     const res = await this.route(path.split("?")[0].replace(/^\/+|\/+$/g, "").split("/"), method, body || {});
+    // nomes novos nos participantes entram sozinhos no cadastro de pessoas
+    if (method !== "GET" && Array.isArray(body?.attendees) && /^(meetings|mandatory)/.test(path)) this.db.settings.people = syncPeopleList(this.db.settings.people || [], body.attendees);
     if (method !== "GET" || res?._dirty) await this.save();
     if (res && res._dirty) delete res._dirty;
     if (method !== "GET" && !path.startsWith("translate")) this.queueTranslation();
@@ -2627,7 +2766,7 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       for (const p of db.projects) dirty = (await this.syncSchedules(p)) || dirty;
       return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons"].map((k) => [k, db[k]])), events: db.events.slice(-60),
         alerts: this.alerts(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
-        summaries: db.summaries.slice(-30), today: todayISO() };
+        summaries: db.summaries.slice(-30), today: todayISO(), assist_stats: this.assistStats(), extraction_count: (db.extraction_examples || []).length };
     }
     if (head === "settings" && method === "PATCH") {
       for (const [k, v] of Object.entries(body)) {
@@ -2730,6 +2869,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       Object.assign(rec, data);
       if (note) (rec.history ??= []).push({ date: nowISO(), text: note });  // texto do usuário: não traduzido
       if (col === "projects") rec.last_monitored = todayISO();
+      if (col === "projects" && note) this.addProjectUpdate(rec, note, "manual", "", true);
+      if (col === "meetings" && Array.isArray(data.attendees)) rec.participants = data.attendees.join(", ");
       this.touch(rec);
       if (note) this.log(`${col}.updated`, rid, "{id} atualizado: {note}", { id: rid, note });
       else if (!silent) this.log(`${col}.updated`, rid, "{id} atualizado", { id: rid });
@@ -2816,7 +2957,13 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
         entry = list.find((x) => x.id === body.entry.id);
         if (!entry) throw new ApiError(t("{id} não encontrado", { id: body.entry.id }));
         const wasDone = entry.status === "Finalizado";
+        const before = `${entry.progress_desc || ""}|${entry.progress ?? ""}|${entry.notes || ""}`;
         Object.assign(entry, body.entry, { updated_at: nowISO() });
+        if (col === "projects" && ["pitems", "activities"].includes(body.list) && before !== `${entry.progress_desc || ""}|${entry.progress ?? ""}|${entry.notes || ""}`) {
+          const label = entry.title || [entry.item, entry.subitem].filter(Boolean).join(" · ");
+          const txt = entry.progress_desc || entry.notes || "";
+          this.addProjectUpdate(rec, `${label}${body.list === "activities" ? ` (${+entry.progress || 0}%)` : ""}${txt ? ": " + txt : ""}`, body.list, entry.id, true);
+        }
         if (body.list === "pitems" && entry.status === "Finalizado" && !wasDone) {
           entry.done_at = todayISO();
           this.log("projects.item_done", rid, "Item {sub} de {id} finalizado — projeto {pct}% concluído", { sub: entry.id, id: rid, pct: this.projectPct(rec) });
@@ -2907,6 +3054,7 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       const out = await AI.extractMeeting(db, rec);
       rec.extraction = out;
       if (out.decisions?.length) rec.decisions = out.decisions;
+      rec.allocation = out.demands?.length ? await AI.capture(db, "", { meeting: rec, demands: out.demands }) : null;
       this.touch(rec);
       return rec;
     }
@@ -3242,7 +3390,11 @@ function dashProjectsView() {
   const d = Core.dashProjects();
   const lateOnly = d.rows.filter((r) => r.late > 0 && !r.delayRisk).length;
   const attention = d.rows.filter((r) => r.late > 0 || r.delayRisk);
-  return `<div class="hero">${t("De {total} projetos ativos, {late} têm itens atrasados e {risk} representam risco em relação ao atraso.", { total: d.total, late: d.withLate, risk: d.delayRisk })}</div>
+  const T = d.totals;
+  return `<div class="hero">${t("De {total} projetos ativos, {late} têm itens atrasados e {risk} representam risco em relação ao atraso.", { total: d.total, late: d.withLate, risk: d.delayRisk })}
+    <br>${t("Do total de {n} itens dos projetos, {done} estão completos ({pct}%), {prog} em andamento e {late} atrasados.", { n: T.items, done: T.itemsDone, pct: T.itemsPct, prog: T.itemsProgress, late: T.itemsLate })}</div>
+  <div class="kpis">${statTile(T.items, t("Itens dos projetos"))}${statTile(T.itemsDone, t("Itens completos"), T.itemsPct + "%")}${statTile(T.itemsProgress, t("Em andamento"))}${statTile(T.itemsLate, t("Itens atrasados"))}
+    ${statTile(T.acts, t("Atividades (planilha)"), t("{n} concluídas · média {pct}%", { n: T.actsDone, pct: T.actsAvg }))}${statTile(T.updates7, t("Progressos registrados (7 dias)"))}</div>
   <div class="kpis">${statTile(d.total, t("Projetos ativos"), t("{n} concluídos", { n: d.done }))}${statTile(d.withLate, t("Com itens atrasados"))}${statTile(d.delayRisk, t("Risco de atraso"), "", "")}
     ${statTile(d.onTrack, t("No prazo"))}${statTile(d.avgPct == null ? "—" : d.avgPct + "%", t("Conclusão média"))}${statTile(d.stale, t("Sem atualização recente"))}${statTile(d.main, t("Projetos principais"))}</div>
   <div class="grid">
@@ -3253,6 +3405,11 @@ function dashProjectsView() {
       <p class="muted small">${t("DELAY_RISK_RULE")}</p></div>
     <div class="card"><h2>${t("Itens atrasados por tipo")}</h2>${hbars([[t("Itens do projeto"), d.lateBy.items], [t("Atividades (planilha)"), d.lateBy.acts], [t("Itens adicionais do projeto"), d.lateBy.adds]])}</div>
     <div class="card"><h2>${t("Distribuição da conclusão")}</h2>${columns(d.buckets.map(([l, v]) => [t(l), v]))}</div>
+    <div class="card"><h2>${t("Itens dos projetos")}</h2>${stackBar([
+      { label: t("Completos"), value: T.itemsDone, color: STATUS_COLORS.good },
+      { label: t("Em andamento / abertos (no prazo)"), value: T.items - T.itemsDone - T.itemsLate, color: STATUS_COLORS.idle },
+      { label: t("Atrasados"), value: T.itemsLate, color: STATUS_COLORS.bad }])}</div>
+    <div class="card"><h2>${t("Últimos progressos")}</h2><ul class="tl">${T.lastUpdates.map((u) => `<li><span class="muted">${fmt(u.date)}</span> <a href="#projetos/${u.pid}">${esc(u.pid)}</a> ${esc(u.text)}</li>`).join("") || `<li class="muted">${t("Nenhum progresso registrado.")}</li>`}</ul></div>
   </div>
   <div class="grid" style="margin-top:var(--gap)">
     <div class="card" style="overflow:auto"><h2>${t("Projetos que exigem atenção")}</h2><table>${th(["ID", "Projeto", "Atrasados", "Atraso mais antigo", "% concluído", "Risco aberto ligado", "Situação"])}
@@ -3343,14 +3500,25 @@ function meetingFields(pre = {}) {
     <div>${L("Tipo")}<select id="mq-type">${opts(LIST("meeting_types"), pre.mtype || "Reporte")}</select></div>
     <div>${L("Agendamento")}<select id="mq-sched">${opts(["Pré-agendada", "Urgente"], pre.scheduling || "Pré-agendada")}</select></div></div></details>`;
 }
+/** Participantes: digite os nomes (separados por vírgula) ou clique nas pessoas já conhecidas. Nomes novos entram no cadastro sozinhos. */
 function attendeesPicker(selected, prefix) {
-  const people = S.db.settings.people || [];
-  if (!people.length) return `<p class="muted small">${t("Nenhuma pessoa cadastrada.")} <a href="#reunioes/tempo">${t("Cadastrar pessoas (gerentes, sr managers, diretor)")}</a></p>`;
-  const roles = [...new Set(people.map((p) => p.role || "Outro"))];
-  return `<div class="att-picker">${roles.map((r) => `<div class="att-group"><b>${esc(t(r))}</b>${people.filter((p) => (p.role || "Outro") === r).map((p) =>
-    `<label><input type="checkbox" class="${prefix}att" value="${esc(p.name)}" ${selected.includes(p.name) ? "checked" : ""}> ${esc(p.name)}</label>`).join("")}</div>`).join("")}</div>`;
+  const people = S.db.settings.people || [], count = {};
+  for (const m of S.db.meetings) for (const n of m.attendees || []) count[n] = (count[n] || 0) + 1;
+  const known = people.slice().sort((a, b) => (count[b.name] || 0) - (count[a.name] || 0)).slice(0, 24);
+  return `<input id="${prefix}attn" class="att-input" value="${esc(selected.join(", "))}" placeholder="${esc(t("Nomes separados por vírgula"))}" oninput="syncAttChips('${prefix}')">
+    ${known.length ? `<div class="att-chips" id="${prefix}chips">${known.map((p) => `<button type="button" class="chip ${selected.includes(p.name) ? "on" : ""}" data-name="${esc(p.name)}" title="${esc(t(p.role || "Outro"))}" onclick="toggleAtt('${prefix}', this)">${esc(p.name)}</button>`).join("")}</div>` : ""}`;
 }
-const readAttendees = (prefix) => [...document.querySelectorAll(`.${prefix}att`)].filter((c) => c.checked).map((c) => c.value);
+function toggleAtt(prefix, btn) {
+  const inp = $(`#${prefix}attn`), n = btn.dataset.name;
+  let names = splitNames(inp.value);
+  names = names.includes(n) ? names.filter((x) => x !== n) : [...names, n];
+  inp.value = names.join(", "); syncAttChips(prefix);
+}
+function syncAttChips(prefix) {
+  const names = splitNames($(`#${prefix}attn`).value);
+  document.querySelectorAll(`#${prefix}chips .chip`).forEach((c) => c.classList.toggle("on", names.includes(c.dataset.name)));
+}
+const readAttendees = (prefix) => splitNames($(`#${prefix}attn`)?.value || "");
 const readMeetingFields = (prefix = "mq-") => ({ level: $(`#${prefix}level`).value, mtype: $(`#${prefix}type`).value, scheduling: $(`#${prefix}sched`).value,
   duration: Math.max(5, +$(`#${prefix}dur`).value || 60), attendees: readAttendees(prefix), resp_dept: $(`#${prefix}rdept`).value.trim() });
 function quickMeeting(date) {
@@ -3358,18 +3526,17 @@ function quickMeeting(date) {
     <div class="row"><div>${L("Título")}<input id="mq-title"></div><div>${L("Horário")}<input type="time" id="mq-time" value="${esc(S.db.settings.work_hours.start)}"></div></div>
     ${meetingFields()}
     <div class="row"><div>${L("Reunião obrigatória")}<select id="mq-mand"><option value="">—</option>${S.db.mandatory.map((m) => `<option value="${m.id}">${esc(m.title)}</option>`).join("")}</select></div>
-      <div>${L("Projeto")}<select id="mq-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}">${p.id} · ${esc(p.name)}</option>`).join("")}</select></div>
-      <div>${L("Outros participantes (texto)")}<input id="mq-part"></div></div>
+      <div>${L("Projeto")}<select id="mq-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}">${p.id} · ${esc(p.name)}</option>`).join("")}</select></div></div>
     <details class="more"><summary>${t("Pauta / objetivo")}</summary><textarea id="mq-agenda" style="min-height:60px"></textarea></details>
     <div class="actions"><button onclick="busy(this, ()=>saveQuickMeeting('${date}'))">${t("Salvar")}</button><button class="ghost" onclick="closeModal()">${t("Cancelar")}</button></div>`);
   $("#mq-mand").onchange = () => { const m = S.db.mandatory.find((x) => x.id === $("#mq-mand").value); if (m) { $("#mq-title").value ||= m.title; $("#mq-level").value = m.level || "Gerencial"; $("#mq-type").value = m.mtype || "Reporte"; if (m.preferred_time) $("#mq-time").value = m.preferred_time;
-    $("#mq-dur").value = m.duration || 60; document.querySelectorAll(".mq-att").forEach((c) => { c.checked = (m.attendees || []).includes(c.value); }); } };
+    $("#mq-dur").value = m.duration || 60; $("#mq-attn").value = (m.attendees || []).join(", "); syncAttChips("mq-"); } };
 }
 async function saveQuickMeeting(date) {
   const title = $("#mq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
   await api("meetings", "POST", { title, date, time: $("#mq-time").value, ...readMeetingFields(), mandatory_id: $("#mq-mand").value,
-    project_id: $("#mq-proj").value, participants: $("#mq-part").value, agenda: $("#mq-agenda").value, status: date < S.today ? "Pendente" : "Agendada" });
+    project_id: $("#mq-proj").value, agenda: $("#mq-agenda").value, status: date < S.today ? "Pendente" : "Agendada" });
   closeModal(); toast(t("Reunião agendada")); await refresh();
 }
 async function suggestMonth(month) {
@@ -3399,21 +3566,18 @@ function mandatoryView() {
   <div class="grid">
   <div class="card"><h2>${t(MAND_EDIT ? "Editar reunião obrigatória" : "Nova reunião obrigatória")}</h2>
     ${L("Título")}<input id="mo-title" value="${esc(e.title)}">
-    <div class="row"><div>${L("Frequência")}<select id="mo-freq">${opts(FREQUENCIES, e.frequency || "Mensal")}</select></div><div>${L("Vezes por mês (personalizada)")}<input type="number" id="mo-times" min="1" value="${esc(e.times_per_month || 1)}"></div>
-      <div>${L("Horário preferido")}<input type="time" id="mo-time" value="${esc(e.preferred_time || "")}"></div><div>${L("Duração (min)")}<input type="number" id="mo-dur" value="${esc(e.duration || 60)}"></div></div>
+    <div class="row"><div>${L("Frequência")}<select id="mo-freq">${opts(FREQUENCIES, e.frequency || "Mensal")}</select></div>
+      <div>${L("Horário preferido")}<input type="time" id="mo-time" value="${esc(e.preferred_time || "")}"></div><div>${L("Duração (min)")}<input type="number" id="mo-dur" value="${esc(e.duration || 60)}"></div>
+      <div>${L("Nível")}<select id="mo-level">${opts(LIST("meeting_levels"), e.level || "Gerencial")}</select></div></div>
     ${L("Dias preferidos")}<div class="checks inline">${[1, 2, 3, 4, 5].map((d) => `<label><input type="checkbox" class="mo-day" value="${d}" ${(e.preferred_days || []).map(Number).includes(d) ? "checked" : ""}> ${t(dayNames[d])}</label>`).join("")}</div>
-    <div class="row"><div>${L("Nível")}<select id="mo-level">${opts(LIST("meeting_levels"), e.level || "Gerencial")}</select></div><div>${L("Tipo")}<select id="mo-type">${opts(LIST("meeting_types"), e.mtype || "Reporte")}</select></div>
-      <div>${L("Participantes")}<input id="mo-part" value="${esc(e.participants)}"></div></div>
-    ${L("Participantes cadastrados")}${attendeesPicker(e.attendees || [], "mo-")}
-    ${L("Requisito / observações")}<textarea id="mo-notes" style="min-height:50px">${esc(e.notes)}</textarea>
-    <div class="checks"><label><input type="checkbox" id="mo-active" ${e.active === false ? "" : "checked"}> ${t("Ativa")}</label></div>
+    ${L("Participantes")}${attendeesPicker(e.attendees || splitNames(e.participants), "mo-")}
+    <details class="more"><summary>${t("Mais detalhes")}</summary>
+      <div class="row"><div>${L("Vezes por mês (personalizada)")}<input type="number" id="mo-times" min="1" value="${esc(e.times_per_month || 1)}"></div><div>${L("Tipo")}<select id="mo-type">${opts(LIST("meeting_types"), e.mtype || "Reporte")}</select></div></div>
+      ${L("Requisito / observações")}<textarea id="mo-notes" style="min-height:50px">${esc(e.notes)}</textarea>
+      <div class="checks"><label><input type="checkbox" id="mo-active" ${e.active === false ? "" : "checked"}> ${t("Ativa")}</label></div></details>
     <div class="actions"><button onclick="busy(this, saveMandatory)">${t("Salvar")}</button>${MAND_EDIT ? `<button class="ghost" onclick="MAND_EDIT=null;render()">${t("Cancelar")}</button>` : ""}</div></div>
-  <div class="card"><h2>${t("Regras para a IA sugerir horários")}</h2>
-    <p class="muted">${t("Escreva observações e regras: dias e horários a evitar, disponibilidade da diretoria, feriados, intervalo entre reuniões…")}</p>
-    <div class="row"><div>${L("Início do expediente")}<input type="time" id="mr-start" value="${esc(S.db.settings.work_hours.start)}"></div><div>${L("Fim do expediente")}<input type="time" id="mr-end" value="${esc(S.db.settings.work_hours.end)}"></div></div>
-    ${L("Regras e observações")}<textarea id="mr-rules" style="min-height:140px" placeholder="${esc(t("MEETING_RULES_PLACEHOLDER"))}">${esc(S.db.settings.meeting_rules)}</textarea>
-    <div class="actions"><button class="ghost" onclick="busy(this, saveMeetingRules)">${t("Salvar regras")}</button>
-      <button onclick="busy(this, async()=>{await saveMeetingRules(); await suggestMonth('${month}');})">${t("Sugerir datas do mês atual (IA)")}</button></div>
+  <div class="card"><h2>${t("Regras para a IA sugerir horários")}</h2>${meetingRulesBox()}
+    <div class="actions"><button onclick="busy(this, async()=>{await saveMeetingRules(); await suggestMonth('${month}');})">${t("Sugerir datas do mês atual (IA)")}</button></div>
     ${sugs.length ? `<h3>${t("Sugestões para o mês")}</h3><table>${th(["Reunião", "Data", "Horário", "Motivo", ""])}${sugs.map((x) => `<tr><td>${esc(x.title)}</td><td>${esc(x.date)} (${t(dayNames[Core.weekday(x.date)])})</td><td>${esc(x.time)}</td><td class="muted">${esc(t(x.reason))}</td>
       <td class="nowrap"><button class="small" onclick="busy(this, ()=>acceptSuggestions(['${x.id}']))">✓</button><button class="small ghost danger" onclick="busy(this, ()=>discardSuggestion('${x.id}'))">×</button></td></tr>`).join("")}</table>
       <div class="actions"><button onclick="busy(this, ()=>acceptSuggestions(${JSON.stringify(sugs.map((x) => x.id)).replace(/"/g, "'")}))">${t("Aceitar todas as sugestões")}</button><a class="btn ghost" href="#reunioes/calendario">${t("Ver no calendário")}</a></div>` : ""}
@@ -3424,7 +3588,7 @@ async function saveMandatory() {
   if (!title) throw new Error(t("Informe o título."));
   const data = { title, frequency: $("#mo-freq").value, times_per_month: +$("#mo-times").value || 1, preferred_time: $("#mo-time").value, duration: +$("#mo-dur").value || 60,
     preferred_days: [...document.querySelectorAll(".mo-day")].filter((c) => c.checked).map((c) => +c.value), level: $("#mo-level").value, mtype: $("#mo-type").value,
-    participants: $("#mo-part").value, attendees: readAttendees("mo-"), notes: $("#mo-notes").value, active: $("#mo-active").checked };
+    participants: readAttendees("mo-").join(", "), attendees: readAttendees("mo-"), notes: $("#mo-notes").value, active: $("#mo-active").checked };
   if (MAND_EDIT) await api(`mandatory/${MAND_EDIT}`, "PATCH", data); else await api("mandatory", "POST", data);
   MAND_EDIT = null; toast(t("Salvo")); await refresh();
 }
@@ -3550,7 +3714,7 @@ function confirmDone(id) {
 }
 async function saveConfirmDone(id) {
   const att = readAttendees("cd-");
-  await api(`meetings/${id}/status`, "POST", { status: "Realizada", date: byId("meetings", id).date, actual_duration: Math.max(1, +$("#cd-dur").value || 60), ...(document.querySelector(".cd-att") ? { attendees: att } : {}) });
+  await api(`meetings/${id}/status`, "POST", { status: "Realizada", date: byId("meetings", id).date, actual_duration: Math.max(1, +$("#cd-dur").value || 60), attendees: att });
   const f = $("#cd-file")?.files?.[0];
   if (f) await api(`meetings/${id}/upload`, "POST", { file: f, kind: "ata" });
   closeModal(); toast(t("Reunião confirmada")); await refresh();
@@ -3558,8 +3722,10 @@ async function saveConfirmDone(id) {
 function peopleCard(inner = false) {
   const people = S.db.settings.people || [];
   return `<div class="${inner ? "" : "card"}">${inner ? "" : `<h2>${t("Pessoas (participantes)")}</h2>`}
-    <p class="muted">${t("Cadastre gerentes, sr managers e o diretor para marcar quem participou de cada reunião e medir o tempo gasto.")}</p>
-    <table>${th(["Nome", "Cargo", "Departamento", ""])}${people.map((p, k) => `<tr><td>${esc(p.name)}</td><td>${esc(t(p.role || "Outro"))}</td><td>${esc(p.dept)}</td>
+    <p class="muted">${t("PEOPLE_AUTO_HINT")}</p>
+    <table>${th(["Nome", "Cargo", "Departamento", ""])}${people.map((p, k) => `<tr><td>${esc(p.name)}</td>
+      <td><select class="small-sel" onchange="busy(this, ()=>setPerson(${k}, {role: this.value}))">${opts(LIST("people_roles"), p.role || "Outro")}</select></td>
+      <td><input class="dept-in" value="${esc(p.dept)}" list="pp-depts" onchange="busy(this, ()=>setPerson(${k}, {dept: this.value.trim()}))"></td>
       <td><button class="small ghost danger" onclick="busy(this, ()=>removePerson(${k}))">×</button></td></tr>`).join("") || `<tr><td colspan=4 class="muted">${t("Nenhuma pessoa cadastrada.")}</td></tr>`}</table>
     <div class="row"><div>${L("Nome")}<input id="pp-name"></div><div>${L("Cargo")}<select id="pp-role">${opts(LIST("people_roles"), "Gerente")}</select></div><div>${L("Departamento")}<input id="pp-dept" list="pp-depts"></div></div>
     <datalist id="pp-depts">${(S.db.settings.areas || []).map((a) => `<option>${esc(a)}</option>`).join("")}</datalist>
@@ -3573,10 +3739,454 @@ async function addPerson() {
   people.push({ name, role: $("#pp-role").value, dept: $("#pp-dept").value.trim() });
   await api("settings", "PATCH", { people }); await refresh();
 }
+async function setPerson(k, patch) {
+  const people = [...(S.db.settings.people || [])];
+  people[k] = { ...people[k], ...patch, auto: false };
+  await api("settings", "PATCH", { people }); await refresh();
+}
 async function removePerson(k) {
   if (!confirm(t("Excluir este registro?"))) return;
   const people = [...(S.db.settings.people || [])]; people.splice(k, 1);
   await api("settings", "PATCH", { people }); await refresh();
+}
+</script>
+<script>
+/* Assistente de IA.
+ *
+ * - Registro rápido: o usuário escreve o que aconteceu (vários projetos e reuniões no mesmo dia) e o
+ *   assistente propõe onde registrar cada ponto: progresso em projeto, progresso em item, item novo na
+ *   lista geral, entrada para triagem ou reunião realizada.
+ * - Alocação das demandas extraídas das atas na lista geral, com o mesmo mecanismo.
+ * - Sugestão de horário para qualquer reunião (regras do usuário + agenda livre).
+ * - Aprendizado: cada proposta confirmada ou corrigida vira exemplo (db.assist_examples). Os casos parecidos
+ *   orientam a heurística offline e o Claude. Com o tempo a taxa de acerto sobe e dá para deixar a IA aplicar sozinha.
+ */
+const ASSIST_KINDS = ["item_new", "item_progress", "project_progress", "input", "meeting", "ignore"];
+const ASSIST_KIND_LABEL = {
+  item_new: "Novo item na lista geral", item_progress: "Progresso em item existente", project_progress: "Progresso em projeto",
+  input: "Enviar para Entradas (triagem)", meeting: "Registrar reunião realizada", ignore: "Ignorar",
+};
+const needsTarget = (k) => k === "item_progress" || k === "project_progress";
+
+// ------------------------------------------------------------------ IA / heurística
+Object.assign(AI, {
+  LIST_MARK: /^\s*(\d{1,2}\s*[.)\-–]|[-•*▪●○■□►])\s*/,
+  /** Texto livre -> pontos (um por linha; texto corrido longo é dividido em frases). */
+  segments(text) {
+    let lines = String(text || "").split(/\r?\n/).map((l) => l.replace(this.LIST_MARK, "").trim()).filter(Boolean);
+    if (lines.length === 1 && lines[0].length > 160) lines = lines[0].split(/(?<=[.!?;。！？；])\s+/).map((x) => x.trim()).filter(Boolean);
+    return lines.map((l) => ({ text: l, title: l.slice(0, 160) }));
+  },
+  parseDue(s) {
+    const iso = (s.match(/(\d{4}-\d{2}-\d{2})/) || [])[1];
+    if (iso) return iso;
+    const m = s.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+    if (!m) return "";
+    const y = m[3] ? (m[3].length === 2 ? "20" + m[3] : m[3]) : todayISO().slice(0, 4);
+    return `${y}-${pad(+m[2])}-${pad(+m[1])}`;
+  },
+  parseOwner(s) {
+    return ((s.match(/(?:resp(?:ons[aá]vel)?|owner|负责人)\s*[:：\-]\s*([^\d,;，；()]+)/i) || [])[1] || "").trim();
+  },
+  similarAssist(db, text, limit = 6) {
+    return (db.assist_examples || []).map((x) => [this.similarity(text, x.text || ""), x]).filter(([s]) => s > 0.2)
+      .sort((a, b) => b[0] - a[0]).slice(0, limit);
+  },
+  activeProjects: (db) => db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)),
+
+  heuristicProposal(db, seg, ctx) {
+    const text = seg.text, valid = (k, id) => (k === "project_progress" ? !!Core.find("projects", id) : k === "item_progress" ? !!Core.find("items", id) : true);
+    const clean = (x) => x.replace(/\s*(?:resp(?:ons[aá]vel)?|owner|负责人)\s*[:：\-].*$/i, "").replace(/\s*\b\d{4}-\d{2}-\d{2}\b|\s*\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, "").trim() || x;
+    const base = { text, title: clean(seg.title || text), owner: seg.owner || this.parseOwner(text), due_date: seg.due_date || this.parseDue(text), area_main: seg.area_main || "",
+      date: todayISO(), time: "", duration: 60 };
+    const out = (kind, target, reason) => ({ ...base, kind, target: target || "", reason });
+    // 1) caso parecido que o usuário já decidiu
+    const [best] = this.similarAssist(db, text, 1);
+    if (best && best[0] >= 0.55 && valid(best[1].final.kind, best[1].final.target))
+      return out(best[1].final.kind, best[1].final.target, ["Como você decidiu num caso parecido: «{ex}»", { ex: best[1].text.slice(0, 60) }]);
+    // 2) ID citado
+    const pid = (text.match(/\bPROJ\d{3,}\b/i) || [])[0]?.toUpperCase(), gid = (text.match(/\bGOV\d{3,}\b/i) || [])[0]?.toUpperCase();
+    if (pid && Core.find("projects", pid)) return out("project_progress", pid, ["Cita {id}", { id: pid }]);
+    if (gid && Core.find("items", gid)) return out("item_progress", gid, ["Cita {id}", { id: gid }]);
+    // 3) item ligado pela extração / parecido com item ou projeto existente
+    if (seg.related_item && Core.find("items", seg.related_item)) return out("item_progress", seg.related_item, ["Parecido com o item {id}", { id: seg.related_item }]);
+    const proj = this.activeProjects(db).map((p) => [Math.max(this.similarity(text, p.name || ""), this.similarity(text, `${p.name || ""} ${p.description || ""}`) * 0.8), p])
+      .sort((a, b) => b[0] - a[0])[0];
+    const item = this.relatedItems(db, text, 1, 0.5)[0];
+    if (proj && proj[0] >= 0.5 && (!item || proj[0] >= item.score)) return out("project_progress", proj[1].id, ["Parecido com o projeto {id}", { id: proj[1].id }]);
+    if (item) return out("item_progress", item.id, ["Parecido com o item {id}", { id: item.id }]);
+    // 4) reunião (só no registro livre)
+    if (!ctx.meeting && /reuni[aã]o|meeting|会议|call\b|alinhamento com/i.test(text) && /\d{1,2}\s*(h|:)\s*\d{0,2}|\d+\s*min/i.test(text)) {
+      const p = out("meeting", "", ["Parece uma reunião (horário/duração citados)", {}]);
+      const tm = text.match(/\b(\d{1,2})(?:h|:)(\d{2})?(?!\d|\s*min)/i), dur = text.match(/(\d+)\s*min/i);
+      if (tm) p.time = `${pad(+tm[1])}:${tm[2] || "00"}`;
+      p.duration = dur ? +dur[1] : 60;
+      const who = text.match(/\b(?:com|with)\s+([^.;\d]+)|[与和]([^。；\d]+)/i);
+      if (who) p.owner = splitNames(who[1] || who[2]).join(", ");
+      p.title = text.replace(/\b\d{1,2}(?:h|:)\d{0,2}\b|\d+\s*min\b|\b(?:com|with)\s+[^.;\d]+$/gi, "").replace(/\s{2,}/g, " ").trim() || text;
+      return p;
+    }
+    return out("item_new", "", ["Assunto novo: vira item na lista geral", {}]);
+  },
+
+  get CAPTURE_SCHEMA() {
+    const S = { type: "string" };
+    return {
+      type: "object", additionalProperties: false, required: ["proposals"],
+      properties: { proposals: { type: "array", items: { type: "object", additionalProperties: false,
+        required: ["text", "title", "kind", "target_id", "owner", "due_date", "date", "time", "duration", "area_main", "reason"],
+        properties: { text: S, title: S, kind: { type: "string", enum: ASSIST_KINDS }, target_id: { type: "string", description: "PROJ… ou GOV… quando kind é project_progress / item_progress, senão vazio" },
+          owner: { type: "string", description: "Responsável (ou participantes, para kind=meeting)" }, due_date: { type: "string", description: "AAAA-MM-DD ou vazio" },
+          date: { type: "string", description: "Data da reunião AAAA-MM-DD (kind=meeting)" }, time: { type: "string", description: "HH:MM ou vazio" },
+          duration: { type: "integer", description: "minutos (kind=meeting)" }, area_main: S, reason: { type: "string", description: "Uma frase curta" } } } } },
+    };
+  },
+
+  /** Propostas de registro para texto livre ou para as demandas de uma reunião (ctx.demands). */
+  async capture(db, text, ctx = {}) {
+    const segs = ctx.demands ? ctx.demands.map((d) => ({ text: d.description && d.description !== d.title ? `${d.title} — ${d.description}` : d.title, title: d.title,
+      owner: d.owner, due_date: d.due_date, area_main: d.area_main, related_item: d.related_item })) : this.segments(text);
+    const heur = () => segs.map((s) => this.heuristicProposal(db, s, ctx));
+    const finish = (ps, engine, error) => ({ proposals: ps.map((p) => ({ ...p, ai: { kind: p.kind, target: p.target || "" } })), engine, error });
+    if (!segs.length) return finish([], "heuristica");
+    if (!this.enabled()) return finish(heur(), "heuristica");
+    const J = (x) => JSON.stringify(x);
+    const projects = this.activeProjects(db).map((p) => ({ id: p.id, name: p.name, main: p.main, description: (p.description || "").slice(0, 200) }));
+    const items = db.items.filter((i) => i.status !== "Concluído").slice(-150).map((i) => ({ id: i.id, title: i.title, area: i.area_main, projects: i.links?.projects || [] }));
+    const examples = [...new Map(segs.flatMap((s) => this.similarAssist(db, s.text, 3)).map(([, x]) => [x.date + x.text, x])).values()].slice(0, 12)
+      .map((x) => ({ texto: x.text, ia_sugeriu: x.ai, usuario_decidiu: x.final }));
+    const prompt = `Você é o assistente pessoal de governança do usuário, que participa de muitas reuniões e projetos por dia. Hoje é ${todayISO()}.\n`
+      + (ctx.meeting ? `Demandas extraídas da reunião "${ctx.meeting.title || ""}" (${ctx.meeting.date || ""}). Retorne exatamente uma proposta por demanda, na mesma ordem:\n${J(segs)}\n\n`
+        : `Anotações livres do usuário. Divida em registros, um por assunto, e proponha onde registrar cada um:\n${text}\n\n`)
+      + "Destinos (kind): project_progress = atualização de um projeto existente (target_id = PROJ…); item_progress = andamento de um item existente da lista geral (target_id = GOV…); "
+      + "item_new = assunto novo que deve entrar na lista geral; input = demanda que precisa de triagem completa (avaliar risco, criar projeto…); "
+      + "meeting = o usuário relata uma reunião que aconteceu (preencha date, time, duration, owner = participantes); ignore = sem valor de registro.\n"
+      + "Prefira atualizar o que já existe a criar itens novos. Escreva title claro e acionável.\n\n"
+      + `Projetos ativos:\n${J(projects)}\n\nItens em aberto na lista geral:\n${J(items)}\n\n`
+      + `Regras do usuário para alocar (siga com prioridade):\n${db.settings.assist_rules || "(nenhuma)"}\n\n`
+      + `Decisões anteriores do usuário em casos parecidos (aprenda e repita o critério):\n${J(examples)}`;
+    try {
+      const out = await this.call(prompt, this.CAPTURE_SCHEMA, "medium");
+      const ps = out.proposals.map((p) => {
+        let kind = p.kind, target = (p.target_id || "").toUpperCase();
+        if (kind === "project_progress" && !Core.find("projects", target)) { kind = "item_new"; target = ""; }
+        if (kind === "item_progress" && !Core.find("items", target)) { kind = "item_new"; target = ""; }
+        if (!needsTarget(kind)) target = "";
+        return { text: p.text, title: p.title || p.text, kind, target, owner: p.owner, due_date: /^\d{4}-\d{2}-\d{2}$/.test(p.due_date) ? p.due_date : "",
+          date: /^\d{4}-\d{2}-\d{2}$/.test(p.date) ? p.date : todayISO(), time: /^\d{2}:\d{2}$/.test(p.time) ? p.time : "", duration: +p.duration || 60, area_main: p.area_main, reason: p.reason };
+      });
+      return finish(ps, this.model);
+    } catch (e) {
+      return finish(heur(), "heuristica", e.message);
+    }
+  },
+
+  SLOT_SCHEMA: {
+    type: "object", additionalProperties: false, required: ["options"],
+    properties: { options: { type: "array", items: { type: "object", additionalProperties: false, required: ["date", "time", "reason"],
+      properties: { date: { type: "string", description: "AAAA-MM-DD" }, time: { type: "string", description: "HH:MM" }, reason: { type: "string" } } } } },
+  },
+  /** Sugestão de data/horário para qualquer reunião, pelas regras do usuário e pela agenda livre. */
+  async suggestSlot(db, req) {
+    const base = Core.freeSlots({ from: req.from, duration: +req.duration || 60, count: this.enabled() ? 8 : 3 });
+    if (!this.enabled()) return { options: base, engine: "heuristica" };
+    const from = req.from && req.from > todayISO() ? req.from : todayISO();
+    const busy = db.meetings.filter((m) => m.date && m.date >= from && m.date <= addDays(from, 21) && !["Cancelada", "Não realizada"].includes(m.status))
+      .map((m) => ({ date: m.date, time: m.time || "", duration: +m.duration || 60, title: m.title, attendees: m.attendees || [] }));
+    const prompt = `Sugira 3 opções de data e horário para a reunião abaixo (hoje é ${todayISO()} ${localISO().slice(11, 16)}; nada no passado).\n`
+      + `Reunião: ${J2(req)}\nExpediente: ${db.settings.work_hours.start}–${db.settings.work_hours.end}, segunda a sexta.\n`
+      + `Regras e observações do usuário (valem para todas as reuniões; siga com prioridade):\n${db.settings.meeting_rules || "(nenhuma)"}\n\n`
+      + `Agenda já ocupada (evite conflitos, inclusive dos participantes):\n${J2(busy)}\n\nHorários livres calculados (pode usar ou melhorar):\n${J2(base)}\n\n`
+      + "Em reason, uma frase curta dizendo por que o horário respeita as regras.";
+    try {
+      const out = await this.call(prompt, this.SLOT_SCHEMA, "low");
+      const opts = out.options.filter((o) => /^\d{4}-\d{2}-\d{2}$/.test(o.date) && /^\d{2}:\d{2}$/.test(o.time) && o.date >= todayISO()).slice(0, 3);
+      return { options: opts.length ? opts : base.slice(0, 3), engine: this.model };
+    } catch (e) {
+      return { options: base.slice(0, 3), engine: "heuristica", error: e.message };
+    }
+  },
+});
+const J2 = (x) => JSON.stringify(x);
+
+// ------------------------------------------------------------------ regras de negócio
+Object.assign(Core, {
+  assistStats() {
+    const all = this.db.assist_examples || [], ex = all.slice(-30), ok = ex.filter((x) => x.ok).length;
+    return { n: ex.length, ok, pct: ex.length ? Math.round((ok / ex.length) * 100) : 0, total: all.length };
+  },
+  /** Primeiro horário livre de cada dia útil a partir de `from`, respeitando expediente, almoço e regras simples. */
+  freeSlots({ from = "", duration = 60, count = 3 }) {
+    const db = this.db, today = todayISO();
+    const toMin = (h) => { const [a, b] = (h || "09:00").split(":").map(Number); return a * 60 + (b || 0); };
+    const toHH = (n) => `${pad(Math.floor(n / 60))}:${pad(n % 60)}`;
+    let start = toMin(db.settings.work_hours.start || "08:00"), end = toMin(db.settings.work_hours.end || "18:00");
+    const rules = AI.norm(db.settings.meeting_rules || "");
+    if (/(so|somente|apenas)\s+(a|de|pela)\s+tarde|only (in the )?afternoon|只在下午/.test(rules)) start = Math.max(start, 13 * 60);
+    if (/(so|somente|apenas)\s+(de|pela)\s+manha|only (in the )?morning|只在上午/.test(rules)) end = Math.min(end, 12 * 60);
+    const busy = db.meetings.filter((m) => m.date && m.time && !["Cancelada", "Não realizada"].includes(m.status)).map((m) => [m.date, toMin(m.time), toMin(m.time) + (+m.duration || 60)]);
+    const now = toMin(localISO().slice(11, 16)), out = [];
+    let d = from && from > today ? from : today;
+    for (let i = 0; i < 40 && out.length < count; i++, d = addDays(d, 1)) {
+      if ([0, 6].includes(this.weekday(d))) continue;
+      for (let tm = start; tm + duration <= end; tm += 30) {
+        if (d === today && tm < now + 30) continue;
+        if (tm < 13 * 60 && tm + duration > 12 * 60) continue;  // almoço
+        if (busy.some(([bd, bs, be]) => bd === d && tm < be && tm + duration > bs)) continue;
+        out.push({ date: d, time: toHH(tm), reason: "Primeiro horário livre do dia, dentro do expediente e das suas regras." });
+        break;
+      }
+    }
+    return out;
+  },
+  /** Aplica as propostas confirmadas/corrigidas pelo usuário e guarda cada decisão como exemplo. */
+  async applyProposals(list, ctx = {}) {
+    const db = this.db, m = ctx.meeting_id ? this.find("meetings", ctx.meeting_id) : null, results = [];
+    const origin = m ? m.title || m.id : t("Assistente");
+    for (const p of list) {
+      const text = (p.text || p.title || "").trim(), title = (p.title || p.text || "").trim().slice(0, 200);
+      if (p.ai && !ctx.auto) db.assist_examples.push({ date: nowISO(), text: text.slice(0, 400), ai: p.ai, final: { kind: p.kind, target: p.target || "" },
+        ok: p.ai.kind === p.kind && (p.ai.target || "") === (p.target || "") });
+      if (!title || p.kind === "ignore") { results.push({ kind: "ignore", title }); continue; }
+      if (p.kind === "item_new") {
+        const dup = this.findDuplicates(title)[0];
+        if (dup) { p.kind = "item_progress"; p.target = dup; }
+      }
+      if (p.kind === "project_progress") {
+        const pr = this.find("projects", p.target);
+        if (!pr) throw new ApiError(t("{id} não encontrado", { id: p.target }));
+        this.addProjectUpdate(pr, m ? `${text} (${m.id})` : text, m ? "meeting" : "assistant", m?.id || "");
+        if (m) this.link("meetings", m.id, "projects", pr.id);
+        results.push({ kind: p.kind, target: pr.id, title });
+      } else if (p.kind === "item_progress") {
+        const it = this.find("items", p.target);
+        if (!it) throw new ApiError(t("{id} não encontrado", { id: p.target }));
+        (it.history ??= []).push({ date: nowISO(), text: m ? `${text} (${m.id})` : text, kind: "progress", meeting_id: m?.id || "" });
+        if (it.status === "Concluído") it.status = "Em andamento";
+        this.touch(it);
+        this.log("items.progress", it.id, "{id} atualizado: {note}", { id: it.id, note: text.slice(0, 140) });
+        if (m) this.link("meetings", m.id, "items", it.id);
+        results.push({ kind: p.kind, target: it.id, title });
+      } else if (p.kind === "item_new") {
+        const it = await this.createRecord("items", { title, description: text !== title ? text : "", owner: p.owner || "", due_date: p.due_date || "", area_main: p.area_main || "",
+          source: m ? "Reunião" : "Outro", source_detail: "Pedido pontual", origin, emitted_at: todayISO(), priority: "Média", urgency: "Média", item_actions: [], sub_seq: 0 });
+        if (m) this.link("items", it.id, "meetings", m.id);
+        results.push({ kind: p.kind, target: it.id, title });
+      } else if (p.kind === "input") {
+        const inp = await this.createRecord("inputs", { source: m ? "Reunião" : "Outro", source_detail: "Pedido pontual", title, description: text, origin,
+          meeting_id: m?.id || "", owner: p.owner || "", due_date: p.due_date || "", area_main: p.area_main || "" });
+        if (m) this.link("inputs", inp.id, "meetings", m.id);
+        inp.ai_suggestion = await AI.assessInput(db, inp);  // já chega na triagem com a avaliação da IA
+        inp.status = "Em avaliação";
+        results.push({ kind: p.kind, target: inp.id, title });
+      } else if (p.kind === "meeting") {
+        const att = splitNames(p.owner || "");
+        const mt = await this.createRecord("meetings", { title, date: p.date || todayISO(), time: p.time || "", duration: +p.duration || 60, actual_duration: +p.duration || 60,
+          attendees: att, participants: att.join(", "), status: "Realizada", level: "Gerencial", notes: text !== title ? text : "" });
+        db.settings.people = syncPeopleList(db.settings.people || [], att);
+        results.push({ kind: p.kind, target: mt.id, title });
+      }
+    }
+    db.assist_examples = db.assist_examples.slice(-500);
+    if (m) {
+      m.allocation = { ...(m.allocation || {}), applied: true, applied_at: nowISO(), results };
+      this.touch(m);
+      this.log("meetings.allocated", m.id, "Reunião {id}: {n} pontos registrados na lista geral e nos projetos", { id: m.id, n: results.filter((r) => r.kind !== "ignore").length });
+    }
+    return { results };
+  },
+});
+
+// rotas novas do assistente (o restante continua em Core.route)
+const _coreRoute = Core.route;
+Core.route = async function (parts, method, body) {
+  const db = this.db, [head, rid, action] = parts;
+  if (head === "assist" && method === "POST" && !rid) return AI.capture(db, body.text || "", {});
+  if (head === "assist" && rid === "apply" && method === "POST") return this.applyProposals(body.proposals || [], body.ctx || {});
+  if (head === "meeting_slot" && method === "POST") return AI.suggestSlot(db, body);
+  if (head === "projects" && action === "progress" && method === "POST") {
+    const p = this.find("projects", rid);
+    if (!p) throw new ApiError(t("{id} não encontrado", { id: rid }));
+    this.addProjectUpdate(p, body.text || "", "manual");
+    return p;
+  }
+  if (head === "meetings" && action === "teach_extract" && method === "POST") {
+    const m = this.find("meetings", rid);
+    if (!m) throw new ApiError(t("{id} não encontrado", { id: rid }));
+    const titles = (body.demands || []).map((s) => s.replace(AI.LIST_MARK, "").trim()).filter(Boolean);
+    db.extraction_examples.push({ date: nowISO(), ref: rid, text: `${m.minutes || ""}\n${m.notes || ""}`.slice(0, 3000), demands: titles });
+    db.extraction_examples = db.extraction_examples.slice(-100);
+    if (typeof body.rules === "string") db.settings.extraction_rules = body.rules;
+    const old = m.extraction?.demands || [];
+    const demands = titles.map((tl) => old.find((d) => d.title === tl) || { title: tl, description: tl, owner: AI.parseOwner(tl), due_date: AI.parseDue(tl), area_main: "",
+      related_item: AI.relatedItems(db, tl, 1, 0.45)[0]?.id || "" });
+    m.extraction = { ...(m.extraction || {}), demands, taught: true, hint: "" };
+    if (!m.allocation?.applied) m.allocation = demands.length ? await AI.capture(db, "", { meeting: m, demands }) : null;
+    this.touch(m);
+    this.log("meetings.teach", rid, "Extração da reunião {id} corrigida para a IA aprender", { id: rid });
+    return m;
+  }
+  return _coreRoute.call(this, parts, method, body);
+};
+
+// ------------------------------------------------------------------ interface
+window._PROPS = {};
+const reasonText = (r) => (Array.isArray(r) ? t(r[0], r[1]) : r || "");
+const targetLabel = (kind, id) => { const r = kind === "project_progress" ? byId("projects", id) : byId("items", id); return r ? `${id} · ${kind === "project_progress" ? lc(r, "name") : lc(r, "title")}` : id; };
+function targetLists() {
+  return `<datalist id="dl-projects">${S.db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).map((p) => `<option value="${esc(p.id + " · " + lc(p, "name"))}">`).join("")}</datalist>
+    <datalist id="dl-items">${S.db.items.filter((i) => i.status !== "Concluído").map((i) => `<option value="${esc(i.id + " · " + lc(i, "title"))}">`).join("")}</datalist>`;
+}
+/** Tabela editável de propostas: o usuário confirma ou corrige o destino de cada ponto. */
+function proposalsPanel(key, res, onApply) {
+  window._PROPS[key] = res.proposals;
+  const engine = res.engine === "heuristica" ? t("IA offline (heurística)") : res.engine;
+  return `<div class="props"><p class="muted small">${t("Proposta do assistente")} (${esc(engine)})${res.error ? ` · ${t("Claude falhou:")} ${esc(res.error)}` : ""} — ${t("confira o destino de cada ponto; suas correções ensinam a IA.")}</p>
+    <div style="overflow:auto"><table class="props-t">${th(["Onde registrar", "Ponto", "Responsável / participantes", "Prazo / data", "Por quê"])}
+    ${res.proposals.map((p, k) => `<tr class="${p.kind === "ignore" ? "done" : ""}"><td style="min-width:230px"><select id="${key}-k-${k}" onchange="propKind('${key}', ${k}, this.value)">${ASSIST_KINDS.map((x) => `<option value="${x}" ${x === p.kind ? "selected" : ""}>${esc(t(ASSIST_KIND_LABEL[x]))}</option>`).join("")}</select>
+      <input id="${key}-t-${k}" class="tg-in" list="${p.kind === "project_progress" ? "dl-projects" : "dl-items"}" value="${esc(p.target ? targetLabel(p.kind, p.target) : "")}" placeholder="${esc(t("Buscar ID ou nome…"))}" ${needsTarget(p.kind) ? "" : "hidden"}></td>
+      <td style="min-width:240px"><textarea id="${key}-ti-${k}" rows="2">${esc(p.title)}</textarea>${p.text && p.text !== p.title ? `<div class="muted small">${esc(p.text)}</div>` : ""}</td>
+      <td><input id="${key}-o-${k}" value="${esc(p.owner)}" style="width:140px"></td>
+      <td><input type="date" id="${key}-d-${k}" value="${esc(p.kind === "meeting" ? p.date : p.due_date)}">${p.kind === "meeting" ? `<input type="time" id="${key}-h-${k}" value="${esc(p.time)}"> <input type="number" id="${key}-m-${k}" value="${esc(p.duration || 60)}" style="width:70px"> min` : ""}</td>
+      <td class="muted small">${esc(reasonText(p.reason))}</td></tr>`).join("")}</table></div>${targetLists()}
+    <div class="actions"><button onclick="busy(this, ()=>${onApply})">${t("Aplicar")}</button></div></div>`;
+}
+function propKind(key, k, kind) {
+  const inp = $(`#${key}-t-${k}`);
+  inp.hidden = !needsTarget(kind);
+  inp.setAttribute("list", kind === "project_progress" ? "dl-projects" : "dl-items");
+  if (needsTarget(kind)) { inp.value = ""; inp.focus(); }
+}
+function readProposals(key) {
+  return (window._PROPS[key] || []).map((p, k) => {
+    const kind = $(`#${key}-k-${k}`).value, target = needsTarget(kind) ? ($(`#${key}-t-${k}`).value.match(/^\s*([A-Z]+\d+)/i) || [])[1]?.toUpperCase() || "" : "";
+    if (needsTarget(kind) && !target) throw new Error(t("Escolha o projeto ou item de destino na linha {n}.", { n: k + 1 }));
+    const d = $(`#${key}-d-${k}`).value;
+    return { ...p, kind, target, title: $(`#${key}-ti-${k}`).value.trim(), owner: $(`#${key}-o-${k}`).value.trim(),
+      ...(kind === "meeting" ? { date: d || S.today, time: $(`#${key}-h-${k}`)?.value || p.time, duration: +($(`#${key}-m-${k}`)?.value || p.duration || 60) } : { due_date: d }) };
+  });
+}
+const resultsText = (rs) => rs.filter((r) => r.kind !== "ignore").map((r) => `${t(ASSIST_KIND_LABEL[r.kind])}: ${r.target}`).join(" · ");
+
+// registro rápido (Painel)
+let ASSIST = null;
+function assistantCard() {
+  return `<div class="card assist-card" style="margin-bottom:var(--gap)"><h2>✨ ${t("Assistente — o que aconteceu?")}</h2>
+    <p class="muted">${t("ASSIST_HINT")}</p>
+    <textarea id="as-text" style="min-height:90px" placeholder="${esc(t("ASSIST_PLACEHOLDER"))}">${esc(window._asDraft || "")}</textarea>
+    <div class="actions"><button onclick="busy(this, runAssistant)">${t("Analisar e propor registros")}</button>${ASSIST ? `<button class="ghost" onclick="ASSIST=null;render()">${t("Descartar")}</button>` : ""}</div>
+    ${ASSIST ? proposalsPanel("as", ASSIST, "applyAssistant()") : ""}
+    ${teachAssistBox()}</div>`;
+}
+function teachAssistBox() {
+  const st = S.assist_stats || { n: 0, ok: 0, pct: 0 }, s = S.db.settings;
+  return `<details class="more"><summary>🎓 ${t("Ensinar o assistente")}${st.n ? ` · ${t("acerto de {pct}% nas últimas {n} propostas", st)}` : ""}</summary>
+    <p class="muted small">${st.n ? t("A IA acertou {ok} de {n} propostas recentes (você não precisou corrigir).", st) : t("Ainda sem histórico: confirme ou corrija as primeiras propostas para a IA aprender o seu critério.")}
+      ${st.n >= 20 && st.pct >= 90 ? " " + t("Já dá para deixar o assistente aplicar sozinho.") : ""}</p>
+    ${L("Regras para alocar (ex.: tudo de Xushui vai para o projeto PROJ002; dúvidas sem ação, ignorar)")}<textarea id="as-rules" style="min-height:60px">${esc(s.assist_rules)}</textarea>
+    <div class="checks"><label><input type="checkbox" id="as-auto" ${s.assist_auto ? "checked" : ""}> ${t("Aplicar automaticamente, sem revisar (quando todos os destinos estiverem definidos)")}</label></div>
+    <div class="actions"><button class="small ghost" onclick="busy(this, async()=>{await api('settings','PATCH',{assist_rules:$('#as-rules').value,assist_auto:$('#as-auto').checked}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></details>`;
+}
+async function runAssistant() {
+  const text = $("#as-text").value.trim();
+  if (!text) throw new Error(t("Escreva o que aconteceu."));
+  window._asDraft = text;
+  const res = await api("assist", "POST", { text });
+  if (S.db.settings.assist_auto && res.proposals.length && res.proposals.every((p) => !needsTarget(p.kind) || p.target)) {
+    const r = await api("assist/apply", "POST", { proposals: res.proposals, ctx: { auto: true } });
+    window._asDraft = ""; ASSIST = null;
+    toast(t("Registrado automaticamente: {list}", { list: resultsText(r.results) }));
+  } else ASSIST = res;
+  await refresh();
+}
+async function applyAssistant() {
+  const r = await api("assist/apply", "POST", { proposals: readProposals("as") });
+  ASSIST = null; window._asDraft = "";
+  toast(t("Registrado: {list}", { list: resultsText(r.results) || "—" }));
+  await refresh();
+}
+
+// reunião: ata / anotações / ensinar a IA + alocação na lista geral
+function meetingNotesCard(m) {
+  const tabsH = [["ata", t("Ata")], ["notas", t("Anotações")], ["ensinar", "🎓 " + t("Ensinar a IA")]];
+  const demands = (m.extraction?.demands || []).map((d) => d.title).join("\n");
+  return `<div class="card"><div class="tabs mini">${tabsH.map(([k, l], i) => `<a href="#" class="${i ? "" : "on"}" onclick="mdTab(this,'${k}');return false">${l}</a>`).join("")}</div>
+    <div class="md-pane" data-k="ata"><textarea id="md-min" style="min-height:200px" placeholder="${esc(t("MINUTES_HINT"))}">${esc(m.minutes)}</textarea>${trPreview(m, "minutes")}
+      <div class="actions"><button onclick="busy(this, ()=>saveMinutes('${m.id}'))">${t("Salvar e extrair demandas")}</button></div>
+      ${L("Arquivo da ata")}<div class="toolbar">${(m.minutes_files || []).map((f) => fileLink(f, f.split("/").pop())).join(" · ") || `<span class="muted">—</span>`}
+        <label class="btn small ghost file-btn">${t("Anexar ata")}<input type="file" hidden multiple onchange="attachMinutes('${m.id}', this)"></label></div>
+      ${L("Outros anexos")}<div class="toolbar"><input type="file" id="md-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('meetings/${m.id}/upload', $('#md-file')); toast(t('Anexado')); await refresh();})">${t("Upload")}</button></div></div>
+    <div class="md-pane" data-k="notas" hidden><textarea id="md-notes" style="min-height:200px">${esc(m.notes)}</textarea>
+      <div class="actions"><button onclick="busy(this, ()=>saveMinutes('${m.id}'))">${t("Salvar e extrair demandas")}</button></div></div>
+    <div class="md-pane" data-k="ensinar" hidden><p class="muted">${t("TEACH_EXTRACT_HINT")}</p>
+      ${L("Demandas corretas desta reunião (uma por linha)")}<textarea id="te-dem" style="min-height:150px">${esc(demands)}</textarea>
+      ${L("Regras de extração (valem para todas as atas)")}<textarea id="te-rules" style="min-height:70px" placeholder="${esc(t("TEACH_EXTRACT_PLACEHOLDER"))}">${esc(S.db.settings.extraction_rules)}</textarea>
+      <div class="actions"><button onclick="busy(this, ()=>teachExtraction('${m.id}'))">${t("Salvar e ensinar a IA")}</button>
+        <span class="muted small">${t("{n} atas já ensinadas", { n: S.extraction_count || 0 })}</span></div></div>
+    ${L("Vínculos")}<div>${linksHtml(m)}</div>
+    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((m.history || []).slice().reverse())}</ul></div>`;
+}
+function mdTab(a, k) {
+  const card = a.closest(".card");
+  card.querySelectorAll(".tabs.mini a").forEach((x) => x.classList.toggle("on", x === a));
+  card.querySelectorAll(".md-pane").forEach((p) => { p.hidden = p.dataset.k !== k; });
+}
+async function saveMinutes(id) {
+  await api(`meetings/${id}`, "PATCH", { minutes: $("#md-min").value, notes: $("#md-notes").value, _silent: true });
+  await api(`meetings/${id}/extract`, "POST"); await refresh();
+}
+async function teachExtraction(id) {
+  await api(`meetings/${id}/teach_extract`, "POST", { demands: $("#te-dem").value.split(/\r?\n/), rules: $("#te-rules").value });
+  toast(t("Obrigado! A IA vai usar esta correção nas próximas atas.")); await refresh();
+}
+function extractionCard(m) {
+  const ex = m.extraction;
+  return `<div class="card"><h2>${t("Extração")} (${esc(tv(ex?.engine) || "—")})</h2>${ex?.hint ? `<p class="muted">${esc(t(ex.hint))}</p>` : ""}
+    ${ex?.summary ? `<div class="ai-box">${esc(ex.summary)}</div>` : ""}
+    <h3>${t("Decisões")}</h3><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || '<li class="muted">—</li>'}</ul></div>`;
+}
+function allocationCard(m) {
+  const al = m.allocation;
+  let body;
+  if (!al?.proposals?.length) body = `<p class="muted">${t("Nenhuma demanda extraída.")} ${t("Use a aba Ensinar a IA para dizer quais são os pontos desta ata.")}</p>
+      ${m.minutes || m.notes ? `<div class="actions"><button class="small" onclick="busy(this, async()=>{await api('meetings/${m.id}/extract','POST'); await refresh();})">${t("Extrair demandas novamente")}</button></div>` : ""}`;
+  else if (al.applied) body = `<ul>${(al.results || []).map((r) => `<li>${r.kind === "ignore" ? `<span class="muted">${esc(r.title)} — ${t("ignorado")}</span>` : `${esc(t(ASSIST_KIND_LABEL[r.kind]))}: ${linkTo(r.target)} — ${esc(r.title)}`}</li>`).join("")}</ul>
+      <div class="actions"><button class="small ghost" onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{allocation:{...byId('meetings','${m.id}').allocation, applied:false}, _silent:true}); await refresh();})">${t("Revisar alocação")}</button></div>`;
+  else body = proposalsPanel("al", al, `applyAllocation('${m.id}')`);
+  return `<div class="card" style="margin-top:var(--gap)"><h2>${t("Pontos da reunião → lista geral e projetos")}</h2>${body}</div>`;
+}
+function linkTo(id) {
+  const col = /^PROJ/.test(id) ? "projetos" : /^GOV/.test(id) ? "lista" : /^INP/.test(id) ? "entradas" : /^MEET/.test(id) ? "reunioes" : "";
+  return col ? `<a href="#${col}/${id}">${id}</a>` : esc(id);
+}
+async function applyAllocation(mid) {
+  const r = await api("assist/apply", "POST", { proposals: readProposals("al"), ctx: { meeting_id: mid } });
+  toast(t("Registrado: {list}", { list: resultsText(r.results) || "—" })); await refresh();
+}
+
+// sugestão de horário (qualquer reunião)
+async function suggestSlot(prefix, duration) {
+  const res = await api("meeting_slot", "POST", { from: $(`#${prefix}date`)?.value || "", duration: duration || +$(`#${prefix}dur`)?.value || 60,
+    title: $(`#${prefix}title`)?.value || "", attendees: $(`#${prefix}attn`) ? readAttendees(prefix) : [], level: $(`#${prefix}level`)?.value || "" });
+  const box = $(`#${prefix}slots`);
+  box.innerHTML = res.options.length ? res.options.map((o) => `<button type="button" class="chip slot" title="${esc(t(o.reason))}" onclick="$('#${prefix}date').value='${o.date}';$('#${prefix}time').value='${o.time}';this.parentElement.querySelectorAll('.slot').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${esc(o.date)} ${esc(o.time)}</button>`).join("")
+    + `<span class="muted small">${esc(t(res.options[0].reason))}</span>` : `<span class="muted small">${t("Nenhum horário livre encontrado nas próximas semanas.")}</span>`;
+}
+function meetingRulesBox() {
+  return `<p class="muted">${t("Escreva observações e regras: dias e horários a evitar, disponibilidade da diretoria, feriados, intervalo entre reuniões…")} ${t("Valem para todas as reuniões (solicitadas, do calendário e obrigatórias).")}</p>
+    <div class="row"><div>${L("Início do expediente")}<input type="time" id="mr-start" value="${esc(S.db.settings.work_hours.start)}"></div><div>${L("Fim do expediente")}<input type="time" id="mr-end" value="${esc(S.db.settings.work_hours.end)}"></div></div>
+    ${L("Regras e observações")}<textarea id="mr-rules" style="min-height:120px" placeholder="${esc(t("MEETING_RULES_PLACEHOLDER"))}">${esc(S.db.settings.meeting_rules)}</textarea>
+    <div class="actions"><button class="ghost" onclick="busy(this, saveMeetingRules)">${t("Salvar regras")}</button></div>`;
+}
+
+// projeto: registrar progresso (vai para o summary diário)
+function projectProgressBox(p) {
+  const ups = (p.updates || []).slice().reverse();
+  return `<div class="card"><h2>${t("Progresso do projeto")}</h2>
+    <p class="muted small">${t("Cada registro aparece no summary diário em \"Progressos dos projetos\".")}</p>
+    <textarea id="pp-text-${p.id}" style="min-height:60px" placeholder="${esc(t("Ex.: cabos do painel de média tensão instalados; teste marcado para sexta."))}"></textarea>
+    <div class="actions"><button class="small" onclick="busy(this, async()=>{await api('projects/${p.id}/progress','POST',{text:$('#pp-text-${p.id}').value}); toast(t('Progresso registrado')); await refresh();})">${t("Registrar progresso")}</button></div>
+    <ul class="tl">${ups.slice(0, 12).map((u) => `<li><span class="muted">${fmt(u.date)}</span> ${esc(u.text)}</li>`).join("") || `<li class="muted">${t("Nenhum progresso registrado.")}</li>`}</ul></div>`;
 }
 </script>
 <script>
@@ -3788,11 +4398,12 @@ function viewPainel() {
     ["Alta prioridade", open.filter((i) => i.priority === "Alta").length, "lista"],
     ["Vencidos", open.filter((i) => i.due_date && i.due_date < S.today).length, "lista"],
     ["Projetos ativos", S.db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).length, "projetos"],
-    ["Reuniões a confirmar", toConfirm.length, "reunioes"],
+    ["Reuniões a confirmar", toConfirm.length, "reunioes/confirmar"],
     ["Riscos abertos", S.db.risks.filter((r) => r.status !== "Fechado").length, "riscos"],
   ];
   const mains = S.db.projects.filter((p) => p.main && !["Concluído", "Cancelado"].includes(p.status));
   return `<h1>${t("Painel de governança")}</h1>
+  ${assistantCard()}
   <div class="kpis">${k.map(([n, v, h]) => `<a class="kpi" href="#${h}"><b>${v}</b><span>${t(n)}</span></a>`).join("")}</div>
   ${mains.length ? `<div class="card" style="margin-bottom:14px"><h2>${t("Projetos principais")}</h2><table>${th(["ID", "Projeto", "% concluído", "Atividades", "Próx. reunião"])}
     ${mains.map((p) => `<tr class="click" onclick="location.hash='projetos/${p.id}'"><td>${p.id}</td><td>${esc(lc(p, "name"))}</td><td>${bar(Core.projectPct(p))}</td><td>${bar(Core.activitiesPct(p))}</td><td>${esc(p.next_meeting)}</td></tr>`).join("")}</table></div>` : ""}
@@ -4162,11 +4773,11 @@ function projOverview(p) {
     <div class="checks"><label><input type="checkbox" id="pd-main" ${p.main ? "checked" : ""}> ${t("Projeto principal (gera reuniões de acompanhamento automaticamente)")}</label></div>
     ${L("Atualização / monitoramento")}<textarea id="pd-note" style="min-height:50px"></textarea>
     <div class="actions"><button onclick="busy(this, async()=>{await api('projects/${p.id}','PATCH',{description:$('#pd-desc').value,objective:$('#pd-obj').value,owner:$('#pd-owner').value,status:$('#pd-status').value,next_meeting:$('#pd-next').value,main:$('#pd-main').checked,_note:$('#pd-note').value.trim()||undefined}); toast(t('Projeto atualizado')); await refresh();})">${t("Salvar (marca monitoramento)")}</button>
-    <a class="btn ghost" href="#reunioes" onclick="window._newMeetingProject='${p.id}'">${t("Registrar reunião")}</a></div>
+    <a class="btn ghost" href="#reunioes/confirmar" onclick="window._newMeetingProject='${p.id}'">${t("Registrar reunião")}</a></div>
     ${L("Vínculos")}<div>${linksHtml(p)}</div>${linkForm("projects", p.id)}</div>
-  <div class="card"><h2>${t("Reuniões do projeto")}</h2><table>${th(["ID", "Reunião", "Data", "Status"])}
+  <div>${projectProgressBox(p)}<div class="card" style="margin-top:var(--gap)"><h2>${t("Reuniões do projeto")}</h2><table>${th(["ID", "Reunião", "Data", "Status"])}
     ${meetings.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=4 class="muted">—</td></tr>`}</table>
-    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((p.history || []).slice().reverse())}</ul></div></div>`;
+    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((p.history || []).slice().reverse())}</ul></div></div></div>`;
 }
 function projItems(p) {
   const pct = Core.projectPct(p);
@@ -4304,12 +4915,12 @@ function scheduleAnalysis(a) {
 let M_FILTER = "";
 function viewReunioes(id) {
   if (id && /^MEET/.test(id)) return meetingDetail(byId("meetings", id));
-  const tab = id || "dash";
+  const tab = id || "solicitadas";
   const pend = S.db.meetings.filter((m) => m.status === "Pendente" || (["Solicitada", "Agendada"].includes(m.status) && m.date && m.date <= S.today)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   const reqOpen = S.db.meetings.filter((m) => m.kind === "Solicitada" && ["Solicitada", "Agendada", "Pendente"].includes(m.status)).length;
-  const T = [["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`], ["solicitadas", `${t("Solicitadas")} (${reqOpen})`],
+  const T = [["solicitadas", `${t("Solicitações")} (${reqOpen})`], ["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`],
     ["confirmar", `${t("Confirmar e registrar ata")} (${pend.length})`], ["tempo", t("Tempo em reuniões")], ["atas", t("Controle de atas")], ["todas", t("Todas as reuniões")]];
-  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, confirmar: () => meetingsConfirmView(pend), tempo: timeView, atas: atasView, todas: meetingsAllView }[tab] || dashMeetingsView;
+  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, confirmar: () => meetingsConfirmView(pend), tempo: timeView, atas: atasView, todas: meetingsAllView }[tab] || requestedView;
   return `<h1>${t("Gerenciamento de reuniões")}</h1>${tabs("reunioes", T, tab)}${body()}`;
 }
 function meetingsConfirmView(pend) {
@@ -4329,40 +4940,48 @@ function meetingsConfirmView(pend) {
     ${L("Ata")}<textarea id="m-min" style="min-height:120px" placeholder="${esc(t("MINUTES_HINT"))}"></textarea>
     ${L("Anexar ata")}<input type="file" id="m-file" multiple>
     <details class="more"><summary>${t("Mais detalhes")}</summary>
-      <div class="row"><div>${L("Outros participantes (texto)")}<input id="m-part"></div><div>${L("Departamentos")}<input id="m-dept"></div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
+      <div class="row"><div>${L("Departamentos")}<input id="m-dept"></div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
       ${L("Anotações pessoais")}<textarea id="m-notes"></textarea></details>
     <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>`;
 }
 let RQ_FILTER = "abertas";
+const RQ_OPEN = ["Solicitada", "Agendada", "Pendente"];
 function requestedView() {
   const projSel = `<select id="rq-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}">${p.id} · ${esc(lc(p, "name"))}</option>`).join("")}</select>`;
-  const list = S.db.meetings.filter((m) => m.kind === "Solicitada" && (RQ_FILTER === "todas" || ["Solicitada", "Agendada", "Pendente"].includes(m.status)))
-    .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+  const req = S.db.meetings.filter((m) => m.kind === "Solicitada");
+  const openL = req.filter((m) => RQ_OPEN.includes(m.status)), doneL = req.filter((m) => !RQ_OPEN.includes(m.status));
+  const list = (RQ_FILTER === "realizadas" ? doneL.sort((a, b) => (b.date || "").localeCompare(a.date || "")) : openL.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999")));
+  const done = RQ_FILTER === "realizadas";
   return `<div class="grid" style="grid-template-columns: minmax(320px,1fr) minmax(320px,1.6fr)">
   <div class="card"><h2>${t("Solicitar reunião")}</h2>
-    <p class="muted">${t("Reuniões pedidas por alguém (diretora, HQ, departamentos), fora das obrigatórias.")}</p>
     ${L("Título / pauta")}<input id="rq-title">
     <div class="row"><div>${L("Solicitada por")}<input id="rq-by" list="rq-sources"></div><div>${L("Data desejada")}<input type="date" id="rq-date"></div><div>${L("Horário")}<input type="time" id="rq-time"></div></div>
+    <div class="toolbar"><button class="small ghost" onclick="busy(this, ()=>suggestSlot('rq-'))">✨ ${t("Sugerir horário (IA)")}</button><div id="rq-slots" class="slots"></div></div>
     ${meetingFields({ scheduling: "Urgente" }).replace(/mq-/g, "rq-")}
     <datalist id="rq-sources">${LIST("sources").map((x) => `<option value="${esc(t(x))}">`).join("")}</datalist>
-    <details class="more"><summary>${t("Pauta, projeto e outros participantes")}</summary>
-      <div class="row"><div>${L("Outros participantes (texto)")}<input id="rq-part"></div><div>${L("Projeto")}${projSel}</div></div>
+    <details class="more"><summary>${t("Pauta e projeto")}</summary>
+      ${L("Projeto")}${projSel}
       ${L("Pauta / objetivo")}<textarea id="rq-agenda" style="min-height:60px"></textarea></details>
-    <div class="actions"><button onclick="busy(this, requestMeeting)">${t("Registrar solicitação")}</button></div></div>
+    <div class="actions"><button onclick="busy(this, requestMeeting)">${t("Registrar solicitação")}</button></div>
+    <details class="more"><summary>⚙ ${t("Regras para a IA sugerir horários (valem para todas as reuniões)")}</summary>${meetingRulesBox()}</details></div>
   <div class="card" style="overflow:auto"><h2>${t("Reuniões solicitadas")}</h2>
-    <div class="toolbar"><button class="small ${RQ_FILTER === "abertas" ? "" : "ghost"}" onclick="RQ_FILTER='abertas';render()">${t("Em aberto")}</button><button class="small ${RQ_FILTER === "todas" ? "" : "ghost"}" onclick="RQ_FILTER='todas';render()">${t("Todas")}</button></div>
-    <table>${th(["ID", "Reunião", "Solicitada por", "Pedido em", "Data", "Agendamento", "Status", ""])}
-    ${list.map((m) => { const open = ["Solicitada", "Agendada", "Pendente"].includes(m.status); return `<tr class="${m.date && m.date < S.today && open ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}</td><td>${esc(tv(m.requested_by))}</td>
-      <td>${esc(m.requested_at || (m.created_at || "").slice(0, 10))}</td><td>${esc(m.date || "—")} ${esc(m.time || "")}</td><td>${esc(tv(m.scheduling))}</td><td>${statusPill(m.status)}</td>
-      <td><div class="act-cell">${open ? `<button class="small ghost" onclick="scheduleRequested('${m.id}')">${t("Agendar")}</button>
+    <div class="toolbar"><button class="small ${done ? "ghost" : ""}" onclick="RQ_FILTER='abertas';render()">${t("Requisitadas (em aberto)")} (${openL.length})</button><button class="small ${done ? "" : "ghost"}" onclick="RQ_FILTER='realizadas';render()">${t("Realizadas / encerradas")} (${doneL.length})</button></div>
+    <table>${th(done ? ["ID", "Reunião", "Solicitada por", "Data", "Duração", "Ata", "Status"] : ["ID", "Reunião", "Solicitada por", "Pedido em", "Data", "Status", ""])}
+    ${list.map((m) => done ? `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}</td><td>${esc(tv(m.requested_by))}</td>
+      <td class="nowrap">${esc(m.date || "—")} ${esc(m.time || "")}</td><td class="nowrap">${m.status === "Realizada" ? `${m.actual_duration || m.duration || 60} min` : "—"}</td>
+      <td>${m.status === "Realizada" ? (Core.hasMinutes(m) ? pill("✓", "p-Baixa") : pill(t("Pendente"), "p-Alta")) : ""}</td><td>${statusPill(m.status)}</td></tr>`
+      : `<tr class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}</td><td>${esc(tv(m.requested_by))}</td>
+      <td class="nowrap">${esc(m.requested_at || (m.created_at || "").slice(0, 10))}</td><td class="nowrap">${esc(m.date || "—")} ${esc(m.time || "")}</td><td>${statusPill(m.status)}</td>
+      <td><div class="act-cell"><button class="small ghost" onclick="scheduleRequested('${m.id}')">${t("Agendar")}</button>
         <button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
         <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button>
-        <button class="small ghost" onclick="busy(this, ()=>cancelMeeting('${m.id}'))">${t("Cancelar")}</button>` : ""}</div></td></tr>`; }).join("") || `<tr><td colspan=8 class="muted">${t("Nenhuma reunião solicitada.")}</td></tr>`}</table></div></div>`;
+        <button class="small ghost" onclick="busy(this, ()=>cancelMeeting('${m.id}'))">${t("Cancelar")}</button></div></td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t(done ? "Nenhuma reunião solicitada realizada ainda." : "Nenhuma reunião solicitada em aberto.")}</td></tr>`}</table></div></div>`;
 }
 function scheduleRequested(id) {
   const m = byId("meetings", id);
   openModal(`<h2>${t("Agendar")} · ${esc(titleOf(m))}</h2>
     <div class="row"><div>${L("Data")}<input type="date" id="sc-date" value="${esc(m.date || S.today)}"></div><div>${L("Horário")}<input type="time" id="sc-time" value="${esc(m.time || S.db.settings.work_hours.start)}"></div></div>
+    <div class="toolbar"><button class="small ghost" onclick="busy(this, ()=>suggestSlot('sc-', ${+m.duration || 60}))">✨ ${t("Sugerir horário (IA)")}</button><div id="sc-slots" class="slots"></div></div>
     <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${id}','PATCH',{date:$('#sc-date').value,time:$('#sc-time').value,status:'Agendada'}); closeModal(); toast(t('Reunião agendada')); await refresh();})">${t("Salvar")}</button></div>`);
 }
 async function cancelMeeting(id) {
@@ -4379,7 +4998,7 @@ function meetingsAllView() {
 async function requestMeeting() {
   const title = $("#rq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
-  await api("meetings", "POST", { title, date: $("#rq-date").value, time: $("#rq-time").value, requested_by: $("#rq-by").value, participants: $("#rq-part").value,
+  await api("meetings", "POST", { title, date: $("#rq-date").value, time: $("#rq-time").value, requested_by: $("#rq-by").value,
     project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: $("#rq-date").value && $("#rq-time").value ? "Agendada" : "Solicitada", kind: "Solicitada",
     ...readMeetingFields("rq-") });
   toast(t("Solicitação registrada")); await refresh();
@@ -4394,7 +5013,7 @@ async function meetingNotDone(id) {
   await refresh();
 }
 async function saveMeeting() {
-  const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, time: $("#m-time").value, participants: $("#m-part").value,
+  const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, time: $("#m-time").value,
     departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value, status: "Realizada",
     ...readMeetingFields("m-"), actual_duration: Math.max(5, +$("#m-dur").value || 60) });
   for (const f of $("#m-file").files) await api(`meetings/${r.id}/upload`, "POST", { file: f, kind: "ata" });
@@ -4407,28 +5026,15 @@ function meetingDetail(m) {
   window._demands = ex?.demands || [];
   const pending = OPEN_MEETING.includes(m.status);
   return `<p><a href="#reunioes/todas">← ${t("Reuniões")}</a></p><h1>${m.id} · ${esc(titleOf(m))} ${trButton("meetings", m.id)}</h1>
-  <p>${statusPill(m.status)} <span class="muted">${[m.date, m.participants, m.departments, m.requested_by ? t("Solicitada por") + ": " + tv(m.requested_by) : ""].filter(Boolean).map(esc).join(" · ")}</span></p>
+  <p>${statusPill(m.status)} <span class="muted">${[m.date, (m.attendees || []).join(", ") || m.participants, m.departments, m.requested_by ? t("Solicitada por") + ": " + tv(m.requested_by) : ""].filter(Boolean).map(esc).join(" · ")}</span></p>
   ${pending ? `<div class="alert lv-media">${t("Esta reunião aguarda confirmação.")} <button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
     <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></div>` : ""}
   ${m.agenda ? `<div class="card" style="margin-bottom:14px"><b>${t("Pauta / objetivo")}:</b> ${esc(lc(m, "agenda"))}</div>` : ""}
   <div class="card" style="margin-bottom:14px"><div class="row"><div>${L("Data")}<input type="date" id="me-date" value="${esc(m.date)}"></div><div>${L("Horário")}<input type="time" id="me-time" value="${esc(m.time)}"></div>
     ${m.status === "Realizada" ? `<div>${L("Duração real (min)")}<input type="number" min="5" step="5" id="me-adur" value="${esc(m.actual_duration || m.duration || 60)}"></div>` : ""}</div>
     ${meetingFields(m).replace(/mq-/g, "me-")}<div class="actions"><button class="small" onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{date:$('#me-date').value,time:$('#me-time').value,...readMeetingFields('me-'),...($('#me-adur')?{actual_duration:Math.max(5,+$('#me-adur').value||60)}:{})}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>
-  <div class="grid">
-  <div class="card"><h2>${t("Ata")}</h2><textarea id="md-min" style="min-height:200px">${esc(m.minutes)}</textarea>${trPreview(m, "minutes")}${L("Anotações")}<textarea id="md-notes">${esc(m.notes)}</textarea>
-    <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${m.id}','PATCH',{minutes:$('#md-min').value,notes:$('#md-notes').value}); await api('meetings/${m.id}/extract','POST'); await refresh();})">${t("Salvar e reprocessar")}</button></div>
-    ${L("Arquivo da ata")}<div class="toolbar">${(m.minutes_files || []).map((f) => fileLink(f, f.split("/").pop())).join(" · ") || `<span class="muted">—</span>`}
-      <label class="btn small ghost file-btn">${t("Anexar ata")}<input type="file" hidden multiple onchange="attachMinutes('${m.id}', this)"></label></div>
-    ${L("Anexos")}<div class="toolbar"><input type="file" id="md-file" multiple><button class="small" onclick="busy(this, async()=>{await uploadFiles('meetings/${m.id}/upload', $('#md-file')); toast(t('Anexado')); await refresh();})">${t("Upload")}</button></div>
-    ${L("Vínculos")}<div>${linksHtml(m)}</div>
-    <h3>${t("Histórico")}</h3><ul class="tl">${timeline((m.history || []).slice().reverse())}</ul></div>
-  <div class="card"><h2>${t("Extração")} (${esc(tv(ex?.engine) || "—")})</h2>${ex?.hint ? `<p class="muted">${esc(t(ex.hint))}</p>` : ""}
-    ${ex?.summary ? `<div class="ai-box">${esc(ex.summary)}</div>` : ""}
-    <h3>${t("Decisões")}</h3><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || '<li class="muted">—</li>'}</ul>
-    <h3>${t("Demandas identificadas → Inputs management")}</h3>
-    ${(ex?.demands || []).map((d, k) => `<div class="alert" style="border:1px solid var(--line)"><b>${esc(d.title)}</b> ${d.related_item ? pill(t("rel.") + " " + d.related_item) : ""}<br><span class="muted">${esc(d.owner)} ${esc(d.due_date)}</span> ${esc(d.description)}
-      <div class="actions" style="margin-top:6px"><button class="small" onclick="busy(this, ()=>demandToInput('${m.id}', ${k}))">${t("Enviar para entradas")}</button></div></div>`).join("") || `<p class="muted">${t("Nenhuma demanda extraída.")}</p>`}
-  </div></div>`;
+  <div class="grid">${meetingNotesCard(m)}${extractionCard(m)}</div>
+  ${allocationCard(m)}`;
 }
 async function demandToInput(mid, k) {
   const d = window._demands[k], m = byId("meetings", mid);
@@ -4558,15 +5164,17 @@ function summaryDoc({ summary: s, narrative }) {
   return `<div class="summary-doc"><h1>${esc(t(s.type))}</h1><p class="muted">${t("Período")} ${esc(s.period.start)}${s.period.end !== s.period.start ? " – " + esc(s.period.end) : ""} · ${t("gerado")} ${fmt(s.generated_at)}</p>
   <h2>1. ${t("Destaques")}</h2><div class="ai-box">${esc(narrative)}</div>
   <h2>2. ${t("Indicadores")}</h2><div class="kpis">${kp.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${t(n)}</span></div>`).join("")}</div>
-  <h2>3. ${t("Novas demandas por origem")}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(tv(src))} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || `<p class="muted">${t("Nenhuma nova demanda.")}</p>`}
-  <h2>4. ${t("Itens críticos (alta prioridade)")}</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
-  <h2>5. ${t("Prazos — vencidos e próximos 7 dias")}</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
-  <h2>6. ${t("Projetos")}</h2>${tbl(s.projects, ["id", "name", "status", "pct", "open_actions", "last_monitored", "next_meeting"], ["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Últ. monitoramento", "Próx. reunião"])}
-  <h2>7. ${t("Riscos")}</h2>${tbl(s.risks, ["id", "title", "mode", "probability", "impact"], ["ID", "Risco", "Modo", "Prob.", "Impacto"])}
-  <h2>8. ${t("Reuniões e decisões")}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(lc(m, "title"))}</b> (${esc(m.date)}) ${statusPill(m.status)}</p><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || `<li class="muted">${t("Sem decisões registradas")}</li>`}</ul>`).join("") || `<p class="muted">${t("Nenhuma reunião no período.")}</p>`}
-  <h2>9. ${t("Infos a reportar")}</h2>${tbl(s.report_items, ["id", "title", "owner", "status"], ["ID", "Item", "Responsável", "Status"])}
-  <h2>10. ${t("Alertas")}</h2><ul>${s.alerts.map((a) => `<li>${esc(msg(a))}</li>`).join("") || '<li class="muted">—</li>'}</ul>
-  <h2>11. ${t("Linha do tempo")}</h2><ul class="tl">${timeline(s.activity)}</ul></div>`;
+  <h2>3. ${t("Progressos dos projetos")}</h2>${(s.project_progress || []).map((p) => `<div class="prog-box"><b>${p.main ? "★ " : ""}<a href="#projetos/${p.id}">${esc(p.id)}</a> · ${esc(p.name)}</b>${p.pct != null ? ` <span class="muted">(${p.pct}%)</span>` : ""}<ul>${p.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum progresso registrado em projetos no período.")}</p>`}
+  <h2>4. ${t("Progresso dos itens da lista geral")}</h2>${(s.item_progress || []).map((i) => `<p><b><a href="#lista/${i.id}">${esc(i.id)}</a> · ${esc(i.title)}</b> ${esc(tv(i.status))}<br>${i.updates.map((u) => esc(u.text)).join("<br>")}</p>`).join("") || `<p class="muted">—</p>`}
+  <h2>5. ${t("Novas demandas por origem")}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(tv(src))} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || `<p class="muted">${t("Nenhuma nova demanda.")}</p>`}
+  <h2>6. ${t("Itens críticos (alta prioridade)")}</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
+  <h2>7. ${t("Prazos — vencidos e próximos 7 dias")}</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
+  <h2>8. ${t("Projetos")}</h2>${tbl(s.projects, ["id", "name", "status", "pct", "open_actions", "last_monitored", "next_meeting"], ["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Últ. monitoramento", "Próx. reunião"])}
+  <h2>9. ${t("Riscos")}</h2>${tbl(s.risks, ["id", "title", "mode", "probability", "impact"], ["ID", "Risco", "Modo", "Prob.", "Impacto"])}
+  <h2>10. ${t("Reuniões e decisões")}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(lc(m, "title"))}</b> (${esc(m.date)}) ${statusPill(m.status)}</p><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || `<li class="muted">${t("Sem decisões registradas")}</li>`}${(m.outcomes || []).filter((r) => r.kind !== "ignore").map((r) => `<li>→ ${esc(t(ASSIST_KIND_LABEL[r.kind]))}: ${linkTo(r.target)} — ${esc(r.title)}</li>`).join("")}</ul>`).join("") || `<p class="muted">${t("Nenhuma reunião no período.")}</p>`}
+  <h2>11. ${t("Infos a reportar")}</h2>${tbl(s.report_items, ["id", "title", "owner", "status"], ["ID", "Item", "Responsável", "Status"])}
+  <h2>12. ${t("Alertas")}</h2><ul>${s.alerts.map((a) => `<li>${esc(msg(a))}</li>`).join("") || '<li class="muted">—</li>'}</ul>
+  <h2>13. ${t("Linha do tempo")}</h2><ul class="tl">${timeline(s.activity)}</ul></div>`;
 }
 
 // ------------------------------------------------------------------ configurações

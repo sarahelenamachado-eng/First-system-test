@@ -34,6 +34,13 @@ Configurações → Módulos e idioma.
 
 ## Módulos
 
+### Assistente de IA (Painel)
+Escreva livremente o que aconteceu no dia, um ponto por linha (ex.: "Mid voltage: cabos instalados", "Reunião GPS 14h 45min com
+Carlos e Wang", "HQ pediu o relatório de Xushui"). O assistente propõe onde registrar cada ponto — **progresso em projeto**,
+**progresso em item existente**, **novo item na lista geral**, **entrada para triagem**, **reunião realizada** ou ignorar — e você
+confirma ou corrige. Cada correção vira exemplo e a IA passa a repetir o seu critério (também funciona offline, por similaridade).
+Em **Ensinar o assistente**: regras de alocação, taxa de acerto das últimas propostas e a opção de deixar a IA aplicar sozinha.
+
 ### 1. Entradas (Inputs management)
 Fluxo em 3 etapas para cada entrada vinda da **Diretora, Reunião, Departamento ou HQ**: entrada da informação →
 assessment (relação com itens já levantados + classificação de escopo, prioridade, urgência, impactos e gaps) →
@@ -53,7 +60,7 @@ progresso) e **Progresso e histórico geral**.
 ### Dashboards (Projetos, Reuniões e Riscos)
 Cada módulo abre com um dashboard: frase-resumo, indicadores e gráficos, e o botão **Analisar com IA**, que
 interpreta os números e sugere a ação.
-- **Projetos:** "de XX projetos ativos, XX têm itens atrasados e XX representam risco em relação ao atraso";
+- **Projetos:** "do total de XX itens, XX completos", itens em andamento e atrasados, atividades, últimos progressos; "de XX projetos ativos, XX têm itens atrasados e XX representam risco em relação ao atraso";
   situação (no prazo / atrasados / risco de atraso), atrasos por tipo, distribuição da conclusão e projetos que exigem atenção.
   *Risco de atraso* = projeto "Em risco", ou com itens atrasados somados a risco aberto ligado ou ≥ 30% dos itens com prazo atrasados.
 - **Reuniões (hoje / semana / mês):** realizadas, de nível gerencial, de reporte, pré-agendadas e urgentes;
@@ -74,9 +81,15 @@ Abas de cada projeto:
 - **Fluxo** — mapa visual do projeto.
 
 ### 4. Reuniões
-Abas: Dashboard · **Calendário** (clique num dia para inserir; sugestões da IA tracejadas) · **Obrigatórias** ·
+Abre em **Solicitações** (requisitadas em aberto / realizadas e encerradas). Abas: Solicitações · Dashboard · **Calendário** (clique num dia para inserir; sugestões da IA tracejadas) · **Obrigatórias** ·
 **Solicitadas** · Confirmar e registrar ata · **Tempo em reuniões** · **Controle de atas** · Todas.
 - **Cadastro simples:** título, data, hora, **duração planejada**, nível, depto. responsável pela ata e participantes.
+- **Participantes:** digite os nomes separados por vírgula (ou clique nos já conhecidos). Nomes novos entram sozinhos no
+  cadastro de pessoas; depois é só ajustar o cargo (Diretor, Sr Manager…) em Tempo em reuniões.
+- **✨ Sugerir horário (IA):** em qualquer reunião, a IA sugere datas/horários livres seguindo as **regras** que você escreve
+  (valem para todas as reuniões, não só as obrigatórias).
+- **Ata → lista geral:** a IA extrai os pontos da ata (inclusive listas numeradas) e propõe onde registrar cada um (projeto, item
+  existente, item novo, entrada). Na aba **Ensinar a IA** da ata você escreve como ela deveria ter extraído e as regras de extração.
   O resto (tipo, agendamento, pauta, projeto, anotações) fica em **Mais detalhes**, só se quiser.
 - **Ao marcar "Foi realizada"** a plataforma pergunta só **quanto tempo durou** (e, se quiser, quem participou e a ata).
 - **Tempo em reuniões (planejado × realizado):** quantas reuniões foram planejadas e para quanto tempo, quantas foram
@@ -106,7 +119,8 @@ Gere pelos dados registrados ou com a IA a partir da sua descrição, arraste, e
 Para **ensinar a IA**: escreva regras de como montar os fluxos e salve fluxos bons como exemplo.
 
 ### 7. Summaries diário e semanal
-Destaques, indicadores, demandas por origem, itens críticos, prazos, projetos (% concluído), riscos,
+Destaques, indicadores, **progressos dos projetos** (tudo o que foi registrado no dia: progresso pelo assistente, pelas atas,
+pelos itens/atividades do projeto ou pela caixa "Progresso do projeto"), progresso dos itens da lista geral, demandas por origem, itens críticos, prazos, projetos (% concluído), riscos,
 reuniões e decisões, infos a reportar, alertas e linha do tempo. Também salvos em HTML na pasta `SUMMARIES`.
 
 ### 8. Configurações
@@ -128,6 +142,7 @@ src/              # código-fonte — edite aqui e rode `node tools/build.mjs` p
   brand.js        # logo padrão
   flow.js         # editor visual de fluxos
   dash.js         # dashboards, calendário, reuniões obrigatórias e "ensinar a IA" (risco)
+  assist.js       # assistente: registro rápido, alocação das atas, sugestão de horário e aprendizado
   store.js        # acesso à pasta escolhida (File System Access API) e configurações do navegador
   xlsx.js         # leitura de .xlsx/.csv sem bibliotecas externas
   ai.js           # integração com Claude + heurísticas offline + aprendizado por feedback
