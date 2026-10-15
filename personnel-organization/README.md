@@ -1,14 +1,14 @@
-# Minhas atividades (IA + HTML)
+# Personnel Organization (IA + HTML)
 
 Plataforma pessoal para controlar as suas atividades, com a mesma lógica da plataforma de governança:
 você escreve o dia em texto livre, **um ponto por linha**, e o assistente transforma cada linha em um registro organizado.
 No fim do dia, ela monta o **sumário diário**: o que fiz, quantas tarefas faltaram, o que aprendi e onde errei.
 
-A plataforma de governança (raiz do repositório) não foi alterada; esta fica só na pasta `pessoal/`.
+A plataforma de governança (raiz do repositório) não foi alterada; esta fica só na pasta `personnel-organization/`.
 
 ## Como usar (sem instalar nada)
 
-1. Baixe o zip, descompacte e dê dois cliques em **`pessoal/index.html`**.
+1. Baixe o zip, descompacte e dê dois cliques em **`personnel-organization/index.html`**.
 2. Escolha onde guardar os dados:
    - **Escolher pasta de trabalho** (Edge ou Chrome): cria um `db.json` na pasta e salva os sumários em `SUMARIOS/`.
      Pode ser uma pasta do OneDrive/Google Drive, para ter backup.
@@ -65,7 +65,7 @@ para o Claude.
 ## Estrutura
 
 ```
-pessoal/
+personnel-organization/
   index.html        # abra este arquivo (gerado: tudo embutido, funciona sozinho)
   src/              # código-fonte — edite aqui e rode `node tools/build.mjs`
     store.js        # pasta do computador ou armazenamento do navegador
@@ -83,3 +83,7 @@ pessoal/
 node --test tests/*.test.mjs   # lógica: classificação, ligação com tarefas, sumário, aprendizado, modo IA (API simulada)
 node tests/e2e.mjs             # navegador: modo heurístico, modo com IA (API simulada) e modo pasta
 ```
+
+## Começa vazia
+A Personnel Organization não importa nada da plataforma de governança: nem itens, nem histórico, nem configurações.
+Cada uma guarda os dados no seu próprio lugar, então dá para usar as duas no mesmo computador sem misturar.

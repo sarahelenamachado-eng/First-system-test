@@ -43,7 +43,7 @@ async function boot() {
 function welcome(h) {
   $("#nav").classList.add("hidden");
   $("#view").innerHTML = `<div class="card welcome">
-    <h1>Minhas atividades <span class="ai-tag">IA</span></h1>
+    <h1>Personnel Organization <span class="ai-tag">IA</span></h1>
     <p>Escreva o seu dia, um ponto por linha. O assistente organiza o que você fez, o que faltou, as tarefas novas,
     o que aprendeu e onde errou — e monta o sumário diário.</p>
     <h2>Onde guardar os seus dados?</h2>

@@ -33,7 +33,7 @@ const Core = {
   blank() {
     return {
       version: 1,
-      settings: { name: "Minhas atividades", areas: [...DEFAULT_AREAS], assist_rules: "", auto_apply: false },
+      settings: { name: "Personnel Organization", areas: [...DEFAULT_AREAS], assist_rules: "", auto_apply: false },
       tasks: [], entries: [], days: {}, assist_examples: [], summaries: [],
       counters: { TAR: 0, REG: 0 },
     };
@@ -218,7 +218,7 @@ ${d.notes.length ? `<h2>🗒️ Anotações</h2>${li(d.notes, (x) => e(x.text))}
 ${d.reflection ? `<h2>✍️ Minha reflexão</h2><p style="white-space:pre-wrap">${e(d.reflection)}</p>` : ""}
 ${d.ai_reflection ? `<h2>🤖 Reflexão do assistente</h2><p style="white-space:pre-wrap">${e(d.ai_reflection)}</p>` : ""}`;
     if (!opts.standalone) return body;
-    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sumário ${e(d.date)}</title>
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Personnel Organization · Sumário ${e(d.date)}</title>
 <style>body{font:15px/1.5 "Segoe UI",system-ui,sans-serif;max-width:820px;margin:24px auto;padding:0 16px;color:#1a1a1a}h1{color:#0f6e6e}h2{font-size:1.1rem;border-left:4px solid #0f6e6e;padding-left:8px;margin-top:22px}
 .kpis{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}.kpi{border:1px solid #ddd;border-top:3px solid #0f6e6e;border-radius:6px;padding:10px}.kpi b{display:block;font-size:1.5rem;color:#0f6e6e}.kpi span,.muted{color:#6a6d72;font-size:.9rem}</style>
 </head><body>${body}<p class="muted">Gerado em ${e(fmtDate(nowISO()))} ${e(nowISO().slice(11, 16))}</p></body></html>`;
