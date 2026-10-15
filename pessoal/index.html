@@ -1,0 +1,1286 @@
+<!doctype html>
+<!-- Arquivo gerado por tools/build.mjs a partir de src/. Edite os arquivos em src/. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minhas atividades</title>
+<style>
+/* Visual herdado da plataforma de governança, com cor própria (verde-azulado). Sem modo escuro. */
+:root {
+  color-scheme: light;
+  --brand: #0f6e6e;
+  --font-scale: 1;
+  --bg: #f1f1f2; --bg-2: #e7e8ea; --panel: #ffffff; --ink: #1a1a1a; --muted: #6a6d72; --line: #dedfe2;
+  --soft: #e7f3f3;
+  --high: #b00000; --high-bg: #fde4e4; --mid: #8a5a00; --mid-bg: #fff1d6; --low: #1f6b34; --low-bg: #e3f3e6;
+  --pad: 16px; --gap: 14px;
+}
+body[data-density="compacta"] { --pad: 10px; --gap: 10px; }
+body[data-density="confortável"] { --pad: 22px; --gap: 18px; }
+* { box-sizing: border-box; }
+html { font-size: calc(14px * var(--font-scale)); }
+body {
+  margin: 0; font: 1rem/1.45 "Segoe UI", system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; color: var(--ink);
+  background: radial-gradient(1200px 600px at 85% -10%, #ffffff 0%, rgba(255,255,255,0) 60%), linear-gradient(160deg, #f7f7f8 0%, var(--bg) 45%, var(--bg-2) 100%) fixed;
+  min-height: 100vh;
+}
+a { color: var(--brand); }
+
+/* ---------- topo */
+.top { background: rgba(255,255,255,.96); position: sticky; top: 0; z-index: 5; box-shadow: 0 1px 0 var(--line); }
+.top-row { display: flex; align-items: center; gap: 16px; padding: 10px 22px 6px; }
+.brand { font-weight: 800; font-size: 1.45rem; color: var(--brand); letter-spacing: .2px; flex: 1; }
+.brand .ai { background: var(--brand); color: #fff; border-radius: 4px; padding: 0 6px; margin-left: 2px; font-size: 1.05rem; vertical-align: 2px; }
+.top-right { display: flex; align-items: center; gap: 12px; }
+.logo { height: 34px; max-width: 220px; object-fit: contain; }
+.redbar { height: 8px; margin: 0 22px; border-radius: 1px; background: linear-gradient(90deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 70%, #fff) 45%, rgba(255,255,255,0) 100%); }
+nav { display: flex; gap: 2px; flex-wrap: wrap; padding: 6px 18px 8px; }
+nav a { color: var(--ink); text-decoration: none; padding: 6px 12px; border-radius: 4px; font-weight: 600; }
+nav a:hover { color: var(--brand); background: var(--soft); }
+nav a.active { color: var(--brand); box-shadow: inset 0 -3px 0 var(--brand); border-radius: 0; }
+.badge { font-size: .8rem; padding: 3px 9px; border-radius: 999px; background: #eee; color: var(--muted); white-space: nowrap; }
+.badge.on { background: var(--low-bg); color: var(--low); }
+.badge:empty { display: none; }
+.lang { width: auto; padding: 4px 8px; font-size: .9rem; }
+
+/* ---------- conteúdo */
+main { max-width: 1360px; margin: 0 auto; padding: 22px 18px 60px; }
+h1 { font-size: 1.75rem; margin: 4px 0 16px; color: var(--brand); font-weight: 800; }
+h2 { font-size: 1.1rem; margin: 0 0 10px; color: var(--ink); font-weight: 700; padding-left: 9px; border-left: 4px solid var(--brand); }
+h3 { font-size: 1rem; margin: 16px 0 6px; color: var(--ink); }
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title-row h1 { margin-bottom: 4px; }
+.pct-big { min-width: 260px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.grid { display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: var(--pad); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.welcome { max-width: 680px; margin: 40px auto; border-top: 4px solid var(--brand); }
+.kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: var(--gap); }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--brand); border-radius: 6px; padding: 12px; text-decoration: none; color: inherit; display: block; }
+.kpi b { display: block; font-size: 1.8rem; color: var(--brand); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.kpi span { color: var(--muted); font-size: .85rem; }
+a.kpi:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .8rem; color: #444; font-weight: 700; background: #f5f5f6; text-transform: none; }
+tr.click { cursor: pointer; } tr.click:hover { background: var(--soft); }
+tr.done td { color: var(--muted); }
+tr.overdue td:first-child { box-shadow: inset 3px 0 0 var(--high); }
+.acts td { font-size: .92rem; }
+.acts tr.group-start td { border-top: 2px solid #c9c9cc; }
+.acts td.grp { font-weight: 700; color: #333; background: #fafafa; }
+.acts td.lp { white-space: pre-wrap; min-width: 220px; color: #333; }
+.nowrap { white-space: nowrap; }
+label { display: block; font-size: .8rem; color: #444; margin: 10px 0 4px; font-weight: 700; }
+input, select, textarea { width: 100%; padding: 7px 8px; border: 1px solid #cfd1d5; border-radius: 4px; background: #fff; color: var(--ink); font: inherit; }
+input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb, var(--brand) 35%, transparent); border-color: var(--brand); }
+input.late { border-color: var(--high); color: var(--high); }
+textarea { min-height: 80px; resize: vertical; }
+td textarea { min-height: 0; }
+.row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+button, .btn { display: inline-block; border: 1px solid var(--brand); background: var(--brand); color: #fff; padding: 7px 14px; border-radius: 4px; cursor: pointer; font: inherit; font-weight: 600; text-decoration: none; }
+button:hover, .btn:hover { filter: brightness(1.08); }
+button.ghost, .btn.ghost { background: #fff; color: var(--brand); }
+button.danger { color: var(--high); border-color: #e3b2b2; }
+button.small { padding: 3px 9px; font-size: .85rem; }
+button:disabled { opacity: .5; cursor: wait; }
+.swatch { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #ccc; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
+.pill { display: inline-block; font-size: .78rem; padding: 1px 8px; border-radius: 999px; background: #eeeeef; color: #333; margin: 1px 2px 1px 0; white-space: nowrap; }
+.p-Alta, .lv-alta, .p-Alto { background: var(--high-bg); color: var(--high); }
+.p-Média, .lv-media, .p-Médio { background: var(--mid-bg); color: var(--mid); }
+.p-Baixa, .lv-baixa, .p-Baixo { background: var(--low-bg); color: var(--low); }
+.star { color: var(--brand); }
+.muted { color: var(--muted); }
+.alert { padding: 8px 10px; border-radius: 4px; margin-bottom: 6px; background: #f6f6f7; }
+.steps { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.step { padding: 5px 12px; border-radius: 999px; background: #eaeaec; color: var(--muted); font-size: .82rem; font-weight: 600; }
+.step.on { background: var(--brand); color: #fff; }
+.tabs { display: flex; gap: 2px; flex-wrap: wrap; border-bottom: 2px solid var(--line); margin: 6px 0 16px; }
+.tabs a { padding: 8px 14px; text-decoration: none; color: #333; font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+.tabs a:hover { color: var(--brand); }
+.tabs a.on { color: var(--brand); border-bottom-color: var(--brand); }
+.checks label { display: flex; gap: 6px; align-items: center; font-weight: 400; color: var(--ink); margin: 4px 0; font-size: 1rem; }
+.checks.inline { display: flex; gap: 16px; flex-wrap: wrap; }
+.checks input { width: auto; }
+.ai-box { border-left: 3px solid var(--brand); background: var(--soft); padding: 10px 12px; border-radius: 4px; margin: 10px 0; white-space: pre-wrap; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+.toolbar input, .toolbar select { width: auto; min-width: 150px; }
+.progress { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+.progress b { font-variant-numeric: tabular-nums; min-width: 38px; }
+.progress-bar { flex: 1; height: 8px; background: #e4e4e6; border-radius: 4px; overflow: hidden; min-width: 70px; }
+.progress-bar span { display: block; height: 100%; background: var(--brand); border-radius: 4px; }
+.progress-bar.mini { height: 4px; margin-top: 4px; }
+.map-grid { display: grid; gap: 4px 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.logo-preview { background: #fff; border: 1px dashed #ccc; border-radius: 6px; padding: 16px; text-align: center; margin-bottom: 8px; }
+.logo-preview img { max-height: 60px; max-width: 100%; }
+.modal { position: fixed; inset: 0; background: rgba(30,30,30,.45); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow: auto; z-index: 20; }
+.modal-box { background: var(--panel); border-radius: 6px; border-top: 4px solid var(--brand); padding: 22px; width: min(960px, 100%); position: relative; }
+.close { position: absolute; right: 12px; top: 10px; background: transparent; color: var(--muted); border: 0; font-size: 22px; }
+.hidden { display: none !important; }
+.toast { position: fixed; right: 18px; bottom: 18px; background: #1a1a1a; color: #fff; padding: 10px 16px; border-radius: 4px; border-left: 4px solid var(--brand); z-index: 30; max-width: 440px; }
+.tl li { margin-bottom: 4px; }
+.files a { color: var(--brand); }
+.summary-doc { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 24px; }
+.summary-doc h2 { margin-top: 22px; }
+
+/* ---------- fluxos */
+.flow-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--gap); align-items: start; }
+.flow-canvas { overflow: auto; max-height: 72vh; background: #fbfbfb; border: 1px solid var(--line); border-radius: 6px; touch-action: none; user-select: none; }
+.flow-canvas .fl-node { cursor: grab; }
+.flow-canvas .fl-edge { cursor: pointer; }
+.flow-side { position: sticky; top: 150px; }
+@media (max-width: 900px) { .flow-wrap { grid-template-columns: 1fr; } .flow-side { position: static; } }
+
+@media (max-width: 640px) {
+  .top-row { padding: 8px 12px 4px; } .redbar { margin: 0 12px; } nav { padding: 4px 8px 6px; }
+  .logo { height: 24px; } .badge { display: none; }
+  main { padding: 16px 12px 40px; }
+}
+@media print { .top, .no-print, .tabs { display: none !important; } main { padding: 0; } .summary-doc { border: 0; } body { background: #fff; } }
+.acts textarea { min-width: 220px; } .acts input[type=date] { min-width: 130px; }
+input[type=range], input[type=checkbox] { accent-color: var(--brand); }
+
+/* ---------- dashboards */
+.hero { font-size: 1.15rem; font-weight: 600; margin: 4px 0 14px; padding: 12px 16px; background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--brand); border-radius: 6px; }
+.kpi small { display: block; color: var(--muted); font-size: .75rem; margin-top: 2px; }
+.small { font-size: .8rem; }
+.hbars { display: grid; gap: 8px; }
+.hb-row { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 10px; align-items: center; }
+.hb-label { font-size: .88rem; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hb-bar { display: block; height: 14px; border-radius: 0 4px 4px 0; min-width: 0; }
+.hb-val { font-weight: 700; font-size: .88rem; color: #1a1a1a; white-space: nowrap; }
+.stackbar { display: flex; gap: 2px; height: 22px; border-radius: 4px; overflow: hidden; margin: 6px 0 10px; }
+.sb-seg { display: block; height: 100%; min-width: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .85rem; color: #333; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.meter { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+.meter b { font-variant-numeric: tabular-nums; }
+.cols { display: flex; align-items: flex-end; gap: 14px; height: 170px; padding-top: 18px; }
+.col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+.col-bar { display: block; width: min(24px, 70%); background: var(--brand); border-radius: 4px 4px 0 0; min-height: 0; }
+.col-val { font-weight: 700; font-size: .85rem; margin-bottom: 4px; }
+.col-label { font-size: .75rem; color: var(--muted); margin-top: 6px; text-align: center; white-space: nowrap; }
+.heat { border-collapse: separate; border-spacing: 2px; }
+.heat td { text-align: center; font-weight: 700; font-size: 1.05rem; padding: 14px 6px; border: 0; border-radius: 4px; }
+.heat th { background: transparent; text-align: center; border: 0; }
+
+/* ---------- calendário */
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.cal-head { background: #f5f5f6; font-weight: 700; font-size: .8rem; padding: 6px; text-align: center; }
+.cal-day { background: #fff; min-height: 104px; padding: 4px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cal-day:hover { background: #fffafa; }
+.cal-day.weekend { background: #fafafa; }
+.cal-day.empty { background: #f7f7f8; cursor: default; }
+.cal-day.today .cal-num { background: var(--brand); color: #fff; border-radius: 999px; padding: 0 7px; }
+.cal-num { font-size: .8rem; font-weight: 700; align-self: flex-start; }
+.cal-title { font-size: 1.1rem; min-width: 170px; text-align: center; }
+.cal-ev { display: block; font-size: .75rem; padding: 2px 5px; border-radius: 3px; text-decoration: none; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid #999; background: #f1f1f2; }
+.cal-ev.sug { border: 1px dashed var(--brand); border-left-width: 3px; background: #fff; display: flex; align-items: center; gap: 3px; overflow: visible; }
+.cal-ev .sug-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cal-ev .mini { flex: none; padding: 0 5px; font-size: .72rem; line-height: 1.35; }
+.cal-ev .mini + .mini { background: #fff; color: var(--brand); }
+.st-Agendada { border-left-color: #6a6d72 !important; background: #f1f1f2; }
+.st-Pendente, .st-Solicitada { border-left-color: #C98A00 !important; background: #fff6e2; }
+.st-Realizada { border-left-color: #2E7D32 !important; background: #e9f5eb; }
+.st-Norealizada { border-left-color: #C00000 !important; background: #fde8e8; }
+.legend i.st-Agendada { background: #6a6d72; } .legend i.st-Pendente, .legend i.st-Solicitada { background: #C98A00; }
+.legend i.st-Realizada { background: #2E7D32; } .legend i.st-Norealizada { background: #C00000; } .legend i.sug { background: #fff; border: 1px dashed var(--brand); }
+.teach { border-left: 4px solid var(--brand); }
+@media (max-width: 760px) { .cal-day { min-height: 70px; } .cal-ev { font-size: .65rem; } }
+
+/* ---------- traduções */
+.tr-btn { vertical-align: middle; font-size: .78rem; margin-left: 6px; }
+h1 .tr-btn, h2 .tr-btn { font-weight: 600; }
+.tr-preview { font-size: .85rem; color: #444; background: #f6f6f7; border-left: 3px solid #b9bcc2; padding: 6px 8px; margin-top: 4px; border-radius: 3px; white-space: pre-wrap; }
+.tr-field { margin-bottom: 12px; }
+.tr-table td { width: 33%; font-size: .9rem; }
+
+/* ---------- lista geral, busca de itens, prazos */
+.due-strip { background: #fde8e8; color: #7a0000; padding: 6px 22px; font-weight: 600; font-size: .9rem; border-top: 1px solid #f3c2c2; }
+.due-strip a { margin-left: 10px; }
+.due-banner { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-weight: 600; }
+.late-txt { color: var(--high); font-weight: 700; }
+tr.overdue td { background: #fff6f6; }
+.pager { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; }
+.inline-check { display: inline-flex; gap: 6px; align-items: center; font-weight: 400; font-size: .9rem; margin: 0; color: var(--ink); }
+.inline-check input { width: auto; }
+td.lp { max-width: 280px; font-size: .88rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: #f1f1f2; border-radius: 999px; padding: 3px 4px 3px 10px; font-size: .85rem; }
+.chip.direct { background: var(--soft); color: var(--brand); font-weight: 600; }
+.chip.sug { background: #fff; border: 1px dashed #bbb; padding-right: 10px; }
+.chip .mini { padding: 0 6px; font-size: .75rem; line-height: 1.4; border-radius: 999px; }
+.search-results { border: 1px solid var(--line); border-top: 0; border-radius: 0 0 4px 4px; max-height: 260px; overflow: auto; }
+.search-results:empty { display: none; }
+.search-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 6px 8px; border-top: 1px solid var(--line); }
+details.merge { margin-top: 14px; } details.merge summary { cursor: pointer; color: var(--muted); }
+.toolbar .inline-check input { min-width: 0; width: auto; }
+.act-cell { display: flex; flex-wrap: wrap; gap: 4px; min-width: 150px; }
+
+/* ---------- painel por departamento */
+.dept-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.dept-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; background: #fff; color: var(--ink); border: 1px solid var(--line);
+  border-top: 4px solid #b9bcc2; border-radius: 6px; padding: 12px; font-weight: 400; cursor: pointer; }
+.dept-tile:hover { filter: none; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.dept-tile.has-late { border-top-color: var(--brand); }
+.dept-tile.on { outline: 2px solid var(--brand); background: var(--soft); }
+.dept-name { font-weight: 800; font-size: 1.05rem; color: var(--brand); }
+.dept-tile b { font-size: 1.7rem; line-height: 1.1; }
+.dept-sub { font-size: .78rem; color: var(--muted); }
+.dept-meta { font-size: .78rem; color: var(--muted); min-height: 1em; }
+
+/* ---------- participantes e tempo em reuniões */
+.att-picker { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: #fafafa; }
+.att-group { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.att-group b { font-size: .78rem; color: var(--brand); text-transform: uppercase; letter-spacing: .3px; margin-right: 2px; }
+.att-group label { display: inline-flex; gap: 5px; align-items: center; font-weight: 400; margin: 0; color: var(--ink); font-size: .9rem; }
+.att-group input { width: auto; accent-color: var(--brand); }
+.director-btn { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+.director-btn.on { background: var(--brand); border-color: var(--brand); }
+/* planejado × realizado */
+.pairbars { display: grid; gap: 10px; }
+.pb-row { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 10px; align-items: center; }
+.pb-row > div { display: grid; gap: 3px; }
+.pb-row .hb-bar { height: 10px; }
+details.more { margin: 8px 0; } details.more > summary { cursor: pointer; color: var(--muted); font-size: .9rem; margin-bottom: 6px; }
+.file-btn { cursor: pointer; margin: 0; font-size: .85rem; }
+.dept-in { width: 110px; padding: 4px 6px; }
+.people-box > summary { cursor: pointer; }
+.people-box[open] > summary { margin-bottom: 8px; }
+/* assistente */
+.assist-card { border-top: 3px solid var(--brand); }
+.props-t td { vertical-align: top; }
+.props-t select, .props-t .tg-in { width: 100%; margin-bottom: 4px; }
+.props-t textarea { width: 100%; min-height: 44px; }
+.tabs.mini { margin: 0 0 10px; } .tabs.mini a { padding: 6px 12px; font-size: .92rem; }
+.att-input { width: 100%; }
+.att-chips, .slots { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; align-items: center; }
+button.chip { background: #fff; color: #333; border: 1px solid var(--line); border-radius: 14px; padding: 3px 10px; font-size: .85rem; font-weight: 500; }
+button.chip:hover { border-color: var(--brand); color: var(--brand); filter: none; }
+button.chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.small-sel { padding: 3px 6px; font-size: .88rem; }
+.prog-box { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.prog-box ul { margin: 6px 0 0; }
+
+/* ---------- plataforma pessoal */
+.ai-tag { background: var(--brand); color: #fff; border-radius: 4px; padding: 0 6px; font-size: 1.05rem; vertical-align: 3px; }
+.where { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.grid.two { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); align-items: start; }
+.row.tight { gap: 6px; margin-top: 4px; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.props-t td:first-child { font-size: .92rem; }
+.todo-t td { border-bottom: 1px solid var(--line); }
+.todo-t input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+.k-done { background: var(--low-bg); color: var(--low); }
+.k-progress { background: #e6eef8; color: #24527a; }
+.k-learned { background: #efe7fb; color: #5b3a8c; }
+.k-mistake { background: var(--high-bg); color: var(--high); }
+.k-note { background: #eeeeef; color: #333; }
+.day-card { margin-bottom: var(--gap); }
+.day-card h2 a { font-weight: 400; margin-left: 8px; }
+.stars { display: flex; gap: 4px; }
+.star-btn { background: #fff; color: #c9c9cc; border: 1px solid var(--line); font-size: 1.4rem; line-height: 1; padding: 4px 8px; }
+.star-btn.on { color: #e0a100; border-color: #e0a100; }
+.col-pair { display: flex; gap: 2px; align-items: flex-end; height: 100%; justify-content: center; width: 100%; }
+.col-pair .col-bar { width: min(14px, 40%); }
+.col-bar.miss { background: #d08a2a; }
+.summary-doc .kpi b { font-size: 1.5rem; }
+@media (max-width: 640px) { .grid.two { grid-template-columns: 1fr; } .props-t, .props-t tbody, .props-t tr, .props-t td { display: block; width: 100% !important; } .props-t tr:first-child { display: none; } .props-t tr { border-bottom: 2px solid var(--line); padding: 6px 0; } }
+</style>
+</head>
+<body data-density="normal">
+<header class="top">
+  <div class="top-row">
+    <div class="brand">Minhas atividades <span class="ai">IA</span></div>
+    <div class="top-right">
+      <span id="where" class="where"></span>
+      <div id="ai-badge" class="badge"></div>
+    </div>
+  </div>
+  <div id="redbar" class="redbar"></div>
+  <nav id="nav" class="hidden">
+    <a href="#painel">Painel</a>
+    <a href="#tarefas">Tarefas</a>
+    <a href="#registros">Registros</a>
+    <a href="#sumario">Sumário diário</a>
+    <a href="#config">Config.</a>
+  </nav>
+</header>
+<main id="view"><p class="muted">Carregando…</p></main>
+<div id="modal" class="modal hidden"><div class="modal-box"><button class="close" onclick="closeModal()">×</button><div id="modal-body"></div></div></div>
+<div id="toast" class="toast hidden"></div>
+<script>
+/* Armazenamento local. Dois modos:
+ *
+ *   pasta      -> uma pasta do computador escolhida pelo usuário (File System Access API, Edge/Chrome):
+ *                   <pasta>/db.json          base de dados pessoal
+ *                   <pasta>/SUMARIOS/...     sumários diários salvos em HTML
+ *   navegador  -> tudo guardado no próprio navegador (IndexedDB). Funciona em qualquer navegador,
+ *                 mas os dados ficam só neste computador/navegador (use Config. → Backup).
+ *
+ * A referência à pasta e a chave da IA ficam no IndexedDB do navegador (nunca dentro da pasta).
+ */
+const KV = {
+  _db: null,
+  open() {
+    if (this._db) return Promise.resolve(this._db);
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("atividades-pessoais-ia", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => res((this._db = r.result));
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async get(k) {
+    const db = await this.open();
+    return new Promise((res, rej) => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+  },
+  async set(k, v) {
+    const db = await this.open();
+    return new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); });
+  },
+};
+
+const Store = {
+  mode: "",   // "pasta" | "navegador"
+  root: null,
+  name: "",
+
+  supported: () => typeof window.showDirectoryPicker === "function",
+
+  async pick() {
+    const h = await window.showDirectoryPicker({ id: "atividades-pessoais", mode: "readwrite" });
+    await this.use(h);
+  },
+  async use(h) {
+    this.mode = "pasta";
+    this.root = h;
+    this.name = h.name;
+    await KV.set("root", h).catch(() => {});
+    await KV.set("mode", "pasta").catch(() => {});
+  },
+  async useBrowser() {
+    this.mode = "navegador";
+    this.root = null;
+    this.name = "este navegador";
+    await KV.set("mode", "navegador").catch(() => {});
+  },
+  async rememberedMode() { try { return (await KV.get("mode")) || ""; } catch { return ""; } },
+  /** Pasta usada da última vez; precisa de permissão (clique do usuário) para reabrir. */
+  async remembered() {
+    try { return (await KV.get("root")) || null; } catch { return null; }
+  },
+  async hasPermission(h) { return (await h.queryPermission({ mode: "readwrite" })) === "granted"; },
+  async requestPermission(h) { return (await h.requestPermission({ mode: "readwrite" })) === "granted"; },
+
+  _split(path) { return path.split("/").filter(Boolean); },
+  async dir(path, create = true) {
+    let h = this.root;
+    for (const p of this._split(path)) h = await h.getDirectoryHandle(p, { create });
+    return h;
+  },
+  async write(path, data) {
+    const parts = this._split(path), name = parts.pop();
+    const fh = await (await this.dir(parts.join("/"), true)).getFileHandle(name, { create: true });
+    const w = await fh.createWritable();
+    await w.write(data);
+    await w.close();
+  },
+  async read(path) {
+    try {
+      const parts = this._split(path), name = parts.pop();
+      return await (await (await this.dir(parts.join("/"), false)).getFileHandle(name)).getFile();
+    } catch { return null; }
+  },
+
+  async loadDB() {
+    if (this.mode === "pasta") {
+      const f = await this.read("db.json");
+      return f ? JSON.parse(await f.text()) : null;
+    }
+    const raw = await KV.get("db").catch(() => null);
+    return raw ? JSON.parse(raw) : null;
+  },
+  async saveDB(db) {
+    const json = JSON.stringify(db, null, 2);
+    if (this.mode === "pasta") await this.write("db.json", json);
+    else await KV.set("db", json);
+  },
+};
+</script>
+<script>
+/* Regras da plataforma pessoal: tarefas (itens pessoais), registros do dia e sumário diário.
+ *
+ * Base (db.json):
+ *   tasks    -> itens pessoais a fazer: TAR001… (status Pendente / Em andamento / Feita / Cancelada,
+ *               prazo, área, prioridade, histórico de progresso, dias em que "faltou")
+ *   entries  -> registros do dia: REG001… (kind: done = fiz, progress = avancei, learned = aprendi,
+ *               mistake = errei, note = anotação), sempre com a data a que se referem
+ *   days     -> por data: nota do dia (1–5), reflexão escrita e reflexão da IA
+ *   assist_examples -> cada proposta confirmada/corrigida, para o assistente aprender o seu critério
+ */
+const pad = (n) => String(n).padStart(2, "0");
+const localISO = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const nowISO = () => localISO();
+const todayISO = () => localISO().slice(0, 10);
+const addDays = (iso, n) => { const d = new Date(iso.slice(0, 10) + "T12:00:00"); d.setDate(d.getDate() + n); return localISO(d).slice(0, 10); };
+const weekday = (iso) => new Date(iso.slice(0, 10) + "T12:00:00").getDay();
+const fmtDate = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "");
+const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+const TASK_STATUS = ["Pendente", "Em andamento", "Feita", "Cancelada"];
+const LEVELS = ["Alta", "Média", "Baixa"];
+const DEFAULT_AREAS = ["Saúde", "Estudos", "Trabalho", "Finanças", "Casa", "Família e amigos", "Lazer", "Outros"];
+const KINDS = ["done", "missed", "todo", "progress", "learned", "mistake", "note", "ignore"];
+const KIND_LABEL = {
+  done: "✅ Fiz", missed: "⏳ Não fiz (faltou)", todo: "📝 Nova tarefa", progress: "➡️ Avancei numa tarefa",
+  learned: "💡 Aprendi", mistake: "⚠️ Errei", note: "🗒️ Anotação", ignore: "Ignorar",
+};
+const ENTRY_LABEL = { done: "Fiz", progress: "Avancei", learned: "Aprendi", mistake: "Errei", note: "Anotação" };
+
+const Core = {
+  db: null,
+
+  blank() {
+    return {
+      version: 1,
+      settings: { name: "Minhas atividades", areas: [...DEFAULT_AREAS], assist_rules: "", auto_apply: false },
+      tasks: [], entries: [], days: {}, assist_examples: [], summaries: [],
+      counters: { TAR: 0, REG: 0 },
+    };
+  },
+  load(db) {
+    const b = this.blank();
+    this.db = Object.assign(b, db || {});
+    this.db.settings = Object.assign(b.settings, (db || {}).settings || {});
+    this.db.counters = Object.assign({ TAR: 0, REG: 0 }, this.db.counters);
+    return this.db;
+  },
+  async save() {
+    if (typeof Store !== "undefined" && Store.mode) await Store.saveDB(this.db);
+  },
+  nextId(prefix) { return prefix + String(++this.db.counters[prefix]).padStart(3, "0"); },
+  task(id) { return this.db.tasks.find((t) => t.id === id); },
+  isOpen: (t) => t && (t.status === "Pendente" || t.status === "Em andamento"),
+  openTasks() { return this.db.tasks.filter(this.isOpen); },
+
+  // ---------------------------------------------------------------- tarefas
+  addTask(data) {
+    const t = { id: this.nextId("TAR"), title: (data.title || "").trim(), area: data.area || "Outros", priority: data.priority || "Média",
+      status: data.status || "Pendente", due: data.due || "", notes: data.notes || "", created_at: (data.date ? data.date + nowISO().slice(10) : nowISO()),
+      done_at: "", missed: [], history: [] };
+    if (data.date && data.date > todayISO()) t.created_at = nowISO();
+    this.db.tasks.push(t);
+    return t;
+  },
+  addEntry(kind, text, date, extra = {}) {
+    const e = { id: this.nextId("REG"), date: date || todayISO(), kind, text: (text || "").trim(), area: extra.area || "", task_id: extra.task_id || "",
+      lesson: extra.lesson || "", created_at: nowISO() };
+    this.db.entries.push(e);
+    return e;
+  },
+  completeTask(id, date = todayISO(), note = "") {
+    const t = this.task(id);
+    if (!t) return null;
+    t.status = "Feita";
+    t.done_at = date;
+    t.history.push({ date: nowISO(), text: note ? `Feita: ${note}` : "Marcada como feita" });
+    return this.addEntry("done", note || t.title, date, { area: t.area, task_id: t.id });
+  },
+  reopenTask(id) {
+    const t = this.task(id);
+    if (!t) return;
+    t.status = "Pendente"; t.done_at = "";
+    t.history.push({ date: nowISO(), text: "Reaberta" });
+    this.db.entries = this.db.entries.filter((e) => !(e.kind === "done" && e.task_id === id && e.text === t.title));
+  },
+  progressTask(id, text, date = todayISO()) {
+    const t = this.task(id);
+    if (!t) return null;
+    if (t.status === "Pendente") t.status = "Em andamento";
+    t.history.push({ date: nowISO(), text });
+    return this.addEntry("progress", text, date, { area: t.area, task_id: t.id });
+  },
+  markMissed(id, date = todayISO()) {
+    const t = this.task(id);
+    if (!t) return;
+    if (!t.missed.includes(date)) t.missed.push(date);
+    t.history.push({ date: nowISO(), text: `Faltou fazer em ${fmtDate(date)}` });
+  },
+  /** Passa para o dia seguinte o que faltou: o dia continua contando como "faltou". */
+  rollOver(date = todayISO()) {
+    const { missed } = this.dayData(date);
+    for (const t of missed) {
+      if (!t.missed.includes(date)) t.missed.push(date);
+      t.due = addDays(date, 1);
+      t.history.push({ date: nowISO(), text: `Faltou em ${fmtDate(date)}; prazo passado para ${fmtDate(t.due)}` });
+    }
+    return missed.length;
+  },
+
+  // ---------------------------------------------------------------- assistente: aplicar propostas
+  /** Aplica as propostas confirmadas/corrigidas e guarda cada decisão como exemplo para o assistente aprender. */
+  applyProposals(list, date = todayISO(), opts = {}) {
+    const results = [];
+    for (const p of list) {
+      const text = (p.text || p.title || "").trim(), title = (p.title || p.text || "").trim().slice(0, 200);
+      if (p.ai && !opts.auto) this.db.assist_examples.push({ date: nowISO(), text: text.slice(0, 400), ai: p.ai, final: { kind: p.kind, target: p.target || "" },
+        ok: p.ai.kind === p.kind && (p.ai.target || "") === (p.target || "") });
+      if (!title || p.kind === "ignore") { results.push({ kind: "ignore", title }); continue; }
+      const t = p.target ? this.task(p.target) : null;
+      switch (p.kind) {
+        case "done":
+          if (t) this.completeTask(t.id, date, title !== t.title ? title : "");
+          else this.addEntry("done", title, date, { area: p.area });
+          break;
+        case "missed":
+          if (t) this.markMissed(t.id, date);
+          else { const n = this.addTask({ title, area: p.area, priority: p.priority, due: date, date }); this.markMissed(n.id, date); }
+          break;
+        case "todo":
+          if (t) { if (p.due) t.due = p.due; if (p.priority) t.priority = p.priority; t.history.push({ date: nowISO(), text: `Lembrete: ${title}` }); }
+          else this.addTask({ title, area: p.area, priority: p.priority, due: p.due, date });
+          break;
+        case "progress":
+          if (t) this.progressTask(t.id, title, date);
+          else { const n = this.addTask({ title, area: p.area, priority: p.priority, due: p.due, status: "Em andamento", date }); this.progressTask(n.id, title, date); }
+          break;
+        case "learned": case "note":
+          this.addEntry(p.kind, title, date, { area: p.area, task_id: t?.id });
+          break;
+        case "mistake":
+          this.addEntry("mistake", title, date, { area: p.area, task_id: t?.id, lesson: p.lesson });
+          break;
+      }
+      results.push({ kind: p.kind, title, target: t?.id || "" });
+    }
+    return results;
+  },
+  assistStats() {
+    const all = this.db.assist_examples || [], ex = all.slice(-30), ok = ex.filter((x) => x.ok).length;
+    return { n: ex.length, ok, pct: ex.length ? Math.round((ok / ex.length) * 100) : 0, total: all.length };
+  },
+
+  // ---------------------------------------------------------------- sumário
+  /** Tudo o que interessa de um dia: o que fiz, o que faltou, o que aprendi, onde errei. */
+  dayData(date = todayISO()) {
+    const db = this.db, of = (k) => db.entries.filter((e) => e.date === date && e.kind === k);
+    const createdBy = (t) => (t.created_at || "").slice(0, 10) <= date;
+    // planejadas para o dia: prazo até o dia (e ainda abertas no começo do dia) ou marcadas como "faltou" nesse dia
+    const planned = db.tasks.filter((t) => t.status !== "Cancelada" && createdBy(t)
+      && ((t.due && t.due <= date && !(t.status === "Feita" && t.done_at && t.done_at < date)) || (t.missed || []).includes(date)));
+    const doneOnDay = (t) => t.status === "Feita" && t.done_at === date;
+    const missed = planned.filter((t) => !doneOnDay(t) && !(t.status === "Feita" && t.done_at && t.done_at <= date));
+    const plannedDone = planned.filter(doneOnDay);
+    const late = missed.filter((t) => t.due && t.due < date);
+    const pending = db.tasks.filter((t) => createdBy(t) && t.status !== "Cancelada" && !(t.status === "Feita" && t.done_at && t.done_at <= date));
+    const day = db.days[date] || {};
+    const pct = planned.length ? Math.round((plannedDone.length / planned.length) * 100) : null;
+    return { date, done: of("done"), progress: of("progress"), learned: of("learned"), mistakes: of("mistake"), notes: of("note"),
+      planned, plannedDone, missed, late, pending, pct, mood: day.mood || 0, reflection: day.reflection || "", ai_reflection: day.ai_reflection || "" };
+  },
+  weekData(end = todayISO(), n = 7) {
+    const out = [];
+    for (let i = n - 1; i >= 0; i--) {
+      const d = this.dayData(addDays(end, -i));
+      out.push({ date: d.date, done: d.done.length, missed: d.missed.length, planned: d.planned.length, learned: d.learned.length, mistakes: d.mistakes.length, mood: d.mood, pct: d.pct });
+    }
+    return out;
+  },
+  setDay(date, patch) { this.db.days[date] = Object.assign(this.db.days[date] || {}, patch); },
+
+  /** Reflexão sem IA: frases montadas a partir dos números do dia. */
+  heuristicReflection(d) {
+    const out = [];
+    const n = d.done.length;
+    out.push(n ? `Você registrou ${n} ${n === 1 ? "coisa feita" : "coisas feitas"}${d.progress.length ? ` e avançou em ${d.progress.length} ${d.progress.length === 1 ? "tarefa" : "tarefas"}` : ""}.`
+      : "Nenhuma conclusão registrada neste dia.");
+    if (d.planned.length) out.push(`${d.planned.length === 1 ? "Da 1 tarefa planejada" : `Das ${d.planned.length} tarefas planejadas`} para o dia, ${d.plannedDone.length} ${d.plannedDone.length === 1 ? "foi feita" : "foram feitas"} (${d.pct}%)`
+      + (d.missed.length ? ` e ${d.missed.length === 1 ? "faltou 1" : `faltaram ${d.missed.length}`}.` : "."));
+    if (d.late.length) out.push(`${d.late.length} ${d.late.length === 1 ? "tarefa está atrasada" : "tarefas estão atrasadas"} de dias anteriores: vale decidir se ainda fazem sentido.`);
+    if (d.learned.length) out.push(`Aprendizado do dia: “${d.learned[0].text}”.`);
+    if (d.mistakes.length) out.push(`Ponto de atenção: “${d.mistakes[0].text}”` + (d.mistakes[0].lesson ? ` (da próxima vez: ${d.mistakes[0].lesson}).` : "."));
+    const next = [...d.missed].sort((a, b) => LEVELS.indexOf(a.priority) - LEVELS.indexOf(b.priority)).slice(0, 3);
+    if (next.length) out.push(`Para amanhã, comece por: ${next.map((t) => t.title).join("; ")}.`);
+    return out.join("\n");
+  },
+
+  summaryHTML(d, opts = {}) {
+    const e = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const li = (arr, f) => (arr.length ? `<ul>${arr.map((x) => `<li>${f(x)}</li>`).join("")}</ul>` : '<p class="muted">—</p>');
+    const tk = (id) => (id && this.task(id) ? ` <span class="muted">(${e(id)})</span>` : "");
+    const stars = d.mood ? "★".repeat(d.mood) + "☆".repeat(5 - d.mood) : "—";
+    const body = `<h1>Sumário de ${e(WEEKDAYS[weekday(d.date)])}, ${e(fmtDate(d.date))}</h1>
+<div class="kpis">
+  <div class="kpi"><b>${d.done.length}</b><span>coisas que fiz</span></div>
+  <div class="kpi"><b>${d.missed.length}</b><span>faltaram fazer${d.planned.length ? ` (de ${d.planned.length} planejadas)` : ""}</span></div>
+  <div class="kpi"><b>${d.pct == null ? "—" : d.pct + "%"}</b><span>do planejado concluído</span></div>
+  <div class="kpi"><b>${d.learned.length}</b><span>aprendizados</span></div>
+  <div class="kpi"><b>${d.mistakes.length}</b><span>erros / pontos de atenção</span></div>
+  <div class="kpi"><b>${stars}</b><span>como foi o dia</span></div>
+</div>
+<h2>✅ Coisas que fiz</h2>${li(d.done, (x) => e(x.text) + tk(x.task_id))}
+${d.progress.length ? `<h2>➡️ Avanços</h2>${li(d.progress, (x) => e(x.text) + tk(x.task_id))}` : ""}
+<h2>⏳ Faltaram fazer (${d.missed.length})</h2>${li(d.missed, (t) => `${e(t.title)} <span class="muted">— ${e(t.priority)}${t.due ? ", prazo " + e(fmtDate(t.due)) : ""}${t.due && t.due < d.date ? ", atrasada" : ""}</span>`)}
+<p class="muted">Tarefas em aberto no total: ${d.pending.length}.</p>
+<h2>💡 O que aprendi</h2>${li(d.learned, (x) => e(x.text))}
+<h2>⚠️ Onde errei</h2>${li(d.mistakes, (x) => e(x.text) + (x.lesson ? `<br><span class="muted">Da próxima vez: ${e(x.lesson)}</span>` : ""))}
+${d.notes.length ? `<h2>🗒️ Anotações</h2>${li(d.notes, (x) => e(x.text))}` : ""}
+${d.reflection ? `<h2>✍️ Minha reflexão</h2><p style="white-space:pre-wrap">${e(d.reflection)}</p>` : ""}
+${d.ai_reflection ? `<h2>🤖 Reflexão do assistente</h2><p style="white-space:pre-wrap">${e(d.ai_reflection)}</p>` : ""}`;
+    if (!opts.standalone) return body;
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sumário ${e(d.date)}</title>
+<style>body{font:15px/1.5 "Segoe UI",system-ui,sans-serif;max-width:820px;margin:24px auto;padding:0 16px;color:#1a1a1a}h1{color:#0f6e6e}h2{font-size:1.1rem;border-left:4px solid #0f6e6e;padding-left:8px;margin-top:22px}
+.kpis{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}.kpi{border:1px solid #ddd;border-top:3px solid #0f6e6e;border-radius:6px;padding:10px}.kpi b{display:block;font-size:1.5rem;color:#0f6e6e}.kpi span,.muted{color:#6a6d72;font-size:.9rem}</style>
+</head><body>${body}<p class="muted">Gerado em ${e(fmtDate(nowISO()))} ${e(nowISO().slice(11, 16))}</p></body></html>`;
+  },
+  async saveSummaryFile(date) {
+    const html = this.summaryHTML(this.dayData(date), { standalone: true });
+    if (typeof Store !== "undefined" && Store.mode === "pasta") {
+      const file = `SUMARIOS/${date}.html`;
+      await Store.write(file, html);
+      this.db.summaries = this.db.summaries.filter((s) => s.date !== date);
+      this.db.summaries.push({ date, file, generated_at: nowISO() });
+      return file;
+    }
+    return "";
+  },
+};
+</script>
+<script>
+/* Camada de IA (mesma lógica da plataforma de governança).
+ *
+ * Com a chave do Claude (Config.), o assistente usa o modelo; sem chave — ou se a chamada falhar — usa
+ * heurísticas locais (palavras‑chave, datas, semelhança com as suas tarefas e com decisões anteriores).
+ *
+ * Aprendizado: cada proposta que você confirma ou corrige vira exemplo (db.assist_examples). Os casos
+ * parecidos orientam a heurística offline e são enviados ao Claude como critério.
+ */
+const AI = {
+  key: "",
+  model: "claude-opus-5-5",
+
+  SYSTEM_PROMPT: `Você é o assistente pessoal de produtividade e autoconhecimento do usuário.
+Você transforma anotações livres do dia em registros organizados (o que fez, o que faltou, tarefas novas,
+avanços, aprendizados e erros) e ajuda a refletir sobre o dia com gentileza e objetividade.
+Responda sempre em português do Brasil, de forma simples e direta. O usuário confirma ou corrige as suas
+sugestões; trate as decisões anteriores dele como critério e siga-as quando aplicáveis.`,
+
+  async init() {
+    this.key = (await KV.get("api_key").catch(() => "")) || "";
+    this.model = (await KV.get("model").catch(() => "")) || "claude-opus-5-5";
+  },
+  async configure(key, model) {
+    this.key = (key || "").trim();
+    this.model = (model || "").trim() || "claude-opus-5-5";
+    await KV.set("api_key", this.key);
+    await KV.set("model", this.model);
+  },
+  enabled() { return !!this.key; },
+
+  /** Chama o Claude. Retorna objeto (se schema) ou texto. Lança Error em falha. */
+  async call(content, schema = null, effort = "medium", maxTokens = 8000) {
+    if (!this.key) throw new Error("IA sem chave configurada");
+    const body = {
+      model: this.model,
+      max_tokens: maxTokens,
+      system: this.SYSTEM_PROMPT,
+      messages: [{ role: "user", content }],
+      output_config: { effort },
+      // Se um classificador de segurança recusar, o servidor tenta outro modelo automaticamente.
+      fallbacks: "default",
+    };
+    if (schema) body.output_config.format = { type: "json_schema", schema };
+    let r;
+    try {
+      r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": this.key,
+          "anthropic-version": "2023-06-01",
+          "anthropic-beta": "server-side-fallback-2026-07-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (e) {
+      throw new Error("Sem conexão com a API do Claude (rede/proxy bloqueado?)");
+    }
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (r.status === 401) throw new Error("Chave da IA inválida (401)");
+      if (r.status === 429) throw new Error("Limite de requisições atingido; tente novamente em instantes");
+      throw new Error(`Erro da API do Claude (${r.status}): ${data?.error?.message || r.statusText}`);
+    }
+    if (data.stop_reason === "refusal") throw new Error("O modelo recusou a solicitação");
+    const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
+    if (!schema) return text;
+    try { return JSON.parse(text); } catch { throw new Error("Resposta da IA em formato inválido"); }
+  },
+
+  // ---------------------------------------------------------------- utilidades de texto
+  STOP: new Set("a o os as de da do das dos e em no na nos nas um uma para pra por com sem que se ao à é ser sobre meu minha meus minhas".split(" ")),
+  norm: (s) => String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, ""),
+  tokens(s) {
+    // radical simples (5 primeiras letras) para aproximar flexões: estudar ~ estudei, relatório ~ relatórios
+    return new Set((this.norm(s).match(/[a-z0-9]{3,}/g) || []).filter((w) => !this.STOP.has(w)).map((w) => w.slice(0, 5)));
+  },
+  similarity(a, b) {
+    const ta = this.tokens(a), tb = this.tokens(b);
+    if (!ta.size || !tb.size) return 0;
+    let inter = 0;
+    for (const t of ta) if (tb.has(t)) inter++;
+    return (inter / Math.min(ta.size, tb.size)) * 0.6 + (inter / (ta.size + tb.size - inter)) * 0.4;
+  },
+  similarAssist(db, text, limit = 6) {
+    return (db.assist_examples || []).map((x) => [this.similarity(text, x.text || ""), x]).filter(([s]) => s > 0.2)
+      .sort((a, b) => b[0] - a[0]).slice(0, limit);
+  },
+  bestTask(db, text, threshold) {
+    const best = db.tasks.filter(Core.isOpen).map((t) => [this.similarity(text, t.title), t]).sort((a, b) => b[0] - a[0])[0];
+    return best && best[0] >= threshold ? best[1] : null;
+  },
+
+  // ---------------------------------------------------------------- anotações -> pontos
+  LIST_MARK: /^\s*(\d{1,2}\s*[.)\-–]|[-•*▪●○■□►])\s*/,
+  segments(text) {
+    let lines = String(text || "").split(/\r?\n/).map((l) => l.replace(this.LIST_MARK, "").trim()).filter(Boolean);
+    if (lines.length === 1 && lines[0].length > 160) lines = lines[0].split(/(?<=[.!?;])\s+/).map((x) => x.trim()).filter(Boolean);
+    return lines;
+  },
+  parseDue(s, base = todayISO()) {
+    const n = this.norm(s);
+    const iso = (s.match(/(\d{4}-\d{2}-\d{2})/) || [])[1];
+    if (iso) return iso;
+    const m = s.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+    if (m) {
+      const y = m[3] ? (m[3].length === 2 ? "20" + m[3] : m[3]) : base.slice(0, 4);
+      return `${y}-${pad(+m[2])}-${pad(+m[1])}`;
+    }
+    if (/\bdepois de amanha\b/.test(n)) return addDays(base, 2);
+    if (/\bamanha\b/.test(n)) return addDays(base, 1);
+    if (/\bhoje\b/.test(n)) return base;
+    const days = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
+    const wd = days.findIndex((d) => new RegExp(`\\b(na|no|ate|até)?\\s*${d}(-feira)?\\b`).test(n));
+    if (wd >= 0) { let k = (wd - weekday(base) + 7) % 7; if (k === 0) k = 7; return addDays(base, k); }
+    if (/\b(semana que vem|proxima semana)\b/.test(n)) return addDays(base, 7);
+    return "";
+  },
+  AREA_WORDS: {
+    "Saúde": ["academia", "treino", "treinei", "corri", "corrida", "medic", "consulta", "remedio", "dormi", "sono", "yoga", "caminhada", "caminhei", "dieta", "agua", "dentista", "terapia", "exame", "pilates", "alongamento", "natacao"],
+    "Estudos": ["estud", "curso", "aula", "livro", "leitura", "li ", "prova", "artigo", "tese", "faculdade", "usp", "mestrado", "doutorado", "pesquisa", "ingles", "disciplina", "seminario", "tcc", "orientador"],
+    "Trabalho": ["reuniao", "relatorio", "email", "e-mail", "cliente", "projeto", "apresentacao", "trabalho", "chefe", "entrega", "planilha", "slides"],
+    "Finanças": ["pagar", "paguei", "conta ", "boleto", "banco", "fatura", "investi", "orcamento", "gastei", "dinheiro", "pix", "cartao", "imposto"],
+    "Casa": ["limpar", "limpei", "lavar", "lavei", "louca", "roupa", "mercado", "casa", "cozinhei", "cozinhar", "arrumei", "arrumar", "faxina", "compras"],
+    "Família e amigos": ["mae", "pai", "familia", "amig", "aniversario", "visita", "namorad", "irma", "avo", "filh"],
+    "Lazer": ["filme", "serie", "passeio", "viagem", "jogo", "musica", "descans", "praia", "show", "cinema"],
+  },
+  guessArea(db, text) {
+    const n = " " + this.norm(text) + " ";
+    const areas = db.settings.areas || DEFAULT_AREAS;
+    // área com mais palavras-chave na frase (empate: a primeira da lista)
+    const best = Object.entries(this.AREA_WORDS).filter(([a]) => areas.includes(a)).map(([a, ws]) => [a, ws.filter((w) => n.includes(w)).length])
+      .sort((x, y) => y[1] - x[1])[0];
+    if (best && best[1]) return best[0];
+    for (const a of areas) if (n.includes(" " + this.norm(a) + " ")) return a;
+    return areas.includes("Outros") ? "Outros" : areas[areas.length - 1] || "";
+  },
+  RX: {
+    labelDone: /^(\[x\]|✓|✔|✅|fiz\s*:|feito\s*:|ok\s*:)\s*/i,
+    labelTodo: /^(\[\s?\]|☐|todo\s*:|pendente\s*:|fazer\s*:|tarefa\s*:)\s*/i,
+    labelLearn: /^(aprendi\s*:|aprendizado\s*:|licao\s*:|lição\s*:|💡)\s*/i,
+    labelMistake: /^(errei\s*:|erro\s*:|⚠️?)\s*/i,
+    labelNote: /^(nota\s*:|obs\s*:|ideia\s*:|anotacao\s*:|anotação\s*:|🗒️?)\s*/i,
+    mistake: /\b(errei|erro|esqueci|falhei|deveria ter|nao deveria|me atrasei|atrasei|cheguei atrasad|perdi o|perdi a|perdi meu|perdi minha|deixei de|vacilei|furei|me distrai|procrastinei)\b/,
+    learned: /\b(aprendi|descobri|entendi|percebi|licao|aprendizado|insight|li que|vi que|conclui que)\b/,
+    missed: /\b(nao fiz|nao consegui|faltou|ficou para|ficou pra|nao deu tempo|adiei|nao terminei|deixei para|deixei pra)\b/,
+    todo: /^(preciso|tenho que|tenho de|lembrar|fazer|comprar|ligar|marcar|agendar|pagar|enviar|responder|estudar|ler|devo|quero|vou|amanha)\b|\b(amanha|ate (o dia|dia)? ?\d{1,2}\/\d{1,2}|semana que vem)\b/,
+    progress: /\b(comecei|avancei|continuei|em andamento|metade|parte d[ao]|\d{1,3}\s*%|iniciei)\b/,
+    note: /^(ideia|nota|obs|lembrete)\b/,
+    done: /^(fiz|fui|li|terminei|termin|conclu|finalizei|entreguei|paguei|comprei|liguei|enviei|respondi|estudei|treinei|corri|limpei|lavei|cozinhei|arrumei|mandei|marquei|agendei|resolvi|organizei|escrevi|assisti|visitei|feito|pronto|ok)\b|^\p{L}+ei\b/u,
+    high: /\b(urgente|importante|prioridade|sem falta)\b/,
+  },
+  cleanTitle(s) {
+    return s.replace(this.RX.labelDone, "").replace(this.RX.labelTodo, "").replace(this.RX.labelLearn, "").replace(this.RX.labelMistake, "").replace(this.RX.labelNote, "")
+      .replace(/\s*\b\d{4}-\d{2}-\d{2}\b|\s*\b(at[eé]\s+)?\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/gi, "").replace(/\s*\((urgente|importante)\)/i, "").trim() || s;
+  },
+
+  heuristicProposal(db, line, date) {
+    const raw = line.trim(), n = this.norm(raw);
+    const base = { text: raw, title: this.cleanTitle(raw), area: this.guessArea(db, raw), priority: this.RX.high.test(n) ? "Alta" : "Média",
+      due: this.parseDue(raw, date), lesson: "" };
+    const out = (kind, target, reason) => ({ ...base, kind, target: target || "", reason });
+    const valid = (k, id) => !id || Core.isOpen(Core.task(id));
+    // 1) marcação explícita
+    if (this.RX.labelDone.test(raw)) { const t = this.bestTask(db, base.title, 0.5); return out("done", t?.id, "Marcado como feito"); }
+    if (this.RX.labelTodo.test(raw)) return out("todo", "", "Marcado como tarefa");
+    if (this.RX.labelLearn.test(raw)) return out("learned", "", "Marcado como aprendizado");
+    if (this.RX.labelMistake.test(raw)) return out("mistake", "", "Marcado como erro");
+    if (this.RX.labelNote.test(raw)) return out("note", "", "Marcado como anotação");
+    // 2) caso parecido que você já decidiu
+    const [best] = this.similarAssist(db, raw, 1);
+    if (best && best[0] >= 0.55 && valid(best[1].final.kind, best[1].final.target))
+      return out(best[1].final.kind, best[1].final.target, `Como você decidiu num caso parecido: «${best[1].text.slice(0, 60)}»`);
+    // 3) ID citado
+    const tid = (raw.match(/\bTAR\d{3,}\b/i) || [])[0]?.toUpperCase();
+    if (tid && Core.isOpen(Core.task(tid))) {
+      if (this.RX.missed.test(n)) return out("missed", tid, `Cita ${tid}`);
+      if (this.RX.progress.test(n)) return out("progress", tid, `Cita ${tid}`);
+      return out("done", tid, `Cita ${tid}`);
+    }
+    // 4) erro, aprendizado, o que faltou
+    if (this.RX.mistake.test(n)) {
+      const p = out("mistake", "", "Fala de erro ou esquecimento");
+      const m = raw.split(/\s+(?:—|–|->|→|=>)\s+|\b(?:da pr[oó]xima vez|na pr[oó]xima)\b[:,]?\s*/i);
+      if (m.length > 1 && m[m.length - 1]) { p.title = m[0].trim(); p.lesson = m[m.length - 1].trim(); }
+      return p;
+    }
+    if (this.RX.learned.test(n)) return out("learned", "", "Fala de algo que você aprendeu");
+    if (this.RX.missed.test(n)) {
+      const t = this.bestTask(db, raw, 0.35);
+      const p = out("missed", t?.id, t ? `Faltou a tarefa ${t.id}` : "Algo que ficou por fazer");
+      const rest = base.title.replace(/^(n[aã]o (fiz|consegui|terminei)( fazer)?|faltou( fazer)?|n[aã]o deu tempo( de)?|adiei)\s*/i, "").replace(/\s*,?\s*(ficou|deixei) p(ara|ra).*$/i, "")
+        .replace(/^(o|a|os|as)\s+/i, "").trim();
+      p.title = rest ? rest[0].toUpperCase() + rest.slice(1) : base.title;
+      return p;
+    }
+    // 5) avanço numa tarefa
+    if (this.RX.progress.test(n)) { const t = this.bestTask(db, raw, 0.35); return out("progress", t?.id, t ? `Avanço na tarefa ${t.id}` : "Avanço em algo novo"); }
+    // 6) tarefa a fazer
+    if (this.RX.todo.test(n)) {
+      const p = out("todo", "", base.due ? `Tarefa com prazo ${fmtDate(base.due)}` : "Algo a fazer");
+      const rest = base.title.replace(/^(preciso( de)?|tenho (que|de)|devo|lembrar( de)?|n[aã]o esquecer( de)?|vou)\s+/i, "")
+        .replace(/\s*,?\s*\b(depois de amanh[aã]|amanh[aã]|hoje|(na|no|at[eé])\s+(segunda|ter[cç]a|quarta|quinta|sexta|s[aá]bado|domingo)(-feira)?|(na )?semana que vem|(na )?pr[oó]xima semana)\s*$/i, "").trim();
+      if (rest) p.title = rest[0].toUpperCase() + rest.slice(1);
+      return p;
+    }
+    if (this.RX.note.test(n)) return out("note", "", "Ideia ou anotação");
+    // 7) concluiu uma tarefa que já existia
+    const t = this.bestTask(db, raw, 0.5);
+    if (t) return out("done", t.id, `Parece a tarefa ${t.id}`);
+    if (this.RX.done.test(n)) return out("done", "", "Verbo no passado: coisa feita");
+    return out("done", "", "Relato do dia: registrado como feito");
+  },
+
+  get CAPTURE_SCHEMA() {
+    const S = { type: "string" };
+    return {
+      type: "object", additionalProperties: false, required: ["proposals"],
+      properties: { proposals: { type: "array", items: { type: "object", additionalProperties: false,
+        required: ["text", "title", "kind", "target_id", "area", "priority", "due_date", "lesson", "reason"],
+        properties: { text: S, title: { type: "string", description: "Título curto e claro" }, kind: { type: "string", enum: KINDS },
+          target_id: { type: "string", description: "TAR… quando o ponto se refere a uma tarefa em aberto (done, missed, progress, todo), senão vazio" },
+          area: S, priority: { type: "string", enum: LEVELS }, due_date: { type: "string", description: "AAAA-MM-DD ou vazio" },
+          lesson: { type: "string", description: "Para kind=mistake: o que fazer diferente da próxima vez, ou vazio" },
+          reason: { type: "string", description: "Uma frase curta" } } } } },
+    };
+  },
+
+  /** Propostas de registro para as anotações livres do dia. */
+  async capture(db, text, date = todayISO()) {
+    const lines = this.segments(text);
+    const heur = () => lines.map((l) => this.heuristicProposal(db, l, date));
+    const finish = (ps, engine, error) => ({ proposals: ps.map((p) => ({ ...p, ai: { kind: p.kind, target: p.target || "" } })), engine, error });
+    if (!lines.length) return finish([], "heuristica");
+    if (!this.enabled()) return finish(heur(), "heuristica");
+    const J = (x) => JSON.stringify(x);
+    const tasks = Core.openTasks().slice(-150).map((t) => ({ id: t.id, title: t.title, area: t.area, due: t.due, status: t.status }));
+    const examples = [...new Map(lines.flatMap((l) => this.similarAssist(db, l, 3)).map(([, x]) => [x.date + x.text, x])).values()].slice(0, 12)
+      .map((x) => ({ texto: x.text, ia_sugeriu: x.ai, usuario_decidiu: x.final }));
+    const prompt = `Anotações livres do usuário sobre o dia ${date} (${WEEKDAYS[weekday(date)]}), um ponto por linha. Retorne uma proposta por linha, na mesma ordem:\n${J(lines)}\n\n`
+      + "Tipos (kind): done = algo que a pessoa fez (se concluiu uma tarefa em aberto, target_id = TAR…); missed = algo planejado que não foi feito / faltou; "
+      + "todo = tarefa nova a fazer (due_date se houver prazo: 'amanhã', 'sexta', '20/10'…); progress = avançou numa tarefa sem concluir; "
+      + "learned = algo que aprendeu; mistake = erro, esquecimento ou algo que faria diferente (preencha lesson); note = anotação/ideia; ignore = sem valor de registro.\n"
+      + `Áreas possíveis: ${J(db.settings.areas)}.\nPrefira ligar a uma tarefa em aberto quando o ponto for sobre ela.\n\n`
+      + `Tarefas em aberto:\n${J(tasks)}\n\n`
+      + `Regras do usuário (siga com prioridade):\n${db.settings.assist_rules || "(nenhuma)"}\n\n`
+      + `Decisões anteriores do usuário em casos parecidos (aprenda e repita o critério):\n${J(examples)}`;
+    try {
+      const out = await this.call(prompt, this.CAPTURE_SCHEMA, "medium");
+      const ps = out.proposals.map((p, i) => {
+        const kind = KINDS.includes(p.kind) ? p.kind : "done";
+        let target = (p.target_id || "").toUpperCase();
+        if (!Core.isOpen(Core.task(target)) || ["learned", "note", "ignore"].includes(kind)) target = "";
+        return { text: p.text || lines[i] || "", title: p.title || p.text, kind, target, area: db.settings.areas.includes(p.area) ? p.area : this.guessArea(db, p.text || ""),
+          priority: LEVELS.includes(p.priority) ? p.priority : "Média", due: /^\d{4}-\d{2}-\d{2}$/.test(p.due_date) ? p.due_date : "", lesson: p.lesson || "", reason: p.reason };
+      });
+      return finish(ps, this.model);
+    } catch (e) {
+      return finish(heur(), "heuristica", e.message);
+    }
+  },
+
+  /** Reflexão do dia para o sumário. */
+  async reflect(db, d) {
+    if (!this.enabled()) return { text: Core.heuristicReflection(d), engine: "heuristica" };
+    const J = (x) => JSON.stringify(x);
+    const data = { dia: d.date, fiz: d.done.map((x) => x.text), avancos: d.progress.map((x) => x.text),
+      faltaram: d.missed.map((t) => ({ tarefa: t.title, prioridade: t.priority, prazo: t.due })), planejadas: d.planned.length, concluidas_do_planejado: d.plannedDone.length,
+      aprendi: d.learned.map((x) => x.text), errei: d.mistakes.map((x) => ({ erro: x.text, proxima_vez: x.lesson })), anotacoes: d.notes.map((x) => x.text),
+      nota_do_dia: d.mood || null, reflexao_do_usuario: d.reflection };
+    const prompt = `Escreva uma reflexão curta (no máximo 8 linhas, texto simples, sem markdown) sobre o dia abaixo, em três partes: `
+      + `"O que foi bem:", "Onde melhorar:" (ligando os erros a uma ação concreta) e "Para amanhã:" (no máximo 3 prioridades, começando pelo que faltou e é mais importante).\n${J(data)}`;
+    try { return { text: (await this.call(prompt, null, "low", 2000)).trim(), engine: this.model }; }
+    catch (e) { return { text: Core.heuristicReflection(d), engine: "heuristica", error: e.message }; }
+  },
+};
+</script>
+<script>
+/* Interface (JS puro, sem build). Rotas por hash: #painel, #tarefas, #registros, #sumario, #config. */
+const $ = (sel, el = document) => el.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pill = (txt, cls = "") => (txt ? `<span class="pill ${esc(cls)}">${esc(txt)}</span>` : "");
+const prio = (p) => pill(p, "p-" + p);
+const opts = (list, sel, labels = {}) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? "selected" : ""}>${esc(labels[o] || o)}</option>`).join("");
+const statusPill = (s) => pill(s, { Feita: "p-Baixa", "Em andamento": "p-Média", Cancelada: "" }[s] || "");
+const kpi = (n, label, href = "", small = "") => `<${href ? `a href="${href}"` : "div"} class="kpi"><b>${n}</b><span>${esc(label)}</span>${small ? `<small>${esc(small)}</small>` : ""}</${href ? "a" : "div"}>`;
+const areas = () => Core.db.settings.areas;
+
+function toast(text) {
+  const el = $("#toast"); el.textContent = text; el.classList.remove("hidden");
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.add("hidden"), 3500);
+}
+async function busy(btn, fn) {
+  const old = btn.textContent; btn.disabled = true; btn.textContent = "Processando…";
+  try { await fn(); } catch (e) { toast("Erro: " + e.message); } finally { btn.disabled = false; btn.textContent = old; }
+}
+function openModal(html) { $("#modal-body").innerHTML = html; $("#modal").classList.remove("hidden"); }
+function closeModal() { $("#modal").classList.add("hidden"); }
+async function save(msg) { await Core.save(); if (msg) toast(msg); render(); }
+function badge() {
+  const b = $("#ai-badge");
+  b.className = "badge" + (AI.enabled() ? " on" : "");
+  b.textContent = AI.enabled() ? `IA ativa (${AI.model})` : "Modo sem IA (heurístico)";
+  $("#where").textContent = Store.mode ? (Store.mode === "pasta" ? `📁 ${Store.name}` : "💾 dados neste navegador") : "";
+}
+function download(name, text, type = "text/html") {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ------------------------------------------------------------------ início
+async function boot() {
+  await AI.init();
+  const mode = await Store.rememberedMode(), h = await Store.remembered();
+  if (mode === "navegador") { await Store.useBrowser(); return start(); }
+  if (mode === "pasta" && h && (await Store.hasPermission(h).catch(() => false))) { await Store.use(h); return start(); }
+  welcome(mode === "pasta" ? h : null);
+}
+function welcome(h) {
+  $("#nav").classList.add("hidden");
+  $("#view").innerHTML = `<div class="card welcome">
+    <h1>Minhas atividades <span class="ai-tag">IA</span></h1>
+    <p>Escreva o seu dia, um ponto por linha. O assistente organiza o que você fez, o que faltou, as tarefas novas,
+    o que aprendeu e onde errou — e monta o sumário diário.</p>
+    <h2>Onde guardar os seus dados?</h2>
+    <div class="actions">
+      ${h ? `<button id="b-cont" onclick="pickAgain()">Continuar com a pasta “${esc(h.name)}”</button>` : ""}
+      ${Store.supported() ? `<button class="${h ? "ghost" : ""}" id="b-pick" onclick="pickFolder()">Escolher pasta de trabalho</button>` : ""}
+      <button class="ghost" id="b-browser" onclick="useBrowser()">Usar só neste navegador</button>
+    </div>
+    <p class="muted small">Pasta: os dados ficam num <code>db.json</code> na pasta escolhida (pode ser do OneDrive/Google Drive, para ter backup) e os sumários em <code>SUMARIOS/</code>.
+    Só funciona no Edge ou Chrome.<br>Navegador: funciona em qualquer navegador, mas os dados ficam só aqui — faça backup em Config.</p>
+  </div>`;
+}
+async function pickAgain() {
+  const h = await Store.remembered();
+  if (h && (await Store.requestPermission(h))) { await Store.use(h); start(); } else toast("Permissão negada. Escolha a pasta de novo.");
+}
+async function pickFolder() {
+  try { await Store.pick(); start(); } catch (e) { if (e.name !== "AbortError") toast("Erro: " + e.message); }
+}
+async function useBrowser() { await Store.useBrowser(); start(); }
+async function start() {
+  Core.load(await Store.loadDB());
+  await Core.save();
+  $("#nav").classList.remove("hidden");
+  if (!location.hash) location.hash = "#painel";
+  render();
+}
+
+// ------------------------------------------------------------------ roteamento
+let draft = { text: "", date: "", proposals: null, engine: "", error: "" };
+let sumDate = "";
+window.addEventListener("hashchange", () => render());
+function render() {
+  if (!Core.db) return;
+  badge();
+  // não perder o que já foi digitado no registro rápido quando a tela é redesenhada
+  if ($("#cap-text")) { draft.text = $("#cap-text").value; draft.date = $("#cap-date").value; }
+  const [route, arg] = (location.hash.slice(1) || "painel").split("/");
+  document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + route));
+  const v = { painel: viewPainel, tarefas: viewTarefas, registros: viewRegistros, sumario: viewSumario, config: viewConfig }[route] || viewPainel;
+  $("#view").innerHTML = v(arg);
+}
+
+// ------------------------------------------------------------------ painel (assistente)
+function viewPainel() {
+  const today = todayISO(), d = Core.dayData(today), date = draft.date || today;
+  const forToday = Core.openTasks().filter((t) => t.due && t.due <= today).sort((a, b) => a.due.localeCompare(b.due) || LEVELS.indexOf(a.priority) - LEVELS.indexOf(b.priority));
+  const st = Core.assistStats();
+  return `<h1>Olá! Como foi o seu dia?</h1>
+  <div class="kpis">
+    ${kpi(d.done.length, "coisas feitas hoje", "#sumario")}
+    ${kpi(d.missed.length, "faltam para hoje", "#tarefas", d.planned.length ? `de ${d.planned.length} planejadas` : "")}
+    ${kpi(d.pending.length, "tarefas em aberto", "#tarefas")}
+    ${kpi(d.learned.length, "aprendizados hoje", "#registros")}
+    ${kpi(d.mistakes.length, "erros hoje", "#registros")}
+  </div>
+  <div class="grid two">
+  <div class="card assist-card">
+    <h2>✨ Registro rápido do dia</h2>
+    <p class="muted small">Um ponto por linha. Exemplos: “Fui à academia”, “Não fiz o relatório”, “Preciso pagar o boleto amanhã”,
+    “Aprendi que…”, “Errei ao… — da próxima vez…”. Use também <code>[x]</code> para feito e <code>[ ]</code> para tarefa.</p>
+    <div class="row"><div><label>Dia</label><input type="date" id="cap-date" value="${esc(date)}"></div></div>
+    <label>Anotações</label>
+    <textarea id="cap-text" rows="8" placeholder="Fui à academia&#10;Estudei 2h para a prova&#10;Não fiz o relatório&#10;Preciso pagar o boleto amanhã&#10;Aprendi que revisar de manhã rende mais&#10;Errei ao deixar tudo para a noite — da próxima vez começar cedo">${esc(draft.text)}</textarea>
+    <div class="actions"><button id="b-capture" onclick="busy(this, capture)">Organizar com ${AI.enabled() ? "IA" : "o assistente"}</button>
+      <span class="muted small">Taxa de acerto do assistente: ${st.n ? `${st.pct}% nas últimas ${st.n} propostas` : "ainda sem histórico"}.</span></div>
+    ${draft.proposals ? proposalsTable() : ""}
+  </div>
+  <div class="card">
+    <h2>📌 Para hoje</h2>
+    ${forToday.length ? `<table class="todo-t">${forToday.map((t) => `<tr class="${t.due < today ? "overdue" : ""}">
+      <td style="width:28px"><input type="checkbox" title="Marcar como feita" onchange="doneTask('${t.id}')"></td>
+      <td>${esc(t.title)}<div class="muted small">${esc(t.area)} · ${t.due < today ? `<span class="late-txt">atrasada desde ${fmtDate(t.due)}</span>` : "hoje"}</div></td>
+      <td class="nowrap">${prio(t.priority)}</td></tr>`).join("")}</table>` : '<p class="muted">Nada com prazo para hoje. 🎉</p>'}
+    <div class="actions"><button class="ghost small" onclick="taskForm()">+ Nova tarefa</button>
+      ${d.missed.length ? `<button class="ghost small" onclick="rollOver()">Passar o que faltou para amanhã</button>` : ""}
+      <a class="btn small" href="#sumario">Ver sumário do dia</a></div>
+  </div>
+  </div>`;
+}
+async function capture() {
+  draft.text = $("#cap-text").value; draft.date = $("#cap-date").value || todayISO();
+  if (!draft.text.trim()) return toast("Escreva pelo menos uma linha.");
+  const r = await AI.capture(Core.db, draft.text, draft.date);
+  Object.assign(draft, { proposals: r.proposals, engine: r.engine, error: r.error || "" });
+  if (Core.db.settings.auto_apply && !r.error && Core.assistStats().pct >= 90 && Core.assistStats().n >= 20) return applyAll(true);
+  render();
+}
+function proposalsTable() {
+  const tasks = Core.openTasks();
+  const taskOpts = (sel) => `<option value="">— nenhuma —</option>` + tasks.map((t) => `<option value="${t.id}" ${t.id === sel ? "selected" : ""}>${esc(t.id + " · " + t.title.slice(0, 50))}</option>`).join("");
+  return `<h3>Confira e corrija antes de registrar</h3>
+  <p class="muted small">${draft.engine === "heuristica" ? "Sugestões do modo heurístico (sem IA)" : `Sugestões da IA (${esc(draft.engine)})`}${draft.error ? ` — a IA falhou (${esc(draft.error)}), usei o modo heurístico.` : "."}
+  Cada correção ensina o assistente.</p>
+  <table class="props-t"><tr><th>Anotação</th><th>Registrar como</th><th>Detalhes</th></tr>
+  ${draft.proposals.map((p, i) => `<tr data-i="${i}">
+    <td style="width:34%">${esc(p.text)}<div class="muted small">${esc(p.reason || "")}</div></td>
+    <td style="width:24%"><select class="p-kind" onchange="propEdit(${i}, 'kind', this.value)">${opts(KINDS, p.kind, KIND_LABEL)}</select>
+      ${["done", "missed", "progress", "todo", "mistake"].includes(p.kind) ? `<select class="p-target" title="Tarefa ligada" onchange="propEdit(${i}, 'target', this.value)">${taskOpts(p.target)}</select>` : ""}</td>
+    <td>${p.kind === "ignore" ? "" : `<input class="p-title" value="${esc(p.title)}" onchange="propEdit(${i}, 'title', this.value)">
+      <div class="row tight">
+        <select onchange="propEdit(${i}, 'area', this.value)">${opts(areas(), p.area)}</select>
+        ${["todo", "missed", "progress"].includes(p.kind) && !p.target ? `<select onchange="propEdit(${i}, 'priority', this.value)">${opts(LEVELS, p.priority)}</select>` : ""}
+        ${p.kind === "todo" || (p.kind === "progress" && !p.target) ? `<input type="date" value="${esc(p.due)}" title="Prazo" onchange="propEdit(${i}, 'due', this.value)">` : ""}
+      </div>
+      ${p.kind === "mistake" ? `<input placeholder="Da próxima vez…" value="${esc(p.lesson)}" onchange="propEdit(${i}, 'lesson', this.value)">` : ""}`}</td>
+  </tr>`).join("")}</table>
+  <div class="actions"><button id="b-apply" onclick="applyAll()">Confirmar e registrar</button><button class="ghost" onclick="draft.proposals = null; render()">Descartar</button></div>`;
+}
+function propEdit(i, k, v) {
+  draft.proposals[i][k] = v;
+  if (k === "kind" || k === "target") { draft.text = $("#cap-text").value; render(); }
+}
+async function applyAll(auto = false) {
+  const n = Core.applyProposals(draft.proposals, draft.date || todayISO(), { auto }).filter((r) => r.kind !== "ignore").length;
+  draft = { text: "", date: "", proposals: null, engine: "", error: "" };
+  $("#cap-text").value = "";
+  await save(`${n} ${n === 1 ? "registro feito" : "registros feitos"}${auto ? " automaticamente" : ""}.`);
+}
+async function doneTask(id) { Core.completeTask(id, todayISO()); await save("Tarefa feita! ✅"); }
+async function rollOver() { const n = Core.rollOver(todayISO()); await save(`${n} ${n === 1 ? "tarefa passada" : "tarefas passadas"} para amanhã (continuam contando como "faltou" hoje).`); }
+
+// ------------------------------------------------------------------ tarefas (itens pessoais)
+let tf = { status: "abertas", area: "", q: "" };
+function viewTarefas() {
+  const today = todayISO();
+  let list = Core.db.tasks.filter((t) => (tf.status === "abertas" ? Core.isOpen(t) : tf.status === "todas" ? true : t.status === tf.status)
+    && (!tf.area || t.area === tf.area) && (!tf.q || AI.norm(t.title).includes(AI.norm(tf.q))));
+  list = list.sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || LEVELS.indexOf(a.priority) - LEVELS.indexOf(b.priority));
+  const byArea = areas().map((a) => [a, Core.openTasks().filter((t) => t.area === a).length]).filter(([, n]) => n);
+  return `<div class="title-row"><h1>Minhas tarefas</h1><button onclick="taskForm()">+ Nova tarefa</button></div>
+  ${byArea.length ? `<div class="chips">${byArea.map(([a, n]) => `<button class="chip ${tf.area === a ? "on" : ""}" onclick="toggleArea(${areas().indexOf(a)})">${esc(a)} · ${n}</button>`).join("")}</div>` : ""}
+  <div class="toolbar">
+    <select onchange="tf.status = this.value; render()">${opts(["abertas", ...TASK_STATUS, "todas"], tf.status, { abertas: "Em aberto", todas: "Todas" })}</select>
+    <input placeholder="Buscar…" value="${esc(tf.q)}" onchange="tf.q = this.value; render()">
+  </div>
+  <div class="card"><table>
+    <tr><th>ID</th><th>Tarefa</th><th>Área</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr>
+    ${list.map((t) => `<tr class="click ${Core.isOpen(t) && t.due && t.due < today ? "overdue" : ""} ${t.status === "Feita" ? "done" : ""}" onclick="taskForm('${t.id}')">
+      <td class="nowrap">${t.id}</td><td>${esc(t.title)}${t.missed.length ? `<div class="muted small">faltou ${t.missed.length}× </div>` : ""}</td><td>${esc(t.area)}</td><td>${prio(t.priority)}</td>
+      <td class="nowrap">${t.due ? fmtDate(t.due) : "—"}${Core.isOpen(t) && t.due && t.due < today ? ' <span class="late-txt">atrasada</span>' : ""}</td><td>${statusPill(t.status)}</td>
+      <td onclick="event.stopPropagation()">${Core.isOpen(t) ? `<button class="small" onclick="doneTask('${t.id}')">Feita</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="7" class="muted">Nenhuma tarefa aqui.</td></tr>'}
+  </table></div>`;
+}
+function toggleArea(i) { const a = areas()[i]; tf.area = tf.area === a ? "" : a; render(); }
+function taskForm(id) {
+  const t = id ? Core.task(id) : { title: "", area: areas().includes("Outros") ? "Outros" : areas()[0], priority: "Média", status: "Pendente", due: "", notes: "", history: [], missed: [] };
+  openModal(`<h2>${id ? esc(id) : "Nova tarefa"}</h2>
+    <label>Tarefa</label><input id="tf-title" value="${esc(t.title)}">
+    <div class="row">
+      <div><label>Área</label><select id="tf-area">${opts(areas(), t.area)}</select></div>
+      <div><label>Prioridade</label><select id="tf-prio">${opts(LEVELS, t.priority)}</select></div>
+      <div><label>Prazo</label><input type="date" id="tf-due" value="${esc(t.due)}"></div>
+      <div><label>Status</label><select id="tf-status">${opts(TASK_STATUS, t.status)}</select></div>
+    </div>
+    <label>Observações</label><textarea id="tf-notes" rows="3">${esc(t.notes)}</textarea>
+    ${id ? `<label>Registrar avanço</label><input id="tf-prog" placeholder="Ex.: fiz metade dos exercícios">
+    <h3>Histórico</h3><ul class="tl">${t.history.map((h) => `<li><span class="muted">${esc(h.date.replace("T", " ").slice(0, 16))}</span> ${esc(h.text)}</li>`).join("") || '<li class="muted">—</li>'}</ul>` : ""}
+    <div class="actions"><button id="tf-save" onclick="saveTask('${id || ""}')">Salvar</button><button class="ghost" onclick="closeModal()">Cancelar</button></div>`);
+  $("#tf-title").focus();
+}
+async function saveTask(id) {
+  const title = $("#tf-title").value.trim();
+  if (!title) return toast("Escreva a tarefa.");
+  const data = { title, area: $("#tf-area").value, priority: $("#tf-prio").value, due: $("#tf-due").value, notes: $("#tf-notes").value };
+  const status = $("#tf-status").value;
+  if (!id) { const t = Core.addTask(data); if (status === "Feita") Core.completeTask(t.id); else t.status = status; }
+  else {
+    const t = Core.task(id), prog = $("#tf-prog").value.trim();
+    Object.assign(t, data);
+    if (prog) Core.progressTask(id, prog);
+    if (status !== t.status) {
+      if (status === "Feita") Core.completeTask(id);
+      else if (t.status === "Feita") { Core.reopenTask(id); t.status = status; }
+      else { t.status = status; t.history.push({ date: nowISO(), text: `Status: ${status}` }); }
+    }
+  }
+  closeModal();
+  await save("Tarefa salva.");
+}
+
+// ------------------------------------------------------------------ registros (diário)
+let rf = { kind: "", days: 30 };
+function viewRegistros() {
+  const from = addDays(todayISO(), -rf.days + 1);
+  const list = Core.db.entries.filter((e) => e.date >= from && (!rf.kind || e.kind === rf.kind)).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  const groups = {};
+  for (const e of list) (groups[e.date] ??= []).push(e);
+  return `<h1>Registros do dia a dia</h1>
+  <div class="toolbar">
+    <select onchange="rf.kind = this.value; render()"><option value="">Tudo</option>${opts(Object.keys(ENTRY_LABEL), rf.kind, ENTRY_LABEL)}</select>
+    <select onchange="rf.days = +this.value; render()">${opts(["7", "30", "90", "365"], String(rf.days), { 7: "Últimos 7 dias", 30: "Últimos 30 dias", 90: "Últimos 90 dias", 365: "Último ano" })}</select>
+  </div>
+  ${Object.entries(groups).map(([date, es]) => `<div class="card day-card"><h2>${esc(WEEKDAYS[weekday(date)])}, ${fmtDate(date)} <a class="small" href="#sumario/${date}">sumário</a></h2>
+    <table>${es.map((e) => `<tr><td class="nowrap" style="width:110px">${pill(ENTRY_LABEL[e.kind], "k-" + e.kind)}</td><td>${esc(e.text)}${e.lesson ? `<div class="muted small">Da próxima vez: ${esc(e.lesson)}</div>` : ""}</td>
+      <td class="muted small nowrap">${esc(e.area)}${e.task_id ? " · " + esc(e.task_id) : ""}</td><td style="width:40px"><button class="ghost small" title="Apagar" onclick="delEntry('${e.id}')">×</button></td></tr>`).join("")}</table></div>`).join("")
+    || '<div class="card"><p class="muted">Nenhum registro no período. Use o registro rápido no Painel.</p></div>'}`;
+}
+async function delEntry(id) {
+  if (!confirm("Apagar este registro?")) return;
+  Core.db.entries = Core.db.entries.filter((e) => e.id !== id);
+  await save("Registro apagado.");
+}
+
+// ------------------------------------------------------------------ sumário diário
+function viewSumario(arg) {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(arg || "") ? arg : sumDate || todayISO();
+  sumDate = date;
+  const d = Core.dayData(date), week = Core.weekData(date);
+  const max = Math.max(1, ...week.map((w) => Math.max(w.done, w.missed)));
+  const saved = Core.db.summaries.find((s) => s.date === date);
+  return `<div class="title-row no-print"><h1>Sumário diário</h1>
+    <div class="toolbar"><button class="ghost small" onclick="location.hash='#sumario/${addDays(date, -1)}'">◀</button>
+    <input type="date" value="${date}" onchange="location.hash='#sumario/' + this.value">
+    <button class="ghost small" onclick="location.hash='#sumario/${addDays(date, 1)}'">▶</button>
+    <button class="ghost small" onclick="location.hash='#sumario/${todayISO()}'">Hoje</button></div></div>
+  <div class="grid two no-print">
+    <div class="card"><h2>Como foi o dia?</h2>
+      <div class="stars">${[1, 2, 3, 4, 5].map((n) => `<button class="star-btn ${n <= d.mood ? "on" : ""}" title="${n}" onclick="setMood('${date}', ${n})">★</button>`).join("")}</div>
+      <label>Minha reflexão (opcional)</label><textarea id="refl" rows="3" placeholder="Como me senti, o que quero lembrar…">${esc(d.reflection)}</textarea>
+      <div class="actions"><button class="ghost small" onclick="saveRefl('${date}')">Salvar reflexão</button>
+        <button id="b-reflect" class="small" onclick="busy(this, () => reflect('${date}'))">🤖 Reflexão do assistente</button></div>
+    </div>
+    <div class="card"><h2>Últimos 7 dias</h2>
+      <div class="cols">${week.map((w) => `<div class="col" title="${fmtDate(w.date)}: ${w.done} feitas, ${w.missed} faltaram">
+        <div class="col-pair"><span class="col-bar" style="height:${(w.done / max) * 100}%"></span><span class="col-bar miss" style="height:${(w.missed / max) * 100}%"></span></div>
+        <span class="col-label">${WEEKDAYS[weekday(w.date)].slice(0, 3)} ${w.date.slice(8)}</span></div>`).join("")}</div>
+      <div class="legend"><span><i style="background:var(--brand)"></i>feitas</span><span><i style="background:#d08a2a"></i>faltaram</span></div>
+      <p class="muted small">Na semana: ${week.reduce((s, w) => s + w.done, 0)} feitas, ${week.reduce((s, w) => s + w.missed, 0)} faltaram, ${week.reduce((s, w) => s + w.learned, 0)} aprendizados, ${week.reduce((s, w) => s + w.mistakes, 0)} erros.</p>
+    </div>
+  </div>
+  <div class="summary-doc" id="summary">${Core.summaryHTML(d)}</div>
+  <div class="actions no-print">
+    ${Store.mode === "pasta" ? `<button onclick="busy(this, () => saveSummary('${date}'))">Salvar na pasta (SUMARIOS/${date}.html)</button>` : ""}
+    <button class="ghost" onclick="download('sumario-${date}.html', Core.summaryHTML(Core.dayData('${date}'), { standalone: true }))">Baixar HTML</button>
+    <button class="ghost" onclick="copySummary('${date}')">Copiar como texto</button>
+    <button class="ghost" onclick="print()">Imprimir / PDF</button>
+    ${saved ? `<span class="muted small">Salvo em ${esc(saved.file)} (${esc(saved.generated_at.replace("T", " ").slice(0, 16))})</span>` : ""}
+  </div>`;
+}
+async function setMood(date, n) { Core.setDay(date, { mood: n }); await save(); }
+async function saveRefl(date) { Core.setDay(date, { reflection: $("#refl").value }); await save("Reflexão salva."); }
+async function reflect(date) {
+  Core.setDay(date, { reflection: $("#refl").value });
+  const r = await AI.reflect(Core.db, Core.dayData(date));
+  Core.setDay(date, { ai_reflection: r.text });
+  await save(r.error ? `A IA falhou (${r.error}); usei a reflexão automática.` : r.engine === "heuristica" ? "Reflexão automática (sem IA) gerada." : "Reflexão da IA gerada.");
+}
+async function saveSummary(date) { const f = await Core.saveSummaryFile(date); await save(`Sumário salvo em ${f}.`); }
+function copySummary() {
+  const txt = $("#summary").innerText;
+  navigator.clipboard?.writeText(txt).then(() => toast("Sumário copiado."), () => toast("Não consegui copiar; selecione e copie manualmente."));
+}
+
+// ------------------------------------------------------------------ configurações
+function viewConfig() {
+  const s = Core.db.settings, st = Core.assistStats();
+  return `<h1>Configurações</h1>
+  <div class="grid two">
+  <div class="card"><h2>IA (Claude)</h2>
+    <p class="muted small">Sem chave, a plataforma funciona no modo heurístico. A chave fica guardada só neste navegador.</p>
+    <label>Chave da API da Anthropic</label><input id="c-key" type="password" value="${esc(AI.key)}" placeholder="sk-ant-…">
+    <label>Modelo</label><input id="c-model" value="${esc(AI.model)}">
+    <div class="actions"><button id="c-save-ai" onclick="saveAI()">Salvar</button>${AI.key ? `<button class="ghost" onclick="$('#c-key').value=''; saveAI()">Remover chave</button>` : ""}</div>
+  </div>
+  <div class="card"><h2>Ensinar o assistente</h2>
+    <p class="muted small">Taxa de acerto nas últimas ${st.n} propostas: <b>${st.n ? st.pct + "%" : "—"}</b> (${st.total} decisões guardadas).</p>
+    <label>Regras para organizar as anotações</label>
+    <textarea id="c-rules" rows="4" placeholder="Ex.: 'academia' é sempre Saúde; tudo que eu escrever com 'TCC' é Estudos e prioridade Alta.">${esc(s.assist_rules)}</textarea>
+    <label class="inline-check"><input type="checkbox" id="c-auto" ${s.auto_apply ? "checked" : ""}> Deixar o assistente registrar sozinho quando acertar 90% ou mais (com 20+ decisões)</label>
+    <label>Áreas da minha vida (uma por linha)</label><textarea id="c-areas" rows="5">${esc(s.areas.join("\n"))}</textarea>
+    <div class="actions"><button onclick="saveSettings()">Salvar</button></div>
+  </div>
+  <div class="card"><h2>Dados e backup</h2>
+    <p>Dados em: <b>${Store.mode === "pasta" ? "pasta " + esc(Store.name) : "este navegador"}</b>.</p>
+    <div class="actions">
+      <button class="ghost" onclick="download('atividades-backup-${todayISO()}.json', JSON.stringify(Core.db, null, 2), 'application/json')">Baixar backup (JSON)</button>
+      <label class="btn ghost file-btn">Restaurar backup<input type="file" accept=".json" class="hidden" onchange="restore(this)"></label>
+      <button class="ghost" onclick="changeStorage()">Trocar onde guardar</button>
+    </div>
+  </div>
+  </div>`;
+}
+async function saveAI() { await AI.configure($("#c-key").value, $("#c-model").value); toast(AI.enabled() ? "IA ativada." : "Modo heurístico (sem IA)."); render(); }
+async function saveSettings() {
+  const s = Core.db.settings;
+  s.assist_rules = $("#c-rules").value;
+  s.auto_apply = $("#c-auto").checked;
+  const list = $("#c-areas").value.split("\n").map((x) => x.trim()).filter(Boolean);
+  if (list.length) s.areas = [...new Set(list)];
+  await save("Configurações salvas.");
+}
+async function restore(input) {
+  const f = input.files[0];
+  if (!f || !confirm("Substituir os dados atuais pelo backup?")) return;
+  try { Core.load(JSON.parse(await f.text())); await save("Backup restaurado."); } catch (e) { toast("Arquivo inválido: " + e.message); }
+}
+async function changeStorage() {
+  if (!confirm("Escolher outro local? Os dados atuais serão copiados para o novo local, se ele estiver vazio.")) return;
+  const current = Core.db;
+  const go = async () => { const existing = await Store.loadDB(); Core.load(existing || current); await Core.save(); render(); toast(existing ? "Dados do novo local carregados." : "Dados copiados para o novo local."); };
+  if (Store.mode === "pasta") { await Store.useBrowser(); return go(); }
+  if (!Store.supported()) return toast("Este navegador não permite usar pastas. Use o Edge ou o Chrome.");
+  try { await Store.pick(); await go(); } catch (e) { if (e.name !== "AbortError") toast("Erro: " + e.message); }
+}
+
+boot();
+</script>
+</body>
+</html>

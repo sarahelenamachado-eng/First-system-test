@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minhas atividades</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-density="normal">
+<header class="top">
+  <div class="top-row">
+    <div class="brand">Minhas atividades <span class="ai">IA</span></div>
+    <div class="top-right">
+      <span id="where" class="where"></span>
+      <div id="ai-badge" class="badge"></div>
+    </div>
+  </div>
+  <div id="redbar" class="redbar"></div>
+  <nav id="nav" class="hidden">
+    <a href="#painel">Painel</a>
+    <a href="#tarefas">Tarefas</a>
+    <a href="#registros">Registros</a>
+    <a href="#sumario">Sumário diário</a>
+    <a href="#config">Config.</a>
+  </nav>
+</header>
+<main id="view"><p class="muted">Carregando…</p></main>
+<div id="modal" class="modal hidden"><div class="modal-box"><button class="close" onclick="closeModal()">×</button><div id="modal-body"></div></div></div>
+<div id="toast" class="toast hidden"></div>
+<script src="store.js"></script>
+<script src="core.js"></script>
+<script src="ai.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
