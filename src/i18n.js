@@ -807,5 +807,28 @@ Object.assign(D, {
   "Nenhuma reunião solicitada realizada ainda.": ["No requested meeting held yet.", "尚无已召开的申请会议。"], "Nenhuma reunião solicitada em aberto.": ["No open requested meetings.", "没有未完成的申请会议。"],
   "Progressos dos projetos": ["Project progress", "项目进展"], "Progresso dos itens da lista geral": ["General list item progress", "总清单事项进展"],
   "Nenhum progresso registrado em projetos no período.": ["No project progress recorded in the period.", "本期没有项目进展记录。"],
-  "Progresso registrado em {n} projetos: {list}.": ["Progress recorded in {n} projects: {list}.", "{n} 个项目记录了进展：{list}。"]
+  "Progresso registrado em {n} projetos: {list}.": ["Progress recorded in {n} projects: {list}.", "{n} 个项目记录了进展：{list}。"],
+  // ---- itens com progresso, itens de projeto a confirmar, finalizados
+  "Itens com progresso hoje": ["Items with progress today", "今日有进展的事项"], "Itens com progresso na semana": ["Items with progress this week", "本周有进展的事项"],
+  "Itens com progresso no dia": ["Items with progress on the day", "当日有进展的事项"], "Itens com progresso": ["Items with progress", "有进展的事项"],
+  "Nenhum item teve progresso registrado no período.": ["No item had progress recorded in the period.", "本期没有事项记录进展。"],
+  "Item do projeto {name}": ["Item of project {name}", "项目 {name} 的事项"], "Atividade do projeto {name}": ["Activity of project {name}", "项目 {name} 的活动"],
+  "projeto {pct}% concluído": ["project {pct}% complete", "项目完成 {pct}%"],
+  "Finalizado — salvo em {file}": ["Finished — saved in {file}", "已完成 — 保存在 {file}"], "Finalizado em {date}": ["Finished on {date}", "完成于 {date}"],
+  "Projeto / escopo": ["Project / scope", "项目 / 范围"], "Criado em": ["Created on", "创建于"], "Finalizado em": ["Finished on", "完成日期"],
+  "{id} finalizado: saiu da lista geral e foi salvo em {file}": ["{id} finished: removed from the general list and saved in {file}", "{id} 已完成：已移出总清单并保存在 {file}"],
+  "{id} reaberto: voltou para a lista": ["{id} reopened: back on the list", "{id} 已重新打开：回到清单"],
+  "Item {sub} de {id} confirmado na lista geral ({status})": ["Item {sub} of {id} confirmed in the general list ({status})", "{id} 的事项 {sub} 已在总清单中确认（{status}）"],
+  "Ver finalizados (histórico)": ["See finished (history)", "查看已完成（历史）"], "finalizados ficam no histórico": ["finished items stay in the history", "已完成事项保存在历史中"],
+  "Finalizados (histórico)": ["Finished (history)", "已完成（历史）"], "Itens de projeto para confirmar": ["Project items to confirm", "待确认的项目事项"],
+  "Estes itens de projeto estão há {n} dias ou mais sem atualização. Confirme como estão: registre o progresso, mude o status ou marque como finalizado.":
+    ["These project items have had no update for {n} days or more. Confirm how they are: record progress, change the status or mark them as finished.", "这些项目事项已 {n} 天或更久没有更新。请确认情况：记录进展、修改状态或标记为已完成。"],
+  "{n} dias": ["{n} days", "{n} 天"], "Sem atualização": ["No update", "未更新"], "Novo progresso": ["New progress", "新进展"],
+  "Item finalizado e salvo no histórico": ["Item finished and saved in the history", "事项已完成并保存到历史"], "Item confirmado": ["Item confirmed", "事项已确认"],
+  "Nenhum item finalizado ainda. Ao marcar um item como finalizado ele sai da lista geral e aparece aqui.": ["No finished items yet. When an item is marked as finished it leaves the general list and shows up here.", "暂无已完成事项。事项标记为已完成后会移出总清单并显示在这里。"],
+  "FINISHED_HELP": ["Finished items leave the general list and stay here, by month and by project / scope. Each one is also saved as a file in the computer folder: in the project folder (PROJECTS/…/FINALIZADOS/month) or, without a project, in FINALIZADOS/department/month.",
+    "已完成事项移出总清单，按月份和项目 / 范围保存在这里。每个事项也会以文件形式保存到电脑文件夹：项目文件夹（PROJECTS/…/FINALIZADOS/月份），没有项目的保存在 FINALIZADOS/部门/月份。",
+    "Itens finalizados saem da lista geral e ficam aqui, por mês e por projeto / escopo. Cada um também é salvo como arquivo na pasta do computador: na pasta do projeto (PROJECTS/…/FINALIZADOS/mês) ou, sem projeto, em FINALIZADOS/departamento/mês."],
+  "Item reaberto": ["Item reopened", "事项已重新打开"], "Reabrir": ["Reopen", "重新打开"], "Arquivo na pasta": ["File in the folder", "文件夹中的文件"],
+  "Item de projeto sem atualização vai para confirmação (dias)": ["Project item without update goes to confirmation (days)", "项目事项未更新多少天后需确认（天）"]
 });

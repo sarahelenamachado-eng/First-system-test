@@ -190,7 +190,7 @@ function render() {
     fluxos: viewFluxos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
   $("#view").innerHTML = V(id, tab);
   if (V === viewEntradas && id) openTriage(id);
-  if (V === viewLista && id && id !== "departamentos") openItem(id);
+  if (V === viewLista && id && !["departamentos", "finalizados"].includes(id)) openItem(id);
   if (V === viewFluxos && id) FlowEd.mount();
   if (V === viewRiscos && id && (tab || "geral") === "docs") loadRiskFiles(id);
 }
@@ -203,6 +203,7 @@ function viewPainel() {
   const k = [
     ["Entradas pendentes", S.db.inputs.filter((i) => i.status !== "Registrado").length, "entradas"],
     ["Itens em aberto", open.length, "lista"],
+    ["Itens de projeto para confirmar", (S.stale_pitems || []).length, "lista"],
     ["Alta prioridade", open.filter((i) => i.priority === "Alta").length, "lista"],
     ["Vencidos", open.filter((i) => i.due_date && i.due_date < S.today).length, "lista"],
     ["Projetos ativos", S.db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).length, "projetos"],
@@ -367,7 +368,7 @@ async function commitTriage(id) {
 }
 
 // ------------------------------------------------------------------ lista geral
-let F = { q: "", status: "", prio: "", src: "", def: "", due: "", done: false, page: 0 };
+let F = { q: "", status: "", prio: "", src: "", def: "", due: "", page: 0 };
 const PAGE = 40;
 const dueSoon = () => addDays(S.today, +S.db.settings.due_soon_days || 3);
 const isOverdue = (i) => i.status !== "Concluído" && i.due_date && i.due_date < S.today;
@@ -381,19 +382,19 @@ function dueCell(i) {
 }
 function filteredItems(extra = () => true) {
   const q = F.q.toLowerCase();
-  return S.db.items.filter((i) => (F.done || F.status === "Concluído" || i.status !== "Concluído") && (!F.status || i.status === F.status) && (!F.prio || i.priority === F.prio)
+  return S.db.items.filter((i) => i.status !== "Concluído" && (!F.status || i.status === F.status) && (!F.prio || i.priority === F.prio)
     && (!F.src || i.source === F.src) && (!F.def || (i.definitions || []).includes(F.def))
     && (!F.due || (F.due === "vencidos" ? isOverdue(i) || lateActions(i).length : isDueSoon(i)))
     && (!q || (i.id + " " + JSON.stringify(i)).toLowerCase().includes(q) || lc(i, "title").toLowerCase().includes(q)) && extra(i)).reverse();
 }
 function listToolbar() {
   return `<div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(F.q)}" onchange="F.q=this.value;F.page=0;render()">
-    <select onchange="F.status=this.value;F.page=0;render()"><option value="">${t("Status")}</option>${opts(STATUS_ITEM, F.status)}</select>
+    <select onchange="F.status=this.value;F.page=0;render()"><option value="">${t("Status")}</option>${opts(STATUS_ITEM.filter((x) => x !== "Concluído"), F.status)}</select>
     <select onchange="F.prio=this.value;F.page=0;render()"><option value="">${t("Prioridade")}</option>${opts(LEVELS, F.prio)}</select>
     <select onchange="F.src=this.value;F.page=0;render()"><option value="">${t("Origem")}</option>${opts(LIST("sources"), F.src)}</select>
     <select onchange="F.def=this.value;F.page=0;render()"><option value="">${t("Definição")}</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${esc(t(v))}</option>`).join("")}</select>
     <select onchange="F.due=this.value;F.page=0;render()"><option value="">${t("Prazo")}</option><option value="vencidos" ${F.due === "vencidos" ? "selected" : ""}>${t("Vencidos")}</option><option value="proximos" ${F.due === "proximos" ? "selected" : ""}>${t("Vencem em breve")}</option></select>
-    <label class="inline-check"><input type="checkbox" ${F.done ? "checked" : ""} onchange="F.done=this.checked;F.page=0;render()"> ${t("Mostrar concluídos")}</label>
+    <a class="btn ghost" href="#lista/finalizados">${t("Ver finalizados (histórico)")}</a>
     <button class="ghost" onclick="exportCsv()">${t("Baixar planilha (CSV)")}</button></div>`;
 }
 /** Tabela paginada de itens (usada na lista geral e no painel por departamento). */
@@ -407,7 +408,7 @@ function itemsTable(all) {
     <td>${prio(i.priority)}</td><td>${(i.impacts || []).map((x) => pill(t(x))).join("")}</td><td>${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}</td>
     <td class="lp">${lp ? `<span class="muted">${esc((lp.date || "").slice(0, 10))}</span> ${esc(lc(lp, "text").slice(0, 120))}` : '<span class="muted">—</span>'}</td><td>${esc(tv(i.status))}</td></tr>`; }).join("") || `<tr><td colspan=10 class="muted">${t("Nenhum item.")}</td></tr>`}
   </table>
-  <div class="pager"><span class="muted">${t("{n} itens", { n: all.length })}${!F.done ? " · " + t("concluídos ocultos") : ""}</span>
+  <div class="pager"><span class="muted">${t("{n} itens", { n: all.length })}${" · " + t("finalizados ficam no histórico")}</span>
     ${pages > 1 ? `<button class="small ghost" ${F.page === 0 ? "disabled" : ""} onclick="F.page--;render()">←</button> ${F.page + 1} / ${pages} <button class="small ghost" ${F.page >= pages - 1 ? "disabled" : ""} onclick="F.page++;render()">→</button>` : ""}</div></div>`;
 }
 /* Departamento do item = "Área principal". Itens sem departamento ficam em "Geral". */
@@ -420,14 +421,54 @@ function departments() {
 }
 let DEP_SEL = null; // null = nenhum escolhido; "" = Geral (sem departamento)
 function viewLista(id) {
-  const T = [["", t("Lista geral")], ["departamentos", t("Por departamento")]];
-  const tabsHtml = `<div class="tabs">${T.map(([k, l]) => `<a href="#lista${k ? "/" + k : ""}" class="${(id === "departamentos") === (k === "departamentos") ? "on" : ""}">${l}</a>`).join("")}</div>`;
+  const nDone = (S.db.finished || []).length;
+  const T = [["", t("Lista geral")], ["departamentos", t("Por departamento")], ["finalizados", `${t("Finalizados (histórico)")} (${nDone})`]];
+  const cur = ["departamentos", "finalizados"].includes(id) ? id : "";
+  const tabsHtml = `<div class="tabs">${T.map(([k, l]) => `<a href="#lista${k ? "/" + k : ""}" class="${cur === k ? "on" : ""}">${l}</a>`).join("")}</div>`;
   const nOver = S.db.items.filter((i) => isOverdue(i) || lateActions(i).length).length, nSoon = S.db.items.filter(isDueSoon).length;
   const banner = nOver || nSoon ? `<div class="alert lv-alta due-banner">⚠ ${t("{over} itens com prazo vencido e {soon} vencendo nos próximos dias.", { over: nOver, soon: nSoon })}
     <button class="small" onclick="F.due='vencidos';F.page=0;render()">${t("Ver vencidos")}</button> <button class="small ghost" onclick="F.due='proximos';F.page=0;render()">${t("Ver próximos")}</button></div>` : "";
   if (id === "departamentos") return `<h1>${t("Lista geral de governança")}</h1>${tabsHtml}${deptPanel()}`;
-  return `<h1>${t("Lista geral de governança")}</h1>${tabsHtml}${banner}${listToolbar()}${itemsTable(filteredItems())}`;
+  if (id === "finalizados") return `<h1>${t("Lista geral de governança")}</h1>${tabsHtml}${finishedPanel()}`;
+  return `<h1>${t("Lista geral de governança")}</h1>${tabsHtml}${banner}${staleBox()}${listToolbar()}${itemsTable(filteredItems())}`;
 }
+/* Itens de projeto há X dias (padrão 5) sem atualização: entram na lista geral para serem confirmados. */
+function staleBox() {
+  const list = S.stale_pitems || [];
+  if (!list.length) return "";
+  const k = (x) => `${x.project}-${x.id}`;
+  return `<div class="card confirm-box"><h2>⏳ ${t("Itens de projeto para confirmar")} (${list.length})</h2>
+    <p class="muted">${t("Estes itens de projeto estão há {n} dias ou mais sem atualização. Confirme como estão: registre o progresso, mude o status ou marque como finalizado.", { n: +S.db.settings.pitem_confirm_days || 5 })}</p>
+    <div style="overflow:auto"><table>${th(["Projeto", "Item", "Último progresso", "Sem atualização", "Status", "Novo progresso", ""])}
+    ${list.map((x) => `<tr class="stale-row" data-key="${k(x)}"><td><a href="#projetos/${x.project}/itens">${esc(x.project)}</a><br><small class="muted">${esc(x.project_name)}</small></td>
+      <td><b>${esc(x.id)}</b> · ${esc(x.title)}${x.owner ? `<br><small class="muted">${esc(x.owner)}</small>` : ""}</td>
+      <td class="lp">${esc(x.progress_desc) || '<span class="muted">—</span>'}</td>
+      <td>${pill(t("{n} dias", { n: x.days }), x.days >= 2 * (+S.db.settings.pitem_confirm_days || 5) ? "p-Alta" : "p-Média")}<br><small class="muted">${esc(x.last)}</small></td>
+      <td><select id="sc-s-${k(x)}">${opts(PITEM_STATUS, x.status)}</select></td>
+      <td><textarea id="sc-p-${k(x)}" rows="2" placeholder="${esc(t("Novo progresso…"))}"></textarea></td>
+      <td class="nowrap"><button class="small" onclick="busy(this, ()=>confirmPItem('${x.project}','${x.id}'))">${t("Confirmar")}</button>
+        <button class="small ghost" onclick="busy(this, ()=>confirmPItem('${x.project}','${x.id}','Finalizado'))">✓ ${t("Finalizado")}</button></td></tr>`).join("")}</table></div></div>`;
+}
+async function confirmPItem(pid, id, status) {
+  const k = `${pid}-${id}`;
+  await api(`projects/${pid}/confirm`, "POST", { pitem: id, status: status || $(`#sc-s-${k}`).value, progress: $(`#sc-p-${k}`).value });
+  toast(t(status === "Finalizado" || $(`#sc-s-${k}`).value === "Finalizado" ? "Item finalizado e salvo no histórico" : "Item confirmado"));
+  await refresh();
+}
+/* Histórico dos itens finalizados, por mês e por projeto / escopo (cada um também fica salvo na pasta). */
+function finishedPanel() {
+  const all = (S.db.finished || []).slice().sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  if (!all.length) return `<p class="muted">${t("Nenhum item finalizado ainda. Ao marcar um item como finalizado ele sai da lista geral e aparece aqui.")}</p>`;
+  const months = [...new Set(all.map((f) => f.month))];
+  const reopen = (f) => f.kind === "items" ? `api('items/${f.id}','PATCH',{status:'Em andamento'})` : `api('projects/${f.project}/sub','POST',{list:'pitems',entry:{id:'${f.id}',status:'Em andamento'}})`;
+  return `<p class="muted">${t("FINISHED_HELP")}</p>` + months.map((m) => {
+    const rows = all.filter((f) => f.month === m), scopes = [...new Set(rows.map((f) => f.scope))];
+    return `<div class="card"><h2>${esc(monthLabel(m))} <span class="muted">(${rows.length})</span></h2>${scopes.map((sc) => `<h3>${esc(sc)}</h3><table>${th(["ID", "Item", "Responsável", "Finalizado em", "Arquivo na pasta", ""])}
+      ${rows.filter((f) => f.scope === sc).map((f) => `<tr><td>${f.kind === "items" ? `<a href="#lista/${f.id}">${f.id}</a>` : `<a href="#projetos/${f.project}/itens">${f.project} · ${f.id}</a>`}</td><td>${esc(f.title)}</td><td>${esc(f.owner)}</td><td>${esc(f.date)}</td>
+        <td>${f.file ? `<span title="${esc(f.file)}">${fileLink(f.file, f.file.split("/").slice(-2).join("/"))}</span>` : "—"}</td><td><button class="small ghost" onclick="busy(this, async()=>{await ${reopen(f)}; toast(t('Item reaberto')); await refresh();})">${t("Reabrir")}</button></td></tr>`).join("")}</table>`).join("")}</div>`;
+  }).join("");
+}
+const monthLabel = (m) => { const d = new Date(m + "-15T12:00:00"); return isNaN(d) ? m : d.toLocaleDateString(I18N.htmlLang(), { month: "long", year: "numeric" }); };
 function deptPanel() {
   const deps = departments();
   const inDep = (d) => (i) => (d === "" ? !deptOf(i) || !deps.some((x) => deptKey(x) === deptKey(deptOf(i))) : deptKey(deptOf(i)) === deptKey(d));
@@ -968,12 +1009,14 @@ async function genSummary() {
 function summaryDoc({ summary: s, narrative }) {
   const k = s.kpis;
   const tbl = (rows, cols, heads) => `<table>${th(heads)}${rows.map((r) => `<tr>${cols.map((c) => `<td>${c === "priority" ? prio(r[c]) : c === "pct" ? bar(r[c]) : ["status", "mode", "probability", "impact"].includes(c) ? esc(tv(r[c])) : esc(r[c])}</td>`).join("")}</tr>`).join("") || `<tr><td colspan=${cols.length} class="muted">—</td></tr>`}</table>`;
-  const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Em aberto", k.open_items], ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
+  const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Itens com progresso", k.items_progress ?? 0], ["Em aberto", k.open_items], ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
   return `<div class="summary-doc"><h1>${esc(t(s.type))}</h1><p class="muted">${t("Período")} ${esc(s.period.start)}${s.period.end !== s.period.start ? " – " + esc(s.period.end) : ""} · ${t("gerado")} ${fmt(s.generated_at)}</p>
   <h2>1. ${t("Destaques")}</h2><div class="ai-box">${esc(narrative)}</div>
   <h2>2. ${t("Indicadores")}</h2><div class="kpis">${kp.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${t(n)}</span></div>`).join("")}</div>
-  <h2>3. ${t("Progressos dos projetos")}</h2>${(s.project_progress || []).map((p) => `<div class="prog-box"><b>${p.main ? "★ " : ""}<a href="#projetos/${p.id}">${esc(p.id)}</a> · ${esc(p.name)}</b>${p.pct != null ? ` <span class="muted">(${p.pct}%)</span>` : ""}<ul>${p.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum progresso registrado em projetos no período.")}</p>`}
-  <h2>4. ${t("Progresso dos itens da lista geral")}</h2>${(s.item_progress || []).map((i) => `<p><b><a href="#lista/${i.id}">${esc(i.id)}</a> · ${esc(i.title)}</b> ${esc(tv(i.status))}<br>${i.updates.map((u) => esc(u.text)).join("<br>")}</p>`).join("") || `<p class="muted">—</p>`}
+  <h2>3. ${t(s.progress_title || "Itens com progresso hoje")}</h2><div id="s-progress">${(s.progress_items || []).map((i) => `<div class="prog-box"><b>${i.kind === "items" ? `<a href="#lista/${i.id}">${esc(i.id)}</a> · ${esc(i.title)}` : `<a href="#projetos/${i.project}/${i.kind === "pitems" ? "itens" : "atividades"}">${esc(i.project)} · ${esc(i.id)}</a> · ${esc(i.title)}`}</b>
+    <span class="muted">— ${esc(i.kind === "items" ? t("Lista geral") : t(i.kind === "pitems" ? "Item do projeto {name}" : "Atividade do projeto {name}", { name: i.project_name }))}</span> ${statusPill(i.status)}${i.kind === "activities" ? ` ${bar(i.pct)}` : i.kind === "pitems" && i.pct != null ? ` <span class="muted">${t("projeto {pct}% concluído", { pct: i.pct })}</span>` : ""}
+    <ul>${i.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum item teve progresso registrado no período.")}</p>`}</div>
+  <h2>4. ${t("Progressos dos projetos")}</h2>${(s.project_progress || []).map((p) => `<div class="prog-box"><b>${p.main ? "★ " : ""}<a href="#projetos/${p.id}">${esc(p.id)}</a> · ${esc(p.name)}</b>${p.pct != null ? ` <span class="muted">(${p.pct}%)</span>` : ""}<ul>${p.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum progresso registrado em projetos no período.")}</p>`}
   <h2>5. ${t("Novas demandas por origem")}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(tv(src))} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || `<p class="muted">${t("Nenhuma nova demanda.")}</p>`}
   <h2>6. ${t("Itens críticos (alta prioridade)")}</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
   <h2>7. ${t("Prazos — vencidos e próximos 7 dias")}</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
@@ -1062,8 +1105,9 @@ function cfgRules(st) {
   <div class="row"><div>${L("Alerta: dias sem atualização")}<input type="number" id="c-days" value="${st.alert_days_without_update}"></div>
     <div>${L("Cadência de reunião de projeto (dias)")}<input type="number" id="c-cad" value="${st.project_meeting_cadence_days}"></div>
     <div>${L("Antecedência para gerar a reunião (dias)")}<input type="number" id="c-lead" value="${st.meeting_lead_days}"></div>
-    <div>${L("Nº de vínculos para sugerir projeto")}<input type="number" id="c-links" value="${st.links_for_project_alert}"></div></div>
-  <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{alert_days_without_update:+$('#c-days').value,project_meeting_cadence_days:+$('#c-cad').value,meeting_lead_days:+$('#c-lead').value,links_for_project_alert:+$('#c-links').value}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>`;
+    <div>${L("Nº de vínculos para sugerir projeto")}<input type="number" id="c-links" value="${st.links_for_project_alert}"></div>
+    <div>${L("Item de projeto sem atualização vai para confirmação (dias)")}<input type="number" id="c-pconf" min="1" value="${st.pitem_confirm_days}"></div></div>
+  <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{alert_days_without_update:+$('#c-days').value,project_meeting_cadence_days:+$('#c-cad').value,meeting_lead_days:+$('#c-lead').value,links_for_project_alert:+$('#c-links').value,pitem_confirm_days:+$('#c-pconf').value||5}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>`;
 }
 function cfgAI() {
   return `<div class="grid"><div class="card"><h2>${t("IA (Claude)")}</h2>

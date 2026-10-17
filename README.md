@@ -48,6 +48,13 @@ definição (risco a monitorar/investigar, info a reportar, novo projeto, ação
 A IA sugere, você confirma ou corrige, e a decisão fica guardada para a IA aprender.
 
 ### 2. Lista geral de governança
+- **Itens de projeto para confirmar:** um item de projeto (aba *Itens do projeto*) que fica **5 dias sem atualização** aparece
+  no topo da lista geral. Ali você registra o progresso, muda o status ou marca como finalizado. O número de dias fica em
+  Configurações → Regras.
+- **Finalizados saem da lista:** ao marcar um item como finalizado (Concluído na lista geral, Finalizado nos itens do projeto),
+  ele sai da lista e vai para a aba **Finalizados (histórico)**, separado por mês e por projeto / escopo (departamento).
+  Também é salvo como arquivo na pasta: `PROJECTS/<projeto>/FINALIZADOS/<AAAA-MM>/` ou, sem projeto,
+  `FINALIZADOS/<departamento>/<AAAA-MM>/`. Se voltar a ter andamento (ou clicar em **Reabrir**), volta para a lista.
 Filtros (status, prioridade, origem, definição, prazo), busca, paginação (concluídos ocultos por padrão), coluna
 "Último progresso" e download em planilha (CSV). Em cada item: **Ações do item** (responsável, prazo, status e
 progresso) e **Progresso e histórico geral**.
@@ -119,7 +126,8 @@ Gere pelos dados registrados ou com a IA a partir da sua descrição, arraste, e
 Para **ensinar a IA**: escreva regras de como montar os fluxos e salve fluxos bons como exemplo.
 
 ### 7. Summaries diário e semanal
-Destaques, indicadores, **progressos dos projetos** (tudo o que foi registrado no dia: progresso pelo assistente, pelas atas,
+Destaques, indicadores, **itens com progresso hoje** (cada item da lista geral, item de projeto ou atividade que andou no dia, com o progresso
+registrado e o status atual), **progressos dos projetos** (tudo o que foi registrado no dia: progresso pelo assistente, pelas atas,
 pelos itens/atividades do projeto ou pela caixa "Progresso do projeto"), progresso dos itens da lista geral, demandas por origem, itens críticos, prazos, projetos (% concluído), riscos,
 reuniões e decisões, infos a reportar, alertas e linha do tempo. Também salvos em HTML na pasta `SUMMARIES`.
 
@@ -131,6 +139,11 @@ IA e aprendizado, pasta de trabalho e backup/restauração.
 ### Alertas automáticos
 Projeto sem atualização há X dias, reunião a confirmar, item ligado a 3+ itens sem projeto, tema recorrente,
 prazos vencidos, riscos parados e entradas aguardando classificação.
+
+## Testes
+
+`node tests/e2e.mjs [pasta para screenshots]` abre a plataforma no Chromium (Playwright) com uma pasta simulada e testa os dois modos:
+sem chave (heurístico) e com a chave do Claude (resposta da API simulada).
 
 ## Estrutura
 

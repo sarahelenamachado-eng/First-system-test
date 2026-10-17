@@ -256,3 +256,6 @@ button.chip.on { background: var(--brand); border-color: var(--brand); color: #f
 .small-sel { padding: 3px 6px; font-size: .88rem; }
 .prog-box { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
 .prog-box ul { margin: 6px 0 0; }
+/* itens de projeto parados há X dias, para confirmar na lista geral */
+.confirm-box { border-left: 4px solid #e0a800; margin-bottom: var(--gap); }
+.confirm-box textarea { min-width: 180px; }

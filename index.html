@@ -264,6 +264,9 @@ button.chip.on { background: var(--brand); border-color: var(--brand); color: #f
 .small-sel { padding: 3px 6px; font-size: .88rem; }
 .prog-box { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
 .prog-box ul { margin: 6px 0 0; }
+/* itens de projeto parados há X dias, para confirmar na lista geral */
+.confirm-box { border-left: 4px solid #e0a800; margin-bottom: var(--gap); }
+.confirm-box textarea { min-width: 180px; }
 </style>
 </head>
 <body data-density="normal">
@@ -1225,7 +1228,30 @@ Object.assign(D, {
   "Nenhuma reunião solicitada realizada ainda.": ["No requested meeting held yet.", "尚无已召开的申请会议。"], "Nenhuma reunião solicitada em aberto.": ["No open requested meetings.", "没有未完成的申请会议。"],
   "Progressos dos projetos": ["Project progress", "项目进展"], "Progresso dos itens da lista geral": ["General list item progress", "总清单事项进展"],
   "Nenhum progresso registrado em projetos no período.": ["No project progress recorded in the period.", "本期没有项目进展记录。"],
-  "Progresso registrado em {n} projetos: {list}.": ["Progress recorded in {n} projects: {list}.", "{n} 个项目记录了进展：{list}。"]
+  "Progresso registrado em {n} projetos: {list}.": ["Progress recorded in {n} projects: {list}.", "{n} 个项目记录了进展：{list}。"],
+  // ---- itens com progresso, itens de projeto a confirmar, finalizados
+  "Itens com progresso hoje": ["Items with progress today", "今日有进展的事项"], "Itens com progresso na semana": ["Items with progress this week", "本周有进展的事项"],
+  "Itens com progresso no dia": ["Items with progress on the day", "当日有进展的事项"], "Itens com progresso": ["Items with progress", "有进展的事项"],
+  "Nenhum item teve progresso registrado no período.": ["No item had progress recorded in the period.", "本期没有事项记录进展。"],
+  "Item do projeto {name}": ["Item of project {name}", "项目 {name} 的事项"], "Atividade do projeto {name}": ["Activity of project {name}", "项目 {name} 的活动"],
+  "projeto {pct}% concluído": ["project {pct}% complete", "项目完成 {pct}%"],
+  "Finalizado — salvo em {file}": ["Finished — saved in {file}", "已完成 — 保存在 {file}"], "Finalizado em {date}": ["Finished on {date}", "完成于 {date}"],
+  "Projeto / escopo": ["Project / scope", "项目 / 范围"], "Criado em": ["Created on", "创建于"], "Finalizado em": ["Finished on", "完成日期"],
+  "{id} finalizado: saiu da lista geral e foi salvo em {file}": ["{id} finished: removed from the general list and saved in {file}", "{id} 已完成：已移出总清单并保存在 {file}"],
+  "{id} reaberto: voltou para a lista": ["{id} reopened: back on the list", "{id} 已重新打开：回到清单"],
+  "Item {sub} de {id} confirmado na lista geral ({status})": ["Item {sub} of {id} confirmed in the general list ({status})", "{id} 的事项 {sub} 已在总清单中确认（{status}）"],
+  "Ver finalizados (histórico)": ["See finished (history)", "查看已完成（历史）"], "finalizados ficam no histórico": ["finished items stay in the history", "已完成事项保存在历史中"],
+  "Finalizados (histórico)": ["Finished (history)", "已完成（历史）"], "Itens de projeto para confirmar": ["Project items to confirm", "待确认的项目事项"],
+  "Estes itens de projeto estão há {n} dias ou mais sem atualização. Confirme como estão: registre o progresso, mude o status ou marque como finalizado.":
+    ["These project items have had no update for {n} days or more. Confirm how they are: record progress, change the status or mark them as finished.", "这些项目事项已 {n} 天或更久没有更新。请确认情况：记录进展、修改状态或标记为已完成。"],
+  "{n} dias": ["{n} days", "{n} 天"], "Sem atualização": ["No update", "未更新"], "Novo progresso": ["New progress", "新进展"],
+  "Item finalizado e salvo no histórico": ["Item finished and saved in the history", "事项已完成并保存到历史"], "Item confirmado": ["Item confirmed", "事项已确认"],
+  "Nenhum item finalizado ainda. Ao marcar um item como finalizado ele sai da lista geral e aparece aqui.": ["No finished items yet. When an item is marked as finished it leaves the general list and shows up here.", "暂无已完成事项。事项标记为已完成后会移出总清单并显示在这里。"],
+  "FINISHED_HELP": ["Finished items leave the general list and stay here, by month and by project / scope. Each one is also saved as a file in the computer folder: in the project folder (PROJECTS/…/FINALIZADOS/month) or, without a project, in FINALIZADOS/department/month.",
+    "已完成事项移出总清单，按月份和项目 / 范围保存在这里。每个事项也会以文件形式保存到电脑文件夹：项目文件夹（PROJECTS/…/FINALIZADOS/月份），没有项目的保存在 FINALIZADOS/部门/月份。",
+    "Itens finalizados saem da lista geral e ficam aqui, por mês e por projeto / escopo. Cada um também é salvo como arquivo na pasta do computador: na pasta do projeto (PROJECTS/…/FINALIZADOS/mês) ou, sem projeto, em FINALIZADOS/departamento/mês."],
+  "Item reaberto": ["Item reopened", "事项已重新打开"], "Reabrir": ["Reopen", "重新打开"], "Arquivo na pasta": ["File in the folder", "文件夹中的文件"],
+  "Item de projeto sem atualização vai para confirmação (dias)": ["Project item without update goes to confirmation (days)", "项目事项未更新多少天后需确认（天）"]
 });
 </script>
 <script>
@@ -1856,11 +1882,13 @@ critério da organização e siga-os quando aplicáveis.`; },
   // ---------------------------------------------------------------- summaries
   async narrative(summary) {
     const k = summary.kpis;
-    const pp = summary.project_progress || [];
+    const pp = summary.project_progress || [], pi = summary.progress_items || [];
     const basic = t("NARRATIVE_BASIC", { ...k, alerts: summary.alerts.length })
-      + (pp.length ? "\n" + t("Progresso registrado em {n} projetos: {list}.", { n: pp.length, list: pp.map((p) => `${p.id} ${p.name} (${p.updates.length})`).join("; ") }) : "");
+      + (pp.length ? "\n" + t("Progresso registrado em {n} projetos: {list}.", { n: pp.length, list: pp.map((p) => `${p.id} ${p.name} (${p.updates.length})`).join("; ") }) : "")
+      + (pi.length ? "\n" + `${t(summary.progress_title || "Itens com progresso hoje")}: ${pi.length}` + "\n" + pi.map((i) => `• ${i.kind === "items" ? i.id : i.project + " · " + i.id} ${i.title}: ${i.updates.map((u) => u.text).join("; ")}`).join("\n") : "");
     if (!this.enabled()) return basic;
     const prompt = `Escreva os DESTAQUES deste summary de governança (${summary.type}) em até 8 bullets curtos, em ${I18N.aiLanguage()}: `
+      + `comece por um bullet "${t(summary.progress_title || "Itens com progresso hoje")}:" listando cada item de progress_items com o progresso registrado; depois `
       + "o que mudou (inclua os progressos registrados nos projetos e itens, e o que saiu das reuniões), o que exige atenção da diretoria, riscos, decisões e próximos passos. Use Hoshin Kanri "
       + "para conectar com os objetivos estratégicos. Dados:\n" + JSON.stringify(summary).slice(0, 80000);
     try { return await this.call(prompt, null, "low", 4000); }
@@ -1903,7 +1931,7 @@ function emptyDb() {
   const db = Object.fromEntries(COLLECTIONS.map((c) => [c, []]));
   return Object.assign(db, {
     seq: Object.fromEntries(COLLECTIONS.map((c) => [c, 0])),
-    events: [], feedback: [], summaries: [], flow_examples: [], risk_lessons: [], meeting_suggestions: [],
+    events: [], feedback: [], summaries: [], finished: [], flow_examples: [], risk_lessons: [], meeting_suggestions: [],
     settings: defaultSettings(),
   });
 }
@@ -1911,6 +1939,7 @@ function emptyDb() {
 function defaultSettings() {
   return {
     alert_days_without_update: 15,
+    pitem_confirm_days: 5,
     project_meeting_cadence_days: 15,
     links_for_project_alert: 3,
     meeting_lead_days: 3,
@@ -2010,6 +2039,7 @@ const Core = {
     for (const it of db.items) { it.item_actions ??= []; it.sub_seq ??= 0; }
     for (const p of db.projects) p.updates ??= [];
     db.assist_examples ??= [];
+    db.finished ??= [];
     db.extraction_examples ??= [];
     // participantes digitados em texto viram participantes (e pessoas cadastradas) — uma vez só
     if (!db.settings.migrated_people_auto) {
@@ -2166,6 +2196,96 @@ const Core = {
     return created;
   },
 
+  // ------------------------------------------------------------ itens de projeto parados e itens finalizados
+  /** Última vez que o item foi mexido (criado, atualizado ou confirmado). */
+  lastTouch: (x) => [x.updated_at, x.confirmed_at, x.created_at].filter(Boolean).sort().at(-1) || "",
+  /** Itens de projeto há X dias (padrão 5) sem atualização: aparecem na lista geral para serem confirmados. */
+  stalePItems() {
+    const limit = +this.db.settings.pitem_confirm_days || 5, out = [];
+    for (const p of this.db.projects) {
+      if (["Concluído", "Cancelado"].includes(p.status)) continue;
+      for (const x of p.pitems || []) {
+        if (x.status === "Finalizado") continue;
+        const last = this.lastTouch(x), days = daysSince(last);
+        if (last && days >= limit) out.push({ project: p.id, project_name: this.loc(p, "name"), id: x.id, title: x.title, status: x.status, owner: x.owner,
+          due: x.due, progress_desc: x.progress_desc || "", last: last.slice(0, 10), days });
+      }
+    }
+    return out.sort((a, b) => b.days - a.days);
+  },
+  /** Confirmação vinda da lista geral: registra o progresso (se houver), o status e reinicia a contagem. */
+  confirmPItem(p, x, { progress = "", status = "" } = {}) {
+    const txt = String(progress || "").trim();
+    if (txt) { x.progress_desc = txt; this.addProjectUpdate(p, `${x.title}: ${txt}`, "pitems", x.id, true); }
+    if (status) x.status = status;
+    x.confirmed_at = x.updated_at = nowISO();
+    if (x.status === "Finalizado") x.done_at ??= todayISO();
+    p.last_monitored = todayISO();
+    this.touch(p);
+    this.log("projects.pitem_confirmed", p.id, "Item {sub} de {id} confirmado na lista geral ({status})", { sub: x.id, id: p.id, status: [x.status] });
+  },
+  /** Projeto / escopo do item finalizado e a pasta onde ele é guardado (separada por mês). */
+  finishedPlace(kind, rec, proj, month) {
+    if (kind === "items") proj = this.find("projects", (rec.links?.projects || [])[0] || "");
+    if (proj) return { project: proj.id, scope: `${proj.id} · ${proj.name || ""}`, folder: `${proj.folder || this.folderFor("projects", proj.id)}/FINALIZADOS/${month}` };
+    const scope = (rec.area_main || "").trim() || "Geral";
+    return { project: "", scope, folder: `FINALIZADOS/${Store.safeName(scope)}/${month}` };
+  },
+  /** Item marcado como finalizado: sai da lista geral, fica no histórico e é salvo na pasta do projeto/escopo, no mês. */
+  async archiveFinished(kind, rec, proj = null) {
+    const date = todayISO(), month = date.slice(0, 7), place = this.finishedPlace(kind, rec, proj, month);
+    const code = kind === "pitems" ? `${proj.id}-${rec.id}` : rec.id;
+    const file = `${place.folder}/${Store.safeName(`${code} - ${(rec.title || "").slice(0, 60)}`)}.html`;
+    rec.done_at = date;
+    rec.archive_file = file;
+    if (kind === "items") (rec.history ??= []).push({ date: nowISO(), text: I18N.fill("Finalizado — salvo em {file}", { file }), kind: "progress", done: true });
+    try { await Store.write(file, this.finishedHtml(kind, rec, proj, place)); }
+    catch (e) { console.warn("arquivo do item finalizado:", e); rec.archive_file = ""; }
+    const key = `${kind}:${proj?.id || ""}:${rec.id}`;
+    this.db.finished = this.db.finished.filter((f) => f.key !== key);
+    this.db.finished.push({ key, kind, id: rec.id, project: place.project, scope: place.scope, title: rec.title || "", owner: rec.owner || "", date, month, file: rec.archive_file });
+    this.log("finished", proj?.id || rec.id, "{id} finalizado: saiu da lista geral e foi salvo em {file}", { id: code, file: rec.archive_file || "—" });
+  },
+  /** Item finalizado que voltou a ser trabalhado: volta para a lista (o arquivo da pasta continua como registro). */
+  reopenFinished(kind, rec, proj = null) {
+    const key = `${kind}:${proj?.id || ""}:${rec.id}`;
+    this.db.finished = this.db.finished.filter((f) => f.key !== key);
+    delete rec.done_at;
+    this.log("reopened", proj?.id || rec.id, "{id} reaberto: voltou para a lista", { id: kind === "pitems" ? `${proj.id}-${rec.id}` : rec.id });
+  },
+  isDone: (kind, x) => (kind === "items" ? x.status === "Concluído" : x.status === "Finalizado"),
+  doneSnapshot() {
+    const m = new Map();
+    for (const it of this.db.items) m.set(`items::${it.id}`, this.isDone("items", it));
+    for (const p of this.db.projects) for (const x of p.pitems || []) m.set(`pitems:${p.id}:${x.id}`, this.isDone("pitems", x));
+    return m;
+  },
+  /** Compara o antes e o depois de cada alteração: arquiva o que acabou de ser finalizado e reabre o que voltou. */
+  async syncFinished(before) {
+    const check = async (kind, rec, proj) => {
+      const was = before.get(`${kind}:${proj?.id || ""}:${rec.id}`) || false, now = this.isDone(kind, rec);
+      if (now && !was) await this.archiveFinished(kind, rec, proj);
+      else if (was && !now) this.reopenFinished(kind, rec, proj);
+    };
+    for (const it of this.db.items) await check("items", it, null);
+    for (const p of this.db.projects) for (const x of p.pitems || []) await check("pitems", x, p);
+  },
+  finishedHtml(kind, rec, proj, place) {
+    const esc = (x) => String(x ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const progress = kind === "items"
+      ? (rec.history || []).filter((h) => h.kind === "progress" && !h.done).map((h) => [h.date, h.text])
+      : (proj.updates || []).filter((u) => u.source === "pitems" && u.ref === rec.id).map((u) => [u.date, u.text]);
+    const field = (k, v) => (v ? `<tr><th>${esc(t(k))}</th><td>${esc(Array.isArray(v) ? v.join(", ") : v)}</td></tr>` : "");
+    return `<!doctype html><html lang="${I18N.htmlLang()}"><meta charset="utf-8"><title>${esc(rec.id)} · ${esc(rec.title)}</title>
+<style>body{font:14px system-ui;margin:32px;color:#1a1a1a}h1{margin:0 0 4px}table{border-collapse:collapse}td,th{border:1px solid #d9d9d9;padding:4px 8px;text-align:left;vertical-align:top}th{background:#f0f0f0}</style>
+<h1>${esc(rec.id)} · ${esc(rec.title)}</h1><p>${esc(t("Finalizado em {date}", { date: rec.done_at }))} · ${esc(t(kind === "items" ? "Lista geral" : "Itens do projeto"))}</p>
+<table>${field("Projeto / escopo", place.scope)}${field("Responsável", rec.owner)}${field("Prazo", rec.due_date || rec.due)}${field("Objetivo", rec.objective)}
+${field("Descrição", rec.description)}${field("Descrição do progresso", rec.progress_desc)}${field("Prioridade", rec.priority && t(rec.priority))}${field("Origem", rec.source && t(rec.source))}
+${field("Criado em", (rec.created_at || "").slice(0, 10))}</table>
+<h2>${esc(t("Progresso e histórico geral"))}</h2><ul>${progress.map(([d, x]) => `<li>${esc((d || "").slice(0, 10))} — ${esc(x)}</li>`).join("") || "<li>—</li>"}</ul>
+${(rec.item_actions || []).length ? `<h2>${esc(t("Ações do item"))}</h2><ul>${rec.item_actions.map((a) => `<li>${esc(a.id)} · ${esc(a.text)} (${esc(t(a.status || ""))})${a.progress ? " — " + esc(a.progress) : ""}</li>`).join("")}</ul>` : ""}`;
+  },
+
   alerts() {
     const db = this.db, s = db.settings, out = [], today = todayISO();
     const add = (level, ref, key, params) => out.push({ level, ref, msg: [key, params], text: I18N.fill(key, params) });
@@ -2224,6 +2344,7 @@ const Core = {
         new_inputs: newInputs.length,
         items_created: db.items.filter((i) => inr(i.created_at)).length,
         items_updated: updIds.size,
+        items_progress: 0,
         open_items: open.length,
         high_priority_open: open.filter((i) => i.priority === "Alta").length,
         overdue: open.filter((i) => i.due_date && i.due_date < today).length,
@@ -2243,16 +2364,44 @@ const Core = {
       project_progress: db.projects.map((p) => ({ id: p.id, name: this.loc(p, "name"), main: p.main, pct: this.projectPct(p),
         updates: (p.updates || []).filter((u) => inr(u.date)).map((u) => ({ date: u.date, text: u.text })) })).filter((p) => p.updates.length)
         .sort((a, b) => (b.main - a.main) || b.updates.length - a.updates.length),
+      progress_title: kind === "weekly" ? "Itens com progresso na semana" : ref === today ? "Itens com progresso hoje" : "Itens com progresso no dia",
+      progress_items: this.progressItems(inr),
       item_progress: db.items.map((i) => ({ id: i.id, title: this.loc(i, "title"), status: i.status,
         updates: (i.history || []).filter((h) => h.kind === "progress" && inr(h.date)).map((h) => ({ date: h.date, text: h.text })) })).filter((i) => i.updates.length),
       activity: events.slice(-200).map((ev) => ({ ts: ev.ts, msg: ev.msg, text: ev.text })),
       alerts: this.alerts(),
     };
+    summary.kpis.items_progress = summary.progress_items.length;
     if (kind === "weekly") {
       summary.activity_per_day = {};
       for (const ev of events) summary.activity_per_day[ev.date] = (summary.activity_per_day[ev.date] || 0) + 1;
     }
     return summary;
+  },
+
+  /** Itens (lista geral, itens do projeto e atividades) que tiveram progresso no período, com o progresso registrado. */
+  progressItems(inr) {
+    const out = [];
+    for (const i of this.db.items) {
+      const ups = (i.history || []).filter((h) => h.kind === "progress" && inr(h.date)).map((h) => ({ date: h.date, text: h.done ? t("Finalizado") : (h.tr ? this.loc(h, "text") : h.text) }));
+      if (ups.length) out.push({ kind: "items", id: i.id, title: this.loc(i, "title"), status: i.status, scope: (i.links?.projects || [])[0] || i.area_main || "", updates: ups });
+    }
+    for (const p of this.db.projects) {
+      const pname = this.loc(p, "name");
+      const ups = (src, id, label) => (p.updates || []).filter((u) => u.source === src && u.ref === id && inr(u.date))
+        .map((u) => ({ date: u.date, text: label && u.text.startsWith(label) ? u.text.slice(label.length).replace(/^:\s*/, "").trim() || u.text : u.text }));
+      for (const x of p.pitems || []) {
+        const list = ups("pitems", x.id, x.title);
+        if (x.status === "Finalizado" && inr(x.done_at)) list.push({ date: x.done_at, text: t("Finalizado") });
+        if (list.length) out.push({ kind: "pitems", id: x.id, title: x.title, status: x.status, project: p.id, project_name: pname, pct: this.projectPct(p), updates: list });
+      }
+      for (const a of p.activities || []) {
+        const label = [a.item, a.subitem].filter(Boolean).join(" · ");
+        const list = ups("activities", a.id, label);
+        if (list.length) out.push({ kind: "activities", id: a.id, title: label, status: (+a.progress || 0) >= 100 ? "Concluída" : "Em andamento", project: p.id, project_name: pname, scope: a.scope || "", pct: +a.progress || 0, updates: list });
+      }
+    }
+    return out;
   },
 
   exportCsv() {
@@ -2301,7 +2450,7 @@ const Core = {
     const rows = (lst, cols) => lst.map((r) => "<tr>" + cols.map((c) => `<td>${esc(coded.includes(c) && r[c] ? t(r[c]) : r[c])}</td>`).join("") + "</tr>").join("") || `<tr><td colspan=${cols.length}>—</td></tr>`;
     const th = (hs) => "<tr>" + hs.map((h) => `<th>${esc(h === "ID" ? h : t(h))}</th>`).join("") + "</tr>";
     const k = s.kpis;
-    const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Em aberto", k.open_items],
+    const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Itens com progresso", k.items_progress ?? 0], ["Em aberto", k.open_items],
       ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
     const msgOf = (a) => (a.msg ? t(a.msg[0], a.msg[1]) : a.text);
     return `<!doctype html><html lang="${I18N.htmlLang()}"><meta charset="utf-8"><title>${esc(t(s.type))} ${esc(s.period.start)}</title>
@@ -2312,8 +2461,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
 <h1>${esc(t(s.type))}</h1><p>${esc(t("Período"))}: ${esc(s.period.start)} – ${esc(s.period.end)} · ${esc(t("gerado"))} ${esc(s.generated_at)}</p>
 <h2>1. ${esc(t("Destaques"))}</h2><div style="white-space:pre-wrap">${esc(text)}</div>
 <h2>2. ${esc(t("Indicadores"))}</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${esc(t(n))}</span>`).join("")}
-<h2>3. ${esc(t("Progressos dos projetos"))}</h2>${(s.project_progress || []).map((p) => `<h3>${p.main ? "★ " : ""}${esc(p.id)} · ${esc(p.name)}${p.pct != null ? ` (${p.pct}%)` : ""}</h3><ul>${p.updates.map((u) => `<li>${esc(u.text)}</li>`).join("")}</ul>`).join("") || `<p>${esc(t("Nenhum progresso registrado em projetos no período."))}</p>`}
-<h2>4. ${esc(t("Progresso dos itens da lista geral"))}</h2>${(s.item_progress || []).map((i) => `<p><b>${esc(i.id)} · ${esc(i.title)}</b><br>${i.updates.map((u) => esc(u.text)).join("<br>")}</p>`).join("") || "<p>—</p>"}
+<h2>3. ${esc(t(s.progress_title || "Itens com progresso hoje"))}</h2>${(s.progress_items || []).map((i) => `<h3>${esc(this.progressLabel(i))}</h3><ul>${i.updates.map((u) => `<li>${esc(u.text)}</li>`).join("")}</ul>`).join("") || `<p>${esc(t("Nenhum item teve progresso registrado no período."))}</p>`}
+<h2>4. ${esc(t("Progressos dos projetos"))}</h2>${(s.project_progress || []).map((p) => `<h3>${p.main ? "★ " : ""}${esc(p.id)} · ${esc(p.name)}${p.pct != null ? ` (${p.pct}%)` : ""}</h3><ul>${p.updates.map((u) => `<li>${esc(u.text)}</li>`).join("")}</ul>`).join("") || `<p>${esc(t("Nenhum progresso registrado em projetos no período."))}</p>`}
 <h2>5. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
 <h2>6. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
 <h2>7. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
@@ -2322,6 +2471,14 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
 <h2>10. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)} · ${esc(t(m.status || "Realizada"))})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}${(m.outcomes || []).filter((r) => r.kind !== "ignore").map((r) => `<br>→ ${esc(r.target)} — ${esc(r.title)}`).join("")}</p>`).join("") || "<p>—</p>"}
 <h2>11. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
 <h2>12. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
+  },
+
+  /** "GOV003 · título — Em andamento" / "PROJ001 · IT002 · título — Em andamento · projeto 50%" */
+  progressLabel(i) {
+    const head = i.kind === "items" ? `${i.id} · ${i.title}` : `${i.project} · ${i.id} · ${i.title}`;
+    const where = i.kind === "items" ? t("Lista geral") : i.kind === "pitems" ? t("Item do projeto {name}", { name: i.project_name }) : t("Atividade do projeto {name}", { name: i.project_name }) + (i.scope ? ` (${i.scope})` : "");
+    const pct = i.kind === "activities" ? ` · ${i.pct}%` : i.kind === "pitems" && i.pct != null ? ` · ${t("projeto {pct}% concluído", { pct: i.pct })}` : "";
+    return `${head} — ${where} · ${t(i.status || "")}${pct}`;
   },
 
   // ------------------------------------------------------------ reuniões automáticas de projetos principais
@@ -2748,7 +2905,10 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
 
   // ------------------------------------------------------------ roteador local
   async api(path, method = "GET", body = {}) {
-    const res = await this.route(path.split("?")[0].replace(/^\/+|\/+$/g, "").split("/"), method, body || {});
+    const parts = path.split("?")[0].replace(/^\/+|\/+$/g, "").split("/");
+    const before = method !== "GET" && parts[0] !== "backup" ? this.doneSnapshot() : null;
+    const res = await this.route(parts, method, body || {});
+    if (before) await this.syncFinished(before);
     // nomes novos nos participantes entram sozinhos no cadastro de pessoas
     if (method !== "GET" && Array.isArray(body?.attendees) && /^(meetings|mandatory)/.test(path)) this.db.settings.people = syncPeopleList(this.db.settings.people || [], body.attendees);
     if (method !== "GET" || res?._dirty) await this.save();
@@ -2764,8 +2924,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     if (head === "state" && method === "GET") {
       let dirty = this.autoMeetings();
       for (const p of db.projects) dirty = (await this.syncSchedules(p)) || dirty;
-      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons"].map((k) => [k, db[k]])), events: db.events.slice(-60),
-        alerts: this.alerts(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
+      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons", "finished"].map((k) => [k, db[k]])), events: db.events.slice(-60),
+        alerts: this.alerts(), stale_pitems: this.stalePItems(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
         summaries: db.summaries.slice(-30), today: todayISO(), assist_stats: this.assistStats(), extraction_count: (db.extraction_examples || []).length };
     }
     if (head === "settings" && method === "PATCH") {
@@ -3020,6 +3180,12 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       rec.nodes = g.nodes; rec.edges = g.edges; rec.engine = g.engine || "dados";
       this.touch(rec);
       this.log("flows.generated", rid, "Fluxo {id} gerado", { id: rid });
+      return rec;
+    }
+    if (col === "projects" && action === "confirm") {
+      const x = (rec.pitems || []).find((e) => e.id === body.pitem);
+      if (!x) throw new ApiError(t("{id} não encontrado", { id: body.pitem }));
+      this.confirmPItem(rec, x, body);
       return rec;
     }
     if (col === "items" && action === "merge") return this.mergeItems(rid, (body.into || "").toUpperCase());
@@ -4382,7 +4548,7 @@ function render() {
     fluxos: viewFluxos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
   $("#view").innerHTML = V(id, tab);
   if (V === viewEntradas && id) openTriage(id);
-  if (V === viewLista && id && id !== "departamentos") openItem(id);
+  if (V === viewLista && id && !["departamentos", "finalizados"].includes(id)) openItem(id);
   if (V === viewFluxos && id) FlowEd.mount();
   if (V === viewRiscos && id && (tab || "geral") === "docs") loadRiskFiles(id);
 }
@@ -4395,6 +4561,7 @@ function viewPainel() {
   const k = [
     ["Entradas pendentes", S.db.inputs.filter((i) => i.status !== "Registrado").length, "entradas"],
     ["Itens em aberto", open.length, "lista"],
+    ["Itens de projeto para confirmar", (S.stale_pitems || []).length, "lista"],
     ["Alta prioridade", open.filter((i) => i.priority === "Alta").length, "lista"],
     ["Vencidos", open.filter((i) => i.due_date && i.due_date < S.today).length, "lista"],
     ["Projetos ativos", S.db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).length, "projetos"],
@@ -4559,7 +4726,7 @@ async function commitTriage(id) {
 }
 
 // ------------------------------------------------------------------ lista geral
-let F = { q: "", status: "", prio: "", src: "", def: "", due: "", done: false, page: 0 };
+let F = { q: "", status: "", prio: "", src: "", def: "", due: "", page: 0 };
 const PAGE = 40;
 const dueSoon = () => addDays(S.today, +S.db.settings.due_soon_days || 3);
 const isOverdue = (i) => i.status !== "Concluído" && i.due_date && i.due_date < S.today;
@@ -4573,19 +4740,19 @@ function dueCell(i) {
 }
 function filteredItems(extra = () => true) {
   const q = F.q.toLowerCase();
-  return S.db.items.filter((i) => (F.done || F.status === "Concluído" || i.status !== "Concluído") && (!F.status || i.status === F.status) && (!F.prio || i.priority === F.prio)
+  return S.db.items.filter((i) => i.status !== "Concluído" && (!F.status || i.status === F.status) && (!F.prio || i.priority === F.prio)
     && (!F.src || i.source === F.src) && (!F.def || (i.definitions || []).includes(F.def))
     && (!F.due || (F.due === "vencidos" ? isOverdue(i) || lateActions(i).length : isDueSoon(i)))
     && (!q || (i.id + " " + JSON.stringify(i)).toLowerCase().includes(q) || lc(i, "title").toLowerCase().includes(q)) && extra(i)).reverse();
 }
 function listToolbar() {
   return `<div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(F.q)}" onchange="F.q=this.value;F.page=0;render()">
-    <select onchange="F.status=this.value;F.page=0;render()"><option value="">${t("Status")}</option>${opts(STATUS_ITEM, F.status)}</select>
+    <select onchange="F.status=this.value;F.page=0;render()"><option value="">${t("Status")}</option>${opts(STATUS_ITEM.filter((x) => x !== "Concluído"), F.status)}</select>
     <select onchange="F.prio=this.value;F.page=0;render()"><option value="">${t("Prioridade")}</option>${opts(LEVELS, F.prio)}</select>
     <select onchange="F.src=this.value;F.page=0;render()"><option value="">${t("Origem")}</option>${opts(LIST("sources"), F.src)}</select>
     <select onchange="F.def=this.value;F.page=0;render()"><option value="">${t("Definição")}</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${esc(t(v))}</option>`).join("")}</select>
     <select onchange="F.due=this.value;F.page=0;render()"><option value="">${t("Prazo")}</option><option value="vencidos" ${F.due === "vencidos" ? "selected" : ""}>${t("Vencidos")}</option><option value="proximos" ${F.due === "proximos" ? "selected" : ""}>${t("Vencem em breve")}</option></select>
-    <label class="inline-check"><input type="checkbox" ${F.done ? "checked" : ""} onchange="F.done=this.checked;F.page=0;render()"> ${t("Mostrar concluídos")}</label>
+    <a class="btn ghost" href="#lista/finalizados">${t("Ver finalizados (histórico)")}</a>
     <button class="ghost" onclick="exportCsv()">${t("Baixar planilha (CSV)")}</button></div>`;
 }
 /** Tabela paginada de itens (usada na lista geral e no painel por departamento). */
@@ -4599,7 +4766,7 @@ function itemsTable(all) {
     <td>${prio(i.priority)}</td><td>${(i.impacts || []).map((x) => pill(t(x))).join("")}</td><td>${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}</td>
     <td class="lp">${lp ? `<span class="muted">${esc((lp.date || "").slice(0, 10))}</span> ${esc(lc(lp, "text").slice(0, 120))}` : '<span class="muted">—</span>'}</td><td>${esc(tv(i.status))}</td></tr>`; }).join("") || `<tr><td colspan=10 class="muted">${t("Nenhum item.")}</td></tr>`}
   </table>
-  <div class="pager"><span class="muted">${t("{n} itens", { n: all.length })}${!F.done ? " · " + t("concluídos ocultos") : ""}</span>
+  <div class="pager"><span class="muted">${t("{n} itens", { n: all.length })}${" · " + t("finalizados ficam no histórico")}</span>
     ${pages > 1 ? `<button class="small ghost" ${F.page === 0 ? "disabled" : ""} onclick="F.page--;render()">←</button> ${F.page + 1} / ${pages} <button class="small ghost" ${F.page >= pages - 1 ? "disabled" : ""} onclick="F.page++;render()">→</button>` : ""}</div></div>`;
 }
 /* Departamento do item = "Área principal". Itens sem departamento ficam em "Geral". */
@@ -4612,14 +4779,54 @@ function departments() {
 }
 let DEP_SEL = null; // null = nenhum escolhido; "" = Geral (sem departamento)
 function viewLista(id) {
-  const T = [["", t("Lista geral")], ["departamentos", t("Por departamento")]];
-  const tabsHtml = `<div class="tabs">${T.map(([k, l]) => `<a href="#lista${k ? "/" + k : ""}" class="${(id === "departamentos") === (k === "departamentos") ? "on" : ""}">${l}</a>`).join("")}</div>`;
+  const nDone = (S.db.finished || []).length;
+  const T = [["", t("Lista geral")], ["departamentos", t("Por departamento")], ["finalizados", `${t("Finalizados (histórico)")} (${nDone})`]];
+  const cur = ["departamentos", "finalizados"].includes(id) ? id : "";
+  const tabsHtml = `<div class="tabs">${T.map(([k, l]) => `<a href="#lista${k ? "/" + k : ""}" class="${cur === k ? "on" : ""}">${l}</a>`).join("")}</div>`;
   const nOver = S.db.items.filter((i) => isOverdue(i) || lateActions(i).length).length, nSoon = S.db.items.filter(isDueSoon).length;
   const banner = nOver || nSoon ? `<div class="alert lv-alta due-banner">⚠ ${t("{over} itens com prazo vencido e {soon} vencendo nos próximos dias.", { over: nOver, soon: nSoon })}
     <button class="small" onclick="F.due='vencidos';F.page=0;render()">${t("Ver vencidos")}</button> <button class="small ghost" onclick="F.due='proximos';F.page=0;render()">${t("Ver próximos")}</button></div>` : "";
   if (id === "departamentos") return `<h1>${t("Lista geral de governança")}</h1>${tabsHtml}${deptPanel()}`;
-  return `<h1>${t("Lista geral de governança")}</h1>${tabsHtml}${banner}${listToolbar()}${itemsTable(filteredItems())}`;
+  if (id === "finalizados") return `<h1>${t("Lista geral de governança")}</h1>${tabsHtml}${finishedPanel()}`;
+  return `<h1>${t("Lista geral de governança")}</h1>${tabsHtml}${banner}${staleBox()}${listToolbar()}${itemsTable(filteredItems())}`;
 }
+/* Itens de projeto há X dias (padrão 5) sem atualização: entram na lista geral para serem confirmados. */
+function staleBox() {
+  const list = S.stale_pitems || [];
+  if (!list.length) return "";
+  const k = (x) => `${x.project}-${x.id}`;
+  return `<div class="card confirm-box"><h2>⏳ ${t("Itens de projeto para confirmar")} (${list.length})</h2>
+    <p class="muted">${t("Estes itens de projeto estão há {n} dias ou mais sem atualização. Confirme como estão: registre o progresso, mude o status ou marque como finalizado.", { n: +S.db.settings.pitem_confirm_days || 5 })}</p>
+    <div style="overflow:auto"><table>${th(["Projeto", "Item", "Último progresso", "Sem atualização", "Status", "Novo progresso", ""])}
+    ${list.map((x) => `<tr class="stale-row" data-key="${k(x)}"><td><a href="#projetos/${x.project}/itens">${esc(x.project)}</a><br><small class="muted">${esc(x.project_name)}</small></td>
+      <td><b>${esc(x.id)}</b> · ${esc(x.title)}${x.owner ? `<br><small class="muted">${esc(x.owner)}</small>` : ""}</td>
+      <td class="lp">${esc(x.progress_desc) || '<span class="muted">—</span>'}</td>
+      <td>${pill(t("{n} dias", { n: x.days }), x.days >= 2 * (+S.db.settings.pitem_confirm_days || 5) ? "p-Alta" : "p-Média")}<br><small class="muted">${esc(x.last)}</small></td>
+      <td><select id="sc-s-${k(x)}">${opts(PITEM_STATUS, x.status)}</select></td>
+      <td><textarea id="sc-p-${k(x)}" rows="2" placeholder="${esc(t("Novo progresso…"))}"></textarea></td>
+      <td class="nowrap"><button class="small" onclick="busy(this, ()=>confirmPItem('${x.project}','${x.id}'))">${t("Confirmar")}</button>
+        <button class="small ghost" onclick="busy(this, ()=>confirmPItem('${x.project}','${x.id}','Finalizado'))">✓ ${t("Finalizado")}</button></td></tr>`).join("")}</table></div></div>`;
+}
+async function confirmPItem(pid, id, status) {
+  const k = `${pid}-${id}`;
+  await api(`projects/${pid}/confirm`, "POST", { pitem: id, status: status || $(`#sc-s-${k}`).value, progress: $(`#sc-p-${k}`).value });
+  toast(t(status === "Finalizado" || $(`#sc-s-${k}`).value === "Finalizado" ? "Item finalizado e salvo no histórico" : "Item confirmado"));
+  await refresh();
+}
+/* Histórico dos itens finalizados, por mês e por projeto / escopo (cada um também fica salvo na pasta). */
+function finishedPanel() {
+  const all = (S.db.finished || []).slice().sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  if (!all.length) return `<p class="muted">${t("Nenhum item finalizado ainda. Ao marcar um item como finalizado ele sai da lista geral e aparece aqui.")}</p>`;
+  const months = [...new Set(all.map((f) => f.month))];
+  const reopen = (f) => f.kind === "items" ? `api('items/${f.id}','PATCH',{status:'Em andamento'})` : `api('projects/${f.project}/sub','POST',{list:'pitems',entry:{id:'${f.id}',status:'Em andamento'}})`;
+  return `<p class="muted">${t("FINISHED_HELP")}</p>` + months.map((m) => {
+    const rows = all.filter((f) => f.month === m), scopes = [...new Set(rows.map((f) => f.scope))];
+    return `<div class="card"><h2>${esc(monthLabel(m))} <span class="muted">(${rows.length})</span></h2>${scopes.map((sc) => `<h3>${esc(sc)}</h3><table>${th(["ID", "Item", "Responsável", "Finalizado em", "Arquivo na pasta", ""])}
+      ${rows.filter((f) => f.scope === sc).map((f) => `<tr><td>${f.kind === "items" ? `<a href="#lista/${f.id}">${f.id}</a>` : `<a href="#projetos/${f.project}/itens">${f.project} · ${f.id}</a>`}</td><td>${esc(f.title)}</td><td>${esc(f.owner)}</td><td>${esc(f.date)}</td>
+        <td>${f.file ? `<span title="${esc(f.file)}">${fileLink(f.file, f.file.split("/").slice(-2).join("/"))}</span>` : "—"}</td><td><button class="small ghost" onclick="busy(this, async()=>{await ${reopen(f)}; toast(t('Item reaberto')); await refresh();})">${t("Reabrir")}</button></td></tr>`).join("")}</table>`).join("")}</div>`;
+  }).join("");
+}
+const monthLabel = (m) => { const d = new Date(m + "-15T12:00:00"); return isNaN(d) ? m : d.toLocaleDateString(I18N.htmlLang(), { month: "long", year: "numeric" }); };
 function deptPanel() {
   const deps = departments();
   const inDep = (d) => (i) => (d === "" ? !deptOf(i) || !deps.some((x) => deptKey(x) === deptKey(deptOf(i))) : deptKey(deptOf(i)) === deptKey(d));
@@ -5160,12 +5367,14 @@ async function genSummary() {
 function summaryDoc({ summary: s, narrative }) {
   const k = s.kpis;
   const tbl = (rows, cols, heads) => `<table>${th(heads)}${rows.map((r) => `<tr>${cols.map((c) => `<td>${c === "priority" ? prio(r[c]) : c === "pct" ? bar(r[c]) : ["status", "mode", "probability", "impact"].includes(c) ? esc(tv(r[c])) : esc(r[c])}</td>`).join("")}</tr>`).join("") || `<tr><td colspan=${cols.length} class="muted">—</td></tr>`}</table>`;
-  const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Em aberto", k.open_items], ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
+  const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Itens com progresso", k.items_progress ?? 0], ["Em aberto", k.open_items], ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
   return `<div class="summary-doc"><h1>${esc(t(s.type))}</h1><p class="muted">${t("Período")} ${esc(s.period.start)}${s.period.end !== s.period.start ? " – " + esc(s.period.end) : ""} · ${t("gerado")} ${fmt(s.generated_at)}</p>
   <h2>1. ${t("Destaques")}</h2><div class="ai-box">${esc(narrative)}</div>
   <h2>2. ${t("Indicadores")}</h2><div class="kpis">${kp.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${t(n)}</span></div>`).join("")}</div>
-  <h2>3. ${t("Progressos dos projetos")}</h2>${(s.project_progress || []).map((p) => `<div class="prog-box"><b>${p.main ? "★ " : ""}<a href="#projetos/${p.id}">${esc(p.id)}</a> · ${esc(p.name)}</b>${p.pct != null ? ` <span class="muted">(${p.pct}%)</span>` : ""}<ul>${p.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum progresso registrado em projetos no período.")}</p>`}
-  <h2>4. ${t("Progresso dos itens da lista geral")}</h2>${(s.item_progress || []).map((i) => `<p><b><a href="#lista/${i.id}">${esc(i.id)}</a> · ${esc(i.title)}</b> ${esc(tv(i.status))}<br>${i.updates.map((u) => esc(u.text)).join("<br>")}</p>`).join("") || `<p class="muted">—</p>`}
+  <h2>3. ${t(s.progress_title || "Itens com progresso hoje")}</h2><div id="s-progress">${(s.progress_items || []).map((i) => `<div class="prog-box"><b>${i.kind === "items" ? `<a href="#lista/${i.id}">${esc(i.id)}</a> · ${esc(i.title)}` : `<a href="#projetos/${i.project}/${i.kind === "pitems" ? "itens" : "atividades"}">${esc(i.project)} · ${esc(i.id)}</a> · ${esc(i.title)}`}</b>
+    <span class="muted">— ${esc(i.kind === "items" ? t("Lista geral") : t(i.kind === "pitems" ? "Item do projeto {name}" : "Atividade do projeto {name}", { name: i.project_name }))}</span> ${statusPill(i.status)}${i.kind === "activities" ? ` ${bar(i.pct)}` : i.kind === "pitems" && i.pct != null ? ` <span class="muted">${t("projeto {pct}% concluído", { pct: i.pct })}</span>` : ""}
+    <ul>${i.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum item teve progresso registrado no período.")}</p>`}</div>
+  <h2>4. ${t("Progressos dos projetos")}</h2>${(s.project_progress || []).map((p) => `<div class="prog-box"><b>${p.main ? "★ " : ""}<a href="#projetos/${p.id}">${esc(p.id)}</a> · ${esc(p.name)}</b>${p.pct != null ? ` <span class="muted">(${p.pct}%)</span>` : ""}<ul>${p.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum progresso registrado em projetos no período.")}</p>`}
   <h2>5. ${t("Novas demandas por origem")}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(tv(src))} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || `<p class="muted">${t("Nenhuma nova demanda.")}</p>`}
   <h2>6. ${t("Itens críticos (alta prioridade)")}</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
   <h2>7. ${t("Prazos — vencidos e próximos 7 dias")}</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
@@ -5254,8 +5463,9 @@ function cfgRules(st) {
   <div class="row"><div>${L("Alerta: dias sem atualização")}<input type="number" id="c-days" value="${st.alert_days_without_update}"></div>
     <div>${L("Cadência de reunião de projeto (dias)")}<input type="number" id="c-cad" value="${st.project_meeting_cadence_days}"></div>
     <div>${L("Antecedência para gerar a reunião (dias)")}<input type="number" id="c-lead" value="${st.meeting_lead_days}"></div>
-    <div>${L("Nº de vínculos para sugerir projeto")}<input type="number" id="c-links" value="${st.links_for_project_alert}"></div></div>
-  <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{alert_days_without_update:+$('#c-days').value,project_meeting_cadence_days:+$('#c-cad').value,meeting_lead_days:+$('#c-lead').value,links_for_project_alert:+$('#c-links').value}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>`;
+    <div>${L("Nº de vínculos para sugerir projeto")}<input type="number" id="c-links" value="${st.links_for_project_alert}"></div>
+    <div>${L("Item de projeto sem atualização vai para confirmação (dias)")}<input type="number" id="c-pconf" min="1" value="${st.pitem_confirm_days}"></div></div>
+  <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{alert_days_without_update:+$('#c-days').value,project_meeting_cadence_days:+$('#c-cad').value,meeting_lead_days:+$('#c-lead').value,links_for_project_alert:+$('#c-links').value,pitem_confirm_days:+$('#c-pconf').value||5}); toast(t('Salvo')); await refresh();})">${t("Salvar")}</button></div></div>`;
 }
 function cfgAI() {
   return `<div class="grid"><div class="card"><h2>${t("IA (Claude)")}</h2>
