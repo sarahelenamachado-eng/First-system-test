@@ -509,11 +509,13 @@ critério da organização e siga-os quando aplicáveis.`; },
   // ---------------------------------------------------------------- summaries
   async narrative(summary) {
     const k = summary.kpis;
-    const pp = summary.project_progress || [];
+    const pp = summary.project_progress || [], pi = summary.progress_items || [];
     const basic = t("NARRATIVE_BASIC", { ...k, alerts: summary.alerts.length })
-      + (pp.length ? "\n" + t("Progresso registrado em {n} projetos: {list}.", { n: pp.length, list: pp.map((p) => `${p.id} ${p.name} (${p.updates.length})`).join("; ") }) : "");
+      + (pp.length ? "\n" + t("Progresso registrado em {n} projetos: {list}.", { n: pp.length, list: pp.map((p) => `${p.id} ${p.name} (${p.updates.length})`).join("; ") }) : "")
+      + (pi.length ? "\n" + `${t(summary.progress_title || "Itens com progresso hoje")}: ${pi.length}` + "\n" + pi.map((i) => `• ${i.kind === "items" ? i.id : i.project + " · " + i.id} ${i.title}: ${i.updates.map((u) => u.text).join("; ")}`).join("\n") : "");
     if (!this.enabled()) return basic;
     const prompt = `Escreva os DESTAQUES deste summary de governança (${summary.type}) em até 8 bullets curtos, em ${I18N.aiLanguage()}: `
+      + `comece por um bullet "${t(summary.progress_title || "Itens com progresso hoje")}:" listando cada item de progress_items com o progresso registrado; depois `
       + "o que mudou (inclua os progressos registrados nos projetos e itens, e o que saiu das reuniões), o que exige atenção da diretoria, riscos, decisões e próximos passos. Use Hoshin Kanri "
       + "para conectar com os objetivos estratégicos. Dados:\n" + JSON.stringify(summary).slice(0, 80000);
     try { return await this.call(prompt, null, "low", 4000); }

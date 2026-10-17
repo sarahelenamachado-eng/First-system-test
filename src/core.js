@@ -28,7 +28,7 @@ function emptyDb() {
   const db = Object.fromEntries(COLLECTIONS.map((c) => [c, []]));
   return Object.assign(db, {
     seq: Object.fromEntries(COLLECTIONS.map((c) => [c, 0])),
-    events: [], feedback: [], summaries: [], flow_examples: [], risk_lessons: [], meeting_suggestions: [],
+    events: [], feedback: [], summaries: [], finished: [], flow_examples: [], risk_lessons: [], meeting_suggestions: [],
     settings: defaultSettings(),
   });
 }
@@ -36,6 +36,7 @@ function emptyDb() {
 function defaultSettings() {
   return {
     alert_days_without_update: 15,
+    pitem_confirm_days: 5,
     project_meeting_cadence_days: 15,
     links_for_project_alert: 3,
     meeting_lead_days: 3,
@@ -135,6 +136,7 @@ const Core = {
     for (const it of db.items) { it.item_actions ??= []; it.sub_seq ??= 0; }
     for (const p of db.projects) p.updates ??= [];
     db.assist_examples ??= [];
+    db.finished ??= [];
     db.extraction_examples ??= [];
     // participantes digitados em texto viram participantes (e pessoas cadastradas) — uma vez só
     if (!db.settings.migrated_people_auto) {
@@ -291,6 +293,96 @@ const Core = {
     return created;
   },
 
+  // ------------------------------------------------------------ itens de projeto parados e itens finalizados
+  /** Última vez que o item foi mexido (criado, atualizado ou confirmado). */
+  lastTouch: (x) => [x.updated_at, x.confirmed_at, x.created_at].filter(Boolean).sort().at(-1) || "",
+  /** Itens de projeto há X dias (padrão 5) sem atualização: aparecem na lista geral para serem confirmados. */
+  stalePItems() {
+    const limit = +this.db.settings.pitem_confirm_days || 5, out = [];
+    for (const p of this.db.projects) {
+      if (["Concluído", "Cancelado"].includes(p.status)) continue;
+      for (const x of p.pitems || []) {
+        if (x.status === "Finalizado") continue;
+        const last = this.lastTouch(x), days = daysSince(last);
+        if (last && days >= limit) out.push({ project: p.id, project_name: this.loc(p, "name"), id: x.id, title: x.title, status: x.status, owner: x.owner,
+          due: x.due, progress_desc: x.progress_desc || "", last: last.slice(0, 10), days });
+      }
+    }
+    return out.sort((a, b) => b.days - a.days);
+  },
+  /** Confirmação vinda da lista geral: registra o progresso (se houver), o status e reinicia a contagem. */
+  confirmPItem(p, x, { progress = "", status = "" } = {}) {
+    const txt = String(progress || "").trim();
+    if (txt) { x.progress_desc = txt; this.addProjectUpdate(p, `${x.title}: ${txt}`, "pitems", x.id, true); }
+    if (status) x.status = status;
+    x.confirmed_at = x.updated_at = nowISO();
+    if (x.status === "Finalizado") x.done_at ??= todayISO();
+    p.last_monitored = todayISO();
+    this.touch(p);
+    this.log("projects.pitem_confirmed", p.id, "Item {sub} de {id} confirmado na lista geral ({status})", { sub: x.id, id: p.id, status: [x.status] });
+  },
+  /** Projeto / escopo do item finalizado e a pasta onde ele é guardado (separada por mês). */
+  finishedPlace(kind, rec, proj, month) {
+    if (kind === "items") proj = this.find("projects", (rec.links?.projects || [])[0] || "");
+    if (proj) return { project: proj.id, scope: `${proj.id} · ${proj.name || ""}`, folder: `${proj.folder || this.folderFor("projects", proj.id)}/FINALIZADOS/${month}` };
+    const scope = (rec.area_main || "").trim() || "Geral";
+    return { project: "", scope, folder: `FINALIZADOS/${Store.safeName(scope)}/${month}` };
+  },
+  /** Item marcado como finalizado: sai da lista geral, fica no histórico e é salvo na pasta do projeto/escopo, no mês. */
+  async archiveFinished(kind, rec, proj = null) {
+    const date = todayISO(), month = date.slice(0, 7), place = this.finishedPlace(kind, rec, proj, month);
+    const code = kind === "pitems" ? `${proj.id}-${rec.id}` : rec.id;
+    const file = `${place.folder}/${Store.safeName(`${code} - ${(rec.title || "").slice(0, 60)}`)}.html`;
+    rec.done_at = date;
+    rec.archive_file = file;
+    if (kind === "items") (rec.history ??= []).push({ date: nowISO(), text: I18N.fill("Finalizado — salvo em {file}", { file }), kind: "progress", done: true });
+    try { await Store.write(file, this.finishedHtml(kind, rec, proj, place)); }
+    catch (e) { console.warn("arquivo do item finalizado:", e); rec.archive_file = ""; }
+    const key = `${kind}:${proj?.id || ""}:${rec.id}`;
+    this.db.finished = this.db.finished.filter((f) => f.key !== key);
+    this.db.finished.push({ key, kind, id: rec.id, project: place.project, scope: place.scope, title: rec.title || "", owner: rec.owner || "", date, month, file: rec.archive_file });
+    this.log("finished", proj?.id || rec.id, "{id} finalizado: saiu da lista geral e foi salvo em {file}", { id: code, file: rec.archive_file || "—" });
+  },
+  /** Item finalizado que voltou a ser trabalhado: volta para a lista (o arquivo da pasta continua como registro). */
+  reopenFinished(kind, rec, proj = null) {
+    const key = `${kind}:${proj?.id || ""}:${rec.id}`;
+    this.db.finished = this.db.finished.filter((f) => f.key !== key);
+    delete rec.done_at;
+    this.log("reopened", proj?.id || rec.id, "{id} reaberto: voltou para a lista", { id: kind === "pitems" ? `${proj.id}-${rec.id}` : rec.id });
+  },
+  isDone: (kind, x) => (kind === "items" ? x.status === "Concluído" : x.status === "Finalizado"),
+  doneSnapshot() {
+    const m = new Map();
+    for (const it of this.db.items) m.set(`items::${it.id}`, this.isDone("items", it));
+    for (const p of this.db.projects) for (const x of p.pitems || []) m.set(`pitems:${p.id}:${x.id}`, this.isDone("pitems", x));
+    return m;
+  },
+  /** Compara o antes e o depois de cada alteração: arquiva o que acabou de ser finalizado e reabre o que voltou. */
+  async syncFinished(before) {
+    const check = async (kind, rec, proj) => {
+      const was = before.get(`${kind}:${proj?.id || ""}:${rec.id}`) || false, now = this.isDone(kind, rec);
+      if (now && !was) await this.archiveFinished(kind, rec, proj);
+      else if (was && !now) this.reopenFinished(kind, rec, proj);
+    };
+    for (const it of this.db.items) await check("items", it, null);
+    for (const p of this.db.projects) for (const x of p.pitems || []) await check("pitems", x, p);
+  },
+  finishedHtml(kind, rec, proj, place) {
+    const esc = (x) => String(x ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const progress = kind === "items"
+      ? (rec.history || []).filter((h) => h.kind === "progress" && !h.done).map((h) => [h.date, h.text])
+      : (proj.updates || []).filter((u) => u.source === "pitems" && u.ref === rec.id).map((u) => [u.date, u.text]);
+    const field = (k, v) => (v ? `<tr><th>${esc(t(k))}</th><td>${esc(Array.isArray(v) ? v.join(", ") : v)}</td></tr>` : "");
+    return `<!doctype html><html lang="${I18N.htmlLang()}"><meta charset="utf-8"><title>${esc(rec.id)} · ${esc(rec.title)}</title>
+<style>body{font:14px system-ui;margin:32px;color:#1a1a1a}h1{margin:0 0 4px}table{border-collapse:collapse}td,th{border:1px solid #d9d9d9;padding:4px 8px;text-align:left;vertical-align:top}th{background:#f0f0f0}</style>
+<h1>${esc(rec.id)} · ${esc(rec.title)}</h1><p>${esc(t("Finalizado em {date}", { date: rec.done_at }))} · ${esc(t(kind === "items" ? "Lista geral" : "Itens do projeto"))}</p>
+<table>${field("Projeto / escopo", place.scope)}${field("Responsável", rec.owner)}${field("Prazo", rec.due_date || rec.due)}${field("Objetivo", rec.objective)}
+${field("Descrição", rec.description)}${field("Descrição do progresso", rec.progress_desc)}${field("Prioridade", rec.priority && t(rec.priority))}${field("Origem", rec.source && t(rec.source))}
+${field("Criado em", (rec.created_at || "").slice(0, 10))}</table>
+<h2>${esc(t("Progresso e histórico geral"))}</h2><ul>${progress.map(([d, x]) => `<li>${esc((d || "").slice(0, 10))} — ${esc(x)}</li>`).join("") || "<li>—</li>"}</ul>
+${(rec.item_actions || []).length ? `<h2>${esc(t("Ações do item"))}</h2><ul>${rec.item_actions.map((a) => `<li>${esc(a.id)} · ${esc(a.text)} (${esc(t(a.status || ""))})${a.progress ? " — " + esc(a.progress) : ""}</li>`).join("")}</ul>` : ""}`;
+  },
+
   alerts() {
     const db = this.db, s = db.settings, out = [], today = todayISO();
     const add = (level, ref, key, params) => out.push({ level, ref, msg: [key, params], text: I18N.fill(key, params) });
@@ -349,6 +441,7 @@ const Core = {
         new_inputs: newInputs.length,
         items_created: db.items.filter((i) => inr(i.created_at)).length,
         items_updated: updIds.size,
+        items_progress: 0,
         open_items: open.length,
         high_priority_open: open.filter((i) => i.priority === "Alta").length,
         overdue: open.filter((i) => i.due_date && i.due_date < today).length,
@@ -368,16 +461,44 @@ const Core = {
       project_progress: db.projects.map((p) => ({ id: p.id, name: this.loc(p, "name"), main: p.main, pct: this.projectPct(p),
         updates: (p.updates || []).filter((u) => inr(u.date)).map((u) => ({ date: u.date, text: u.text })) })).filter((p) => p.updates.length)
         .sort((a, b) => (b.main - a.main) || b.updates.length - a.updates.length),
+      progress_title: kind === "weekly" ? "Itens com progresso na semana" : ref === today ? "Itens com progresso hoje" : "Itens com progresso no dia",
+      progress_items: this.progressItems(inr),
       item_progress: db.items.map((i) => ({ id: i.id, title: this.loc(i, "title"), status: i.status,
         updates: (i.history || []).filter((h) => h.kind === "progress" && inr(h.date)).map((h) => ({ date: h.date, text: h.text })) })).filter((i) => i.updates.length),
       activity: events.slice(-200).map((ev) => ({ ts: ev.ts, msg: ev.msg, text: ev.text })),
       alerts: this.alerts(),
     };
+    summary.kpis.items_progress = summary.progress_items.length;
     if (kind === "weekly") {
       summary.activity_per_day = {};
       for (const ev of events) summary.activity_per_day[ev.date] = (summary.activity_per_day[ev.date] || 0) + 1;
     }
     return summary;
+  },
+
+  /** Itens (lista geral, itens do projeto e atividades) que tiveram progresso no período, com o progresso registrado. */
+  progressItems(inr) {
+    const out = [];
+    for (const i of this.db.items) {
+      const ups = (i.history || []).filter((h) => h.kind === "progress" && inr(h.date)).map((h) => ({ date: h.date, text: h.done ? t("Finalizado") : (h.tr ? this.loc(h, "text") : h.text) }));
+      if (ups.length) out.push({ kind: "items", id: i.id, title: this.loc(i, "title"), status: i.status, scope: (i.links?.projects || [])[0] || i.area_main || "", updates: ups });
+    }
+    for (const p of this.db.projects) {
+      const pname = this.loc(p, "name");
+      const ups = (src, id, label) => (p.updates || []).filter((u) => u.source === src && u.ref === id && inr(u.date))
+        .map((u) => ({ date: u.date, text: label && u.text.startsWith(label) ? u.text.slice(label.length).replace(/^:\s*/, "").trim() || u.text : u.text }));
+      for (const x of p.pitems || []) {
+        const list = ups("pitems", x.id, x.title);
+        if (x.status === "Finalizado" && inr(x.done_at)) list.push({ date: x.done_at, text: t("Finalizado") });
+        if (list.length) out.push({ kind: "pitems", id: x.id, title: x.title, status: x.status, project: p.id, project_name: pname, pct: this.projectPct(p), updates: list });
+      }
+      for (const a of p.activities || []) {
+        const label = [a.item, a.subitem].filter(Boolean).join(" · ");
+        const list = ups("activities", a.id, label);
+        if (list.length) out.push({ kind: "activities", id: a.id, title: label, status: (+a.progress || 0) >= 100 ? "Concluída" : "Em andamento", project: p.id, project_name: pname, scope: a.scope || "", pct: +a.progress || 0, updates: list });
+      }
+    }
+    return out;
   },
 
   exportCsv() {
@@ -426,7 +547,7 @@ const Core = {
     const rows = (lst, cols) => lst.map((r) => "<tr>" + cols.map((c) => `<td>${esc(coded.includes(c) && r[c] ? t(r[c]) : r[c])}</td>`).join("") + "</tr>").join("") || `<tr><td colspan=${cols.length}>—</td></tr>`;
     const th = (hs) => "<tr>" + hs.map((h) => `<th>${esc(h === "ID" ? h : t(h))}</th>`).join("") + "</tr>";
     const k = s.kpis;
-    const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Em aberto", k.open_items],
+    const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Itens com progresso", k.items_progress ?? 0], ["Em aberto", k.open_items],
       ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
     const msgOf = (a) => (a.msg ? t(a.msg[0], a.msg[1]) : a.text);
     return `<!doctype html><html lang="${I18N.htmlLang()}"><meta charset="utf-8"><title>${esc(t(s.type))} ${esc(s.period.start)}</title>
@@ -437,8 +558,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
 <h1>${esc(t(s.type))}</h1><p>${esc(t("Período"))}: ${esc(s.period.start)} – ${esc(s.period.end)} · ${esc(t("gerado"))} ${esc(s.generated_at)}</p>
 <h2>1. ${esc(t("Destaques"))}</h2><div style="white-space:pre-wrap">${esc(text)}</div>
 <h2>2. ${esc(t("Indicadores"))}</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${esc(t(n))}</span>`).join("")}
-<h2>3. ${esc(t("Progressos dos projetos"))}</h2>${(s.project_progress || []).map((p) => `<h3>${p.main ? "★ " : ""}${esc(p.id)} · ${esc(p.name)}${p.pct != null ? ` (${p.pct}%)` : ""}</h3><ul>${p.updates.map((u) => `<li>${esc(u.text)}</li>`).join("")}</ul>`).join("") || `<p>${esc(t("Nenhum progresso registrado em projetos no período."))}</p>`}
-<h2>4. ${esc(t("Progresso dos itens da lista geral"))}</h2>${(s.item_progress || []).map((i) => `<p><b>${esc(i.id)} · ${esc(i.title)}</b><br>${i.updates.map((u) => esc(u.text)).join("<br>")}</p>`).join("") || "<p>—</p>"}
+<h2>3. ${esc(t(s.progress_title || "Itens com progresso hoje"))}</h2>${(s.progress_items || []).map((i) => `<h3>${esc(this.progressLabel(i))}</h3><ul>${i.updates.map((u) => `<li>${esc(u.text)}</li>`).join("")}</ul>`).join("") || `<p>${esc(t("Nenhum item teve progresso registrado no período."))}</p>`}
+<h2>4. ${esc(t("Progressos dos projetos"))}</h2>${(s.project_progress || []).map((p) => `<h3>${p.main ? "★ " : ""}${esc(p.id)} · ${esc(p.name)}${p.pct != null ? ` (${p.pct}%)` : ""}</h3><ul>${p.updates.map((u) => `<li>${esc(u.text)}</li>`).join("")}</ul>`).join("") || `<p>${esc(t("Nenhum progresso registrado em projetos no período."))}</p>`}
 <h2>5. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
 <h2>6. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
 <h2>7. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
@@ -447,6 +568,14 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
 <h2>10. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)} · ${esc(t(m.status || "Realizada"))})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}${(m.outcomes || []).filter((r) => r.kind !== "ignore").map((r) => `<br>→ ${esc(r.target)} — ${esc(r.title)}`).join("")}</p>`).join("") || "<p>—</p>"}
 <h2>11. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
 <h2>12. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
+  },
+
+  /** "GOV003 · título — Em andamento" / "PROJ001 · IT002 · título — Em andamento · projeto 50%" */
+  progressLabel(i) {
+    const head = i.kind === "items" ? `${i.id} · ${i.title}` : `${i.project} · ${i.id} · ${i.title}`;
+    const where = i.kind === "items" ? t("Lista geral") : i.kind === "pitems" ? t("Item do projeto {name}", { name: i.project_name }) : t("Atividade do projeto {name}", { name: i.project_name }) + (i.scope ? ` (${i.scope})` : "");
+    const pct = i.kind === "activities" ? ` · ${i.pct}%` : i.kind === "pitems" && i.pct != null ? ` · ${t("projeto {pct}% concluído", { pct: i.pct })}` : "";
+    return `${head} — ${where} · ${t(i.status || "")}${pct}`;
   },
 
   // ------------------------------------------------------------ reuniões automáticas de projetos principais
@@ -873,7 +1002,10 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
 
   // ------------------------------------------------------------ roteador local
   async api(path, method = "GET", body = {}) {
-    const res = await this.route(path.split("?")[0].replace(/^\/+|\/+$/g, "").split("/"), method, body || {});
+    const parts = path.split("?")[0].replace(/^\/+|\/+$/g, "").split("/");
+    const before = method !== "GET" && parts[0] !== "backup" ? this.doneSnapshot() : null;
+    const res = await this.route(parts, method, body || {});
+    if (before) await this.syncFinished(before);
     // nomes novos nos participantes entram sozinhos no cadastro de pessoas
     if (method !== "GET" && Array.isArray(body?.attendees) && /^(meetings|mandatory)/.test(path)) this.db.settings.people = syncPeopleList(this.db.settings.people || [], body.attendees);
     if (method !== "GET" || res?._dirty) await this.save();
@@ -889,8 +1021,8 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
     if (head === "state" && method === "GET") {
       let dirty = this.autoMeetings();
       for (const p of db.projects) dirty = (await this.syncSchedules(p)) || dirty;
-      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons"].map((k) => [k, db[k]])), events: db.events.slice(-60),
-        alerts: this.alerts(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
+      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons", "finished"].map((k) => [k, db[k]])), events: db.events.slice(-60),
+        alerts: this.alerts(), stale_pitems: this.stalePItems(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
         summaries: db.summaries.slice(-30), today: todayISO(), assist_stats: this.assistStats(), extraction_count: (db.extraction_examples || []).length };
     }
     if (head === "settings" && method === "PATCH") {
@@ -1145,6 +1277,12 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       rec.nodes = g.nodes; rec.edges = g.edges; rec.engine = g.engine || "dados";
       this.touch(rec);
       this.log("flows.generated", rid, "Fluxo {id} gerado", { id: rid });
+      return rec;
+    }
+    if (col === "projects" && action === "confirm") {
+      const x = (rec.pitems || []).find((e) => e.id === body.pitem);
+      if (!x) throw new ApiError(t("{id} não encontrado", { id: body.pitem }));
+      this.confirmPItem(rec, x, body);
       return rec;
     }
     if (col === "items" && action === "merge") return this.mergeItems(rid, (body.into || "").toUpperCase());
