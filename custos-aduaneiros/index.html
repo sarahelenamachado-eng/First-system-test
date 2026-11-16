@@ -1,0 +1,1304 @@
+<!doctype html>
+<!-- Arquivo gerado por tools/build-custos.mjs a partir de custos-aduaneiros/src/. Edite os arquivos em src/. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Custos Aduaneiros</title>
+<style>
+/* Visual no padrão GWM (como a plataforma de governança): fundo claro, títulos vermelhos. */
+:root {
+  color-scheme: light;
+  --brand: #C00000; --soft: #fbeeee;
+  --bg: #f1f1f2; --panel: #ffffff; --ink: #1a1a1a; --ink-2: #52514e; --muted: #6a6d72; --line: #dedfe2; --grid: #ececee;
+  /* séries (paleta categórica validada, 3 primeiros slots) */
+  --s-regular: #2a78d6; --s-storage: #eb6834; --s-customs: #1baf7a;
+  /* canais aduaneiros (sempre com o nome escrito ao lado) */
+  --ch-verde: #1f6b34; --ch-verde-bg: #e3f3e6; --ch-amarelo: #7a5600; --ch-amarelo-bg: #fff1d6;
+  --ch-vermelho: #b00000; --ch-vermelho-bg: #fde4e4; --ch-cinza: #4c4f55; --ch-cinza-bg: #e9eaec;
+  --warn: #8a5a00; --warn-bg: #fff1d6; --ok: #1f6b34; --ok-bg: #e3f3e6;
+}
+* { box-sizing: border-box; }
+html { font-size: 14px; }
+body { margin: 0; font: 1rem/1.45 "Segoe UI", system-ui, -apple-system, "Microsoft YaHei", sans-serif; color: var(--ink); background: var(--bg); min-height: 100vh; }
+a { color: var(--brand); }
+button, input, select, textarea { font: inherit; }
+
+.top { background: #fff; position: sticky; top: 0; z-index: 5; box-shadow: 0 1px 0 var(--line); }
+.top-row { display: flex; align-items: center; gap: 16px; padding: 10px 22px 6px; }
+.brand { font-weight: 800; font-size: 1.35rem; color: var(--brand); flex: 1; }
+.brand small { color: var(--muted); font-weight: 600; font-size: .85rem; margin-left: 8px; }
+.redbar { height: 6px; margin: 0 22px; background: linear-gradient(90deg, var(--brand) 0%, #e07070 45%, rgba(255,255,255,0) 100%); }
+nav { display: flex; gap: 2px; flex-wrap: wrap; padding: 6px 18px 8px; }
+nav a { color: var(--ink); text-decoration: none; padding: 6px 12px; font-weight: 600; border-radius: 4px; }
+nav a:hover { color: var(--brand); background: var(--soft); }
+nav a.active { color: var(--brand); box-shadow: inset 0 -3px 0 var(--brand); border-radius: 0; }
+.store-badge { font-size: .8rem; padding: 3px 9px; border-radius: 999px; background: #eee; color: var(--muted); white-space: nowrap; }
+.store-badge.on { background: var(--ok-bg); color: var(--ok); }
+
+main { max-width: 1360px; margin: 0 auto; padding: 20px 18px 60px; }
+h1 { font-size: 1.6rem; margin: 4px 0 12px; color: var(--brand); font-weight: 800; }
+h2 { font-size: 1.08rem; margin: 0 0 10px; font-weight: 700; padding-left: 9px; border-left: 4px solid var(--brand); }
+h3 { font-size: .95rem; margin: 14px 0 6px; }
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.muted { color: var(--muted); }
+.small { font-size: .86rem; }
+.lead { font-size: 1.05rem; background: #fff; border-left: 4px solid var(--brand); padding: 12px 16px; margin: 0 0 16px; border-radius: 4px; }
+.lead b { color: var(--brand); }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; margin-bottom: 16px; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid3 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+/* stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; text-decoration: none; color: inherit; display: block; position: relative; }
+a.tile:hover { border-color: var(--brand); }
+.tile .k { font-size: .8rem; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.tile .v { font-size: 1.45rem; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.tile .s { font-size: .8rem; color: var(--ink-2); margin-top: 2px; }
+.key { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.tile.hero { border-left: 4px solid var(--brand); }
+
+/* tables */
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { font-size: .78rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .02em; background: #fafafa; position: sticky; top: 0; }
+td.n, th.n { text-align: right; white-space: nowrap; }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--soft); }
+tr.sub td { background: #fafafa; font-size: .88rem; }
+tfoot td { font-weight: 700; border-top: 2px solid var(--line); }
+
+/* badges */
+.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.ch-Verde { color: var(--ch-verde); background: var(--ch-verde-bg); }
+.ch-Amarelo { color: var(--ch-amarelo); background: var(--ch-amarelo-bg); }
+.ch-Vermelho { color: var(--ch-vermelho); background: var(--ch-vermelho-bg); }
+.ch-Cinza { color: var(--ch-cinza); background: var(--ch-cinza-bg); }
+.b-ok { color: var(--ok); background: var(--ok-bg); }
+.b-warn { color: var(--warn); background: var(--warn-bg); }
+.b-none { color: var(--muted); background: #eee; }
+.kpi-tag { font-size: .72rem; color: var(--ink-2); border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; white-space: nowrap; }
+
+/* buttons & forms */
+.btn { background: #fff; border: 1px solid var(--line); border-radius: 4px; padding: 6px 12px; cursor: pointer; font-weight: 600; color: var(--ink); text-decoration: none; display: inline-block; }
+.btn:hover { border-color: var(--brand); color: var(--brand); }
+.btn.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+.btn.primary:hover { filter: brightness(1.1); color: #fff; }
+.btn.danger { color: var(--brand); }
+.btn.sm { padding: 3px 8px; font-size: .85rem; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+input, select, textarea { border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; background: #fff; color: var(--ink); max-width: 100%; }
+textarea { width: 100%; min-height: 64px; }
+label.f { display: flex; flex-direction: column; gap: 3px; font-size: .82rem; color: var(--muted); font-weight: 600; }
+label.f input, label.f select, label.f textarea { color: var(--ink); font-weight: 400; }
+.form { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 12px; }
+.form .wide { grid-column: 1 / -1; }
+
+/* charts */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .85rem; color: var(--ink-2); margin-bottom: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.hbar { display: grid; grid-template-columns: minmax(90px, 150px) 1fr minmax(90px, auto); gap: 4px 10px; align-items: center; }
+.hbar .lab { font-size: .86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hbar .lab a { text-decoration: none; font-weight: 600; }
+.hbar .val { font-size: .85rem; text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.track { display: flex; gap: 2px; height: 18px; position: relative; }
+.track .seg { height: 100%; min-width: 2px; cursor: pointer; }
+.track .seg:last-child { border-radius: 0 4px 4px 0; }
+.track .seg:hover { filter: brightness(1.12); }
+.track.ref::after { content: ""; position: absolute; top: -3px; bottom: -3px; left: var(--ref); border-left: 2px dashed var(--ink-2); }
+.axis-note { font-size: .78rem; color: var(--muted); margin-top: 6px; }
+.compbar { display: flex; gap: 2px; height: 26px; margin: 8px 0 4px; }
+.compbar .seg:first-child { border-radius: 4px 0 0 4px; }
+.compbar .seg:last-child { border-radius: 0 4px 4px 0; }
+#tip { position: fixed; z-index: 50; pointer-events: none; background: #1a1a1a; color: #fff; padding: 6px 9px; border-radius: 4px; font-size: .82rem; line-height: 1.35; max-width: 280px; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+#tip.hidden { display: none; }
+
+/* timeline */
+.timeline { display: flex; flex-wrap: wrap; gap: 0; margin: 6px 0; }
+.tl { position: relative; padding: 0 14px 0 0; min-width: 120px; }
+.tl .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--brand); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--brand); }
+.tl .dot.off { background: #fff; }
+.tl .line { position: absolute; top: 5px; left: 14px; right: 0; height: 2px; background: var(--line); }
+.tl .d { font-weight: 700; font-size: .88rem; margin-top: 4px; }
+.tl .t { font-size: .8rem; color: var(--muted); }
+
+.drop { border: 2px dashed var(--line); border-radius: 8px; padding: 30px; text-align: center; background: #fff; cursor: pointer; }
+.drop.over { border-color: var(--brand); background: var(--soft); }
+.warnbox { background: var(--warn-bg); color: var(--warn); border-radius: 4px; padding: 8px 12px; margin: 6px 0; font-size: .9rem; }
+.okbox { background: var(--ok-bg); color: var(--ok); border-radius: 4px; padding: 8px 12px; margin: 6px 0; font-size: .9rem; }
+.empty { text-align: center; padding: 40px 20px; }
+.obs { white-space: pre-wrap; font-size: .8rem; color: var(--ink-2); max-height: 160px; overflow: auto; }
+
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-start; justify-content: center; z-index: 30; padding: 40px 12px; overflow: auto; }
+.modal.hidden { display: none; }
+.modal-box { background: #fff; border-radius: 8px; padding: 20px; width: min(860px, 100%); position: relative; }
+.modal .close { position: absolute; right: 10px; top: 6px; border: 0; background: none; font-size: 1.6rem; cursor: pointer; color: var(--muted); }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 9px 16px; border-radius: 6px; z-index: 60; }
+.toast.hidden { display: none; }
+@media (max-width: 640px) { .top-row, nav { padding-left: 12px; padding-right: 12px; } main { padding: 14px 12px 40px; } .hbar { grid-template-columns: 80px 1fr; } .hbar .val { grid-column: 2; text-align: left; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-row">
+    <div class="brand">Custos Aduaneiros <small>Storage · Customs costs · Santos Brasil</small></div>
+    <span id="store" class="store-badge"></span>
+  </div>
+  <div class="redbar"></div>
+  <nav>
+    <a href="#painel">Painel</a>
+    <a href="#processos">Processos</a>
+    <a href="#extras">Custos extras</a>
+    <a href="#canal">Canal vermelho</a>
+    <a href="#importar">Importar</a>
+    <a href="#config">Config.</a>
+  </nav>
+</header>
+<main id="view"><p class="muted">Carregando…</p></main>
+<div id="modal" class="modal hidden"><div class="modal-box"><button class="close" onclick="closeModal()">×</button><div id="modal-body"></div></div></div>
+<div id="toast" class="toast hidden"></div>
+<div id="tip" class="hidden"></div>
+<script>
+/* Leitor de .xlsx com TODAS as abas (sem bibliotecas externas).
+ * Retorna { sheets: [{ name, grid, merges }] } onde grid[linha][coluna] = valor (string | number).
+ * Datas do Excel viram "AAAA-MM-DD". Baseado em src/xlsx.js da plataforma de governança. */
+const Book = {
+  async unzip(buf) {
+    const dv = new DataView(buf), dec = new TextDecoder();
+    let e = buf.byteLength - 22;
+    while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+    if (e < 0) throw new Error("Arquivo .xlsx inválido");
+    const count = dv.getUint16(e + 10, true);
+    let off = dv.getUint32(e + 16, true);
+    const files = {};
+    for (let i = 0; i < count; i++) {
+      const method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true);
+      const nl = dv.getUint16(off + 28, true), xl = dv.getUint16(off + 30, true), cl = dv.getUint16(off + 32, true);
+      const local = dv.getUint32(off + 42, true);
+      files[dec.decode(new Uint8Array(buf, off + 46, nl))] = { method, csize, local };
+      off += 46 + nl + xl + cl;
+    }
+    return async (name) => {
+      const f = files[name];
+      if (!f) return null;
+      const start = f.local + 30 + dv.getUint16(f.local + 26, true) + dv.getUint16(f.local + 28, true);
+      const data = new Uint8Array(buf, start, f.csize);
+      if (f.method === 0) return dec.decode(data);
+      return new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text();
+    };
+  },
+
+  async read(file) {
+    const ext = file.name.toLowerCase().split(".").pop();
+    if (ext === "csv" || ext === "txt") return { sheets: [{ name: file.name, grid: this.parseCsv((await file.text()).replace(/^﻿/, "")), merges: [] }] };
+    const get = await this.unzip(await file.arrayBuffer());
+    const xml = (s) => (s ? new DOMParser().parseFromString(s, "application/xml") : null);
+    const byTag = (doc, tag) => (doc ? [...doc.getElementsByTagNameNS("*", tag)] : []);
+    const wb = xml(await get("xl/workbook.xml")), rels = xml(await get("xl/_rels/workbook.xml.rels"));
+    const shared = byTag(xml(await get("xl/sharedStrings.xml")), "si").map((si) => byTag(si, "t").map((t) => t.textContent).join(""));
+    const styles = xml(await get("xl/styles.xml"));
+    const customDate = new Set(byTag(styles, "numFmt").filter((n) => /[dmy]/i.test((n.getAttribute("formatCode") || "").replace(/"[^"]*"|\[[^\]]*\]/g, ""))).map((n) => +n.getAttribute("numFmtId")));
+    const xfs = (() => { const cx = byTag(styles, "cellXfs")[0]; return cx ? byTag(cx, "xf").map((x) => +x.getAttribute("numFmtId")) : []; })();
+    const isDateFmt = (id) => (id >= 14 && id <= 22) || (id >= 45 && id <= 47) || customDate.has(id);
+    const serialToDate = (n) => new Date(Date.UTC(1899, 11, 30) + Math.round(n * 864e5)).toISOString().slice(0, 10);
+    const colIdx = (ref) => { let n = 0; for (const ch of ref.replace(/\d+/g, "")) n = n * 26 + ch.charCodeAt(0) - 64; return n - 1; };
+    const rowIdx = (ref) => +ref.replace(/[A-Z]+/g, "") - 1;
+
+    const out = [];
+    for (const s of byTag(wb, "sheet")) {
+      const rid = s.getAttribute("r:id") || s.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+      const rel = byTag(rels, "Relationship").find((r) => r.getAttribute("Id") === rid);
+      if (!rel) continue;
+      const t = rel.getAttribute("Target");
+      const path = t.startsWith("/") ? t.slice(1) : "xl/" + t.replace(/^\.\//, "");
+      const sheet = xml(await get(path));
+      if (!sheet) continue;
+      const grid = [];
+      for (const row of byTag(sheet, "row")) {
+        for (const c of byTag(row, "c")) {
+          const ref = c.getAttribute("r") || "A1";
+          const ty = c.getAttribute("t"), v = byTag(c, "v")[0]?.textContent ?? "";
+          let val = v;
+          if (ty === "s") val = shared[+v] ?? "";
+          else if (ty === "inlineStr") val = byTag(c, "t").map((x) => x.textContent).join("");
+          else if (ty === "str" || ty === "e") val = v;
+          else if (ty === "b") val = v === "1" ? "TRUE" : "FALSE";
+          else if (v !== "" && isDateFmt(xfs[+(c.getAttribute("s") || 0)] ?? 0)) val = serialToDate(+v);
+          else if (v !== "" && !isNaN(+v)) val = +v;
+          if (val !== "") (grid[rowIdx(ref)] ??= [])[colIdx(ref)] = val;
+        }
+      }
+      const merges = byTag(sheet, "mergeCell").map((m) => {
+        const [a, b] = (m.getAttribute("ref") || "").split(":");
+        return b ? { r0: rowIdx(a), c0: colIdx(a), r1: rowIdx(b), c1: colIdx(b) } : null;
+      }).filter(Boolean);
+      out.push({ name: s.getAttribute("name") || path, grid, merges });
+    }
+    return { sheets: out };
+  },
+
+  /** Cópia da grade com o valor de cada célula mesclada repetido no intervalo todo. */
+  filled(sheet) {
+    const g = sheet.grid.map((r) => (r ? [...r] : []));
+    for (const m of sheet.merges) {
+      const val = g[m.r0]?.[m.c0];
+      if (val === undefined) continue;
+      for (let r = m.r0; r <= m.r1; r++) for (let c = m.c0; c <= m.c1; c++) if (r !== m.r0 || c !== m.c0) (g[r] ??= [])[c] = val;
+    }
+    return g;
+  },
+
+  parseCsv(text) {
+    const first = text.split(/\r?\n/, 1)[0];
+    const delim = [";", "\t", ","].sort((a, b) => first.split(b).length - first.split(a).length)[0];
+    const rows = [];
+    let row = [], cell = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) {
+        if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === delim) { row.push(cell); cell = ""; }
+      else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        row.push(cell); cell = ""; rows.push(row); row = [];
+      } else cell += ch;
+    }
+    row.push(cell); rows.push(row);
+    return rows;
+  },
+};
+</script>
+<script>
+/* Leitura das planilhas de origem:
+ *  1) Demonstrativo de cálculo da Santos Brasil (por processo IRAxxxx-xx): contêineres, serviços, valores, períodos.
+ *  2) Planilha "Red Channel Status" (controle manual do desembaraço): canal, exigências, status e próximos passos.
+ * As funções trabalham com grades (arrays de linhas), produzidas por Book.read(). */
+
+const norm = (s) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\u00a0/g, " ").toUpperCase().replace(/\s+/g, " ").trim();
+
+/** "1.770,00" / "2064,14" / 2064.14 -> número */
+function num(v) {
+  if (typeof v === "number") return v;
+  const s = String(v ?? "").replace(/[R$\s\u00a0]/g, "");
+  if (!s) return NaN;
+  if (/,\d{1,2}$/.test(s)) return +s.replace(/\./g, "").replace(",", ".");
+  return +s.replace(/,/g, "");
+}
+
+/** "12/11/2026", "2026-11-12", "12/11" (+ano de referência) -> "2026-11-12" */
+function toISO(v, refYear) {
+  if (v === undefined || v === null || v === "") return "";
+  if (typeof v === "number") return v > 20000 && v < 80000 ? new Date(Date.UTC(1899, 11, 30) + v * 864e5).toISOString().slice(0, 10) : "";
+  const s = String(v).replace(/\u00a0/g, " ").trim();
+  let m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
+  if (m) { const y = m[3].length === 2 ? "20" + m[3] : m[3]; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; }
+  m = s.match(/(\d{1,2})\/(\d{1,2})(?!\d)/);
+  if (m && refYear) return `${refYear}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return "";
+}
+
+/** Número do processo aduaneiro: "IRA2419-26", "IRA 1818/26", "ira2419_26" -> "IRA2419/26" */
+function procId(s) {
+  const m = String(s ?? "").toUpperCase().match(/IRA\s*[-_]?\s*(\d{3,5})\s*[-\/_ ]\s*(\d{2})(?!\d)/);
+  return m ? `IRA${m[1]}/${m[2]}` : "";
+}
+const procKey = (id) => String(id).replace(/\//g, "-");
+
+/* ------------------------------------------------------------------ classificação dos serviços */
+
+/** Grupos de custo. Regular = custo esperado de todo processo; extras = o que deve ser explicado. */
+const GROUPS = {
+  regular: { label: "Regular", kpi: "", color: "var(--s-regular)" },
+  extra_storage: { label: "Extra · armazenagem além do período livre", short: "Extra armazenagem", kpi: "KPI 1 · Storage", color: "var(--s-storage)" },
+  extra_customs: { label: "Extra · inspeção e desembaraço", short: "Extra desembaraço", kpi: "KPI 3 · Customs costs", color: "var(--s-customs)" },
+};
+
+/** Regras padrão (a primeira que casar vale). Editáveis em Configurações.
+ *  Seguem a planilha de breakdown manual: regular = armazenagem 1º período + escaneamento + carregamento + processamento. */
+const DEFAULT_RULES = [
+  { match: "ARMAZENAGEM", label: "Armazenagem", group: "storage" },
+  { match: "INSPECAO NAO INVASIVA", label: "Escaneamento (inspeção não invasiva)", group: "regular" },
+  { match: "CARREGAMENTO", label: "Carregamento (retirada)", group: "regular" },
+  { match: "PROCESSAMENTO ELETRONICO", label: "Processamento eletrônico", group: "regular" },
+  { match: "POSICIONAMENTO", label: "Posicionamento de contêiner", group: "extra_customs" },
+  { match: "COLOCACAO DE LACRE", label: "Colocação de lacre", group: "extra_customs" },
+  { match: "RETIRADA DE LACRE", label: "Retirada de lacre", group: "extra_customs" },
+  { match: "DESCONSOLIDACAO|DESUNITIZACAO|DESOVA", label: "Desova (desconsolidação)", group: "extra_customs" },
+  { match: "CONSOLIDACAO|UNITIZACAO|OVA ", label: "Ova (consolidação)", group: "extra_customs" },
+  { match: "EXAME|LAUDO|AMOSTRA", label: "Exames e laudos", group: "extra_customs" },
+  { match: "MOVIMENTACAO", label: "Movimentações adicionais", group: "extra_customs" },
+];
+
+function classify(name, rules) {
+  const n = norm(name);
+  for (const r of rules) {
+    let re;
+    try { re = new RegExp(norm(r.match).split("|").map((x) => x.replace(/[.*+?^${}()[\]\\]/g, "\\$&")).join("|")); } catch { continue; }
+    if (re.test(n)) return r;
+  }
+  return { match: "", label: String(name).replace(/\s*-\s*IMPORTA[CÇ][AÃ]O\s*$/i, "").trim() || "Outro serviço", group: "extra_customs", unknown: true };
+}
+
+/** Divide a armazenagem pelos períodos descritos na OBS ("HOUSE 1º Período (15 dias) ... R$=2064,14 de :08/08/2026 a 22/08/2026"). */
+function storagePeriods(obs) {
+  const out = [];
+  const re = /(\d+)\s*[º°o]?\s*Per[ií]odo\s*\((\d+)\s*dias?\)[^\n]*?R\$\s*=\s*([\d.,]+)(?:[^\n]*?de\s*:?\s*(\d{2}\/\d{2}\/\d{4})\s*a\s*(\d{2}\/\d{2}\/\d{4}))?/gi;
+  let m;
+  while ((m = re.exec(obs))) out.push({ n: +m[1], days: +m[2], value: num(m[3]), from: toISO(m[4]), to: toISO(m[5]) });
+  return out;
+}
+
+/* ------------------------------------------------------------------ Santos Brasil */
+
+const SB = {
+  /** Aba com o demonstrativo: a que tiver mais rótulos "Contêiner:" + "Serviço:"; prefere "Santos Brasil Details". */
+  pickSheet(book) {
+    const score = (sh) => {
+      let s = 0;
+      for (const r of sh.grid) for (const c of r || []) { const n = norm(c); if (n === "CONTEINER:" || n === "SERVICO:") s++; }
+      return s + (/santos/i.test(sh.name) ? 1000 : 0) * (s > 0 ? 1 : 0);
+    };
+    return [...book.sheets].map((sh) => ({ sh, s: score(sh) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s)[0]?.sh || null;
+  },
+
+  parse(book, fileName) {
+    const sheet = this.pickSheet(book);
+    if (!sheet) throw new Error("Não encontrei o demonstrativo da Santos Brasil (rótulos \"Contêiner:\" e \"Serviço:\") em nenhuma aba.");
+    const P = {
+      id: procId(fileName), file: fileName, sheet: sheet.name, importedAt: new Date().toISOString(),
+      bl: "", duimp: "", vessel: "", voyage: "", rps: "", nfe: "", client: "", broker: "", table: "", origin: "",
+      cifUsd: null, cifBrl: null, periodFrom: "", periodTo: "", calcDate: "", issuedAt: "",
+      containers: [], blTotal: null, grandTotal: null, warnings: [],
+    };
+    let C = null, S = null;
+    const rows = sheet.grid;
+
+    for (let ri = 0; ri < rows.length; ri++) {
+      const row = rows[ri] || [];
+      const cells = [];
+      row.forEach((v, ci) => { if (v !== undefined && v !== "") cells.push({ ci, v }); });
+      if (!cells.length) continue;
+      const after = (k) => { for (let j = k + 1; j < cells.length; j++) if (!/:\s*_*$/.test(String(cells[j].v)) || typeof cells[j].v === "number") return cells[j].v; return ""; };
+      let labelled = false;
+
+      for (let k = 0; k < cells.length; k++) {
+        const raw = String(cells[k].v), n = norm(raw);
+        if (typeof cells[k].v === "number") continue;
+        const lab = (re) => re.test(n);
+        if (lab(/^EMISSAO:/)) { P.issuedAt = raw.replace(/^.*?:\s*/, "").trim(); labelled = true; }
+        else if (lab(/^NAVIO:$/)) { P.vessel = String(after(k)); labelled = true; }
+        else if (lab(/^VIAGEM:$/)) { P.voyage = String(after(k)); labelled = true; }
+        else if (lab(/^RPS:$/)) { P.rps = String(after(k)); labelled = true; }
+        else if (lab(/^NFE:$/)) { P.nfe = String(after(k)); labelled = true; }
+        else if (lab(/^CLIENTE:$/)) { P.client = String(after(k)); labelled = true; }
+        else if (lab(/^DESPACHANTE:$/)) { P.broker = String(after(k)); labelled = true; }
+        else if (lab(/^TABELA:$/)) { P.table = String(after(k)); labelled = true; }
+        else if (lab(/^BL:$/)) { P.bl = String(after(k)).trim(); labelled = true; }
+        else if (lab(/^VALOR CIF \(US\$\):$/)) { P.cifUsd = num(after(k)); labelled = true; }
+        else if (lab(/^VALOR CIF \(R\$\):$/)) { P.cifBrl = num(after(k)); labelled = true; }
+        else if (lab(/^PORTO:$/)) { P.origin = String(after(k)); labelled = true; }
+        else if (lab(/^DOC\. SAIDA:$/)) { P.duimp = String(after(k)).trim(); labelled = true; }
+        else if (lab(/^PERIODO:$/)) { P.periodFrom = toISO(after(k)); labelled = true; }
+        else if (lab(/^A:$/) && P.periodFrom && !P.periodTo) { P.periodTo = toISO(after(k)); labelled = true; }
+        else if (lab(/^CALCULO PREV\.:$/)) { P.calcDate = toISO(after(k)); labelled = true; }
+        else if (lab(/^CONTEINER:$/)) {
+          C = { id: String(after(k)).trim(), entry: "", exit: "", limit: "", periods: null, stay: null, regimeChange: "", services: [], reported: null };
+          P.containers.push(C); S = null; labelled = true;
+        }
+        else if (lab(/^DATA ENTRADA:$/) && C) { C.entry = toISO(after(k)); labelled = true; }
+        else if (lab(/^DATA SAIDA:$/) && C) { C.exit = toISO(after(k)); labelled = true; }
+        else if (lab(/^LIMITE SAIDA:$/) && C) { C.limit = toISO(after(k)); labelled = true; }
+        else if (lab(/^PERIODOS:/) && C) { C.periods = num(after(k)); labelled = true; }
+        else if (lab(/^ESTADIA:$/) && C) { C.stay = parseInt(String(after(k)), 10) || null; labelled = true; }
+        else if (lab(/^MUDANCA DE REGIME:$/) && C) { C.regimeChange = String(after(k)); labelled = true; }
+        else if (lab(/^SERVICO:$/) && C) {
+          S = { name: String(after(k)).trim(), code: "", value: 0, obs: "" };
+          C.services.push(S); labelled = true;
+        }
+        else if (lab(/^CODIGO:$/) && S) { S.code = String(after(k)); labelled = true; }
+        else if (lab(/^VALOR SERVICO:$/) && S) { S.value = num(after(k)) || 0; labelled = true; }
+        else if (lab(/^OBS:$/) && S) { S.obs = String(after(k)); labelled = true; }
+        else if (lab(/^VALOR TOTAL DO CONTEINER/)) {
+          const id = (raw.match(/\(([^)]+)\)/) || [])[1]?.trim();
+          const c = P.containers.find((x) => x.id === id) || C;
+          if (c) c.reported = num(after(k));
+          S = null; labelled = true;
+        }
+        else if (lab(/^VALOR TOTAL DO BL/)) { P.blTotal = num(after(k)); S = null; labelled = true; }
+        else if (lab(/^TOTAL GERAL:$/)) { P.grandTotal = num(after(k)); S = null; labelled = true; }
+      }
+      // linhas de continuação da OBS (períodos de armazenagem, um por linha)
+      if (!labelled && S && cells.length === 1 && typeof cells[0].v === "string") S.obs += "\n" + cells[0].v;
+      if (P.grandTotal !== null && ri > 0 && !labelled && !S) { /* rodapé: instruções bancárias, ignorado */ }
+    }
+
+    if (!P.containers.length) throw new Error("Nenhum contêiner encontrado no demonstrativo.");
+    if (!P.id) P.id = procId(P.bl) || "";
+    for (const c of P.containers) {
+      const sum = c.services.reduce((a, s) => a + s.value, 0);
+      if (c.reported !== null && Math.abs(sum - c.reported) > 0.05) P.warnings.push(`Contêiner ${c.id}: soma dos serviços R$ ${sum.toFixed(2)} ≠ total informado R$ ${c.reported.toFixed(2)}`);
+    }
+    const total = P.containers.reduce((a, c) => a + c.services.reduce((b, s) => b + s.value, 0), 0);
+    if (P.grandTotal !== null && Math.abs(total - P.grandTotal) > 0.05) P.warnings.push(`Soma dos contêineres R$ ${total.toFixed(2)} ≠ Total Geral R$ ${P.grandTotal.toFixed(2)}`);
+    return P;
+  },
+};
+
+/** Custos derivados de um processo, segundo as regras atuais. */
+function analyze(P, rules, freeDays = 15) {
+  const out = { regular: 0, extra_storage: 0, extra_customs: 0, total: 0, lines: [], containers: [], unknown: 0 };
+  for (const c of P.containers) {
+    const cc = { id: c.id, regular: 0, extra_storage: 0, extra_customs: 0, total: 0, extraDays: 0, dayRate: 0, physical: false, lines: [] };
+    for (const s of c.services) {
+      const r = classify(s.name, rules);
+      if (r.unknown) out.unknown++;
+      if (r.group === "storage") {
+        const per = storagePeriods(s.obs);
+        if (per.length) {
+          const first = per.filter((p) => p.n === 1).reduce((a, p) => a + p.value, 0);
+          const rest = per.filter((p) => p.n > 1);
+          const restVal = Math.max(0, s.value - first);
+          cc.lines.push({ label: `${r.label} · 1º período (${per.find((p) => p.n === 1)?.days ?? freeDays} dias)`, key: r.label + " · período livre", group: "regular", value: Math.min(first, s.value), service: s });
+          if (restVal > 0.004) {
+            const days = rest.reduce((a, p) => a + p.days, 0);
+            cc.extraDays += days; cc.dayRate = rest[0]?.value || 0;
+            cc.lines.push({ label: `${r.label} · períodos adicionais (${days} dia${days === 1 ? "" : "s"})`, key: "Armazenagem adicional", group: "extra_storage", value: restVal, qty: days, unit: rest[0]?.value, service: s });
+          }
+        } else cc.lines.push({ label: r.label, key: r.label + " · período livre", group: "regular", value: s.value, service: s });
+      } else {
+        if (/POSICIONAMENTO/.test(norm(s.name))) cc.physical = true;
+        cc.lines.push({ label: r.label, key: r.label, group: r.group, value: s.value, service: s, unknown: !!r.unknown });
+      }
+    }
+    for (const l of cc.lines) { cc[l.group] += l.value; cc.total += l.value; }
+    cc.stay = c.stay; cc.entry = c.entry; cc.exit = c.exit; cc.periods = c.periods; cc.reported = c.reported;
+    cc.overFree = (c.stay || 0) > freeDays || cc.extraDays > 0;
+    out.containers.push(cc);
+    for (const l of cc.lines) out.lines.push({ ...l, container: c.id });
+    out.regular += cc.regular; out.extra_storage += cc.extra_storage; out.extra_customs += cc.extra_customs; out.total += cc.total;
+  }
+  out.extra = out.extra_storage + out.extra_customs;
+  out.storageFirst = out.lines.filter((l) => l.group === "regular" && /período livre$/.test(l.key)).reduce((a, l) => a + l.value, 0);
+  out.n = P.containers.length;
+  out.maxStay = Math.max(0, ...P.containers.map((c) => c.stay || 0));
+  out.over = out.containers.filter((c) => c.overFree).length;
+  out.physical = out.containers.filter((c) => c.physical).length;
+  out.firstEntry = P.containers.map((c) => c.entry).filter(Boolean).sort()[0] || P.periodFrom || "";
+  out.lastExit = P.containers.map((c) => c.exit).filter(Boolean).sort().pop() || "";
+  return out;
+}
+
+/* ------------------------------------------------------------------ Red Channel Status */
+
+/** Interpreta a planilha manual de canal vermelho. Cada processo pode ocupar várias linhas
+ *  (rótulos + datas); um bloco começa na linha onde aparece um número IRA. */
+const RC = {
+  COLS: [
+    { key: "qty", re: /CONTAINERS? QUANTITY|集装箱/ },
+    { key: "batch", re: /BATCH|批次/ },
+    { key: "daysHeld", re: /TOTAL DAYS|滞留/ },
+    { key: "storageFirst", re: /PORT STORAGE|1ST PERIOD|堆存/ },
+    { key: "storageAdd", re: /ADDITIONAL PERIOD/ },
+    { key: "demurrage", re: /DEMURRAGE/ },
+    { key: "exTariff", re: /EX-?TARIFF|EX TARIFF/ },
+    { key: "infoRequested", re: /INFORMATION REQUESTED|资料/ },
+    { key: "official", re: /^OFFICIAL/ },
+    { key: "nextStepDate", re: /DATE OF NEXT STEP|完成时间/ },
+    { key: "nextStep", re: /^NEXT STEP|下一步$/ },
+  ],
+
+  parse(book) {
+    const results = [];
+    for (const sh of book.sheets) {
+      const g = sh.grid;
+      // 1) cabeçalho: linha com mais títulos reconhecidos
+      const colOf = {};
+      let headerRow = -1, best = 0;
+      for (let r = 0; r < Math.min(g.length, 40); r++) {
+        let hits = 0; const map = {};
+        (g[r] || []).forEach((v, c) => {
+          const n = norm(v);
+          if (!n) return;
+          for (const col of this.COLS) if (!(col.key in map) && col.re.test(n)) { map[col.key] = c; hits++; break; }
+        });
+        if (hits > best) { best = hits; headerRow = r; Object.assign(colOf, map); }
+      }
+      // 2) blocos por processo
+      const starts = [];
+      for (let r = headerRow + 1; r < g.length; r++) {
+        const id = (g[r] || []).map(procId).find(Boolean);
+        if (id && !starts.some((s) => s.id === id)) starts.push({ r, id });
+      }
+      starts.forEach((s, i) => {
+        const end = i + 1 < starts.length ? starts[i + 1].r : g.length;
+        let top = s.r;
+        // o bloco pode começar acima da linha do IRA (rótulos de datas na linha de cima)
+        while (top > headerRow + 1 && top > (i ? starts[i - 1].r + 1 : 0) && !(g[top - 1] || []).some((v) => procId(v)) && (g[top - 1] || []).some((v) => /customs|officer|request|submitted/i.test(String(v)))) top--;
+        results.push(this.block(g, top, end, s.id, colOf));
+      });
+    }
+    return results;
+  },
+
+  block(g, r0, r1, id, colOf) {
+    const rec = { id, channel: "Vermelho", rounds: [], source: "planilha Red Channel" };
+    const year = (new Date()).getFullYear();
+    const texts = (c) => { const out = []; for (let r = r0; r < r1; r++) { const v = g[r]?.[c]; if (v !== undefined && v !== "") out.push(v); } return out; };
+    const firstText = (c) => (c === undefined ? "" : texts(c).map(String).find((x) => x.trim()) || "");
+    const nums = (c) => (c === undefined ? [] : texts(c).map(num).filter((x) => !isNaN(x)));
+
+    rec.batch = texts(colOf.batch ?? 2).map(String).join(" · ").replace(/\s+/g, " ").trim();
+    rec.containers = nums(colOf.qty)[0] ?? null;
+    rec.storageFirst = nums(colOf.storageFirst)[0] ?? null;
+    rec.storageAdd = nums(colOf.storageAdd)[0] ?? null;
+    rec.demurrage = nums(colOf.demurrage)[0] ?? null;
+    rec.exTariff = firstText(colOf.exTariff);
+    rec.infoRequested = firstText(colOf.infoRequested);
+    rec.official = texts(colOf.official ?? -1).join(" · ");
+    rec.nextStep = firstText(colOf.nextStep);
+    rec.nextStepDate = toISO(firstText(colOf.nextStepDate), year);
+
+    // datas: em cada coluna, o rótulo (texto) diz o que é a data abaixo dele
+    const width = Math.max(...g.slice(r0, r1).map((r) => (r || []).length), 0);
+    const dated = [];
+    for (let c = 0; c < width; c++) {
+      let label = "", date = "", extra = "";
+      for (let r = r0; r < r1; r++) {
+        const v = g[r]?.[c];
+        if (v === undefined || v === "") continue;
+        const iso = toISO(v, year);
+        const looksDate = iso && (typeof v === "number" || /^\s*\d{1,4}[\/\-]\d{1,2}/.test(String(v)));
+        if (looksDate) { if (!date) { date = iso; extra = String(v).replace(/^\s*[\d\/\-]+\s*/, "").trim(); } }
+        else if (typeof v === "string") label += " " + v;
+      }
+      const L = norm(label);
+      if (/CUSTOMS CLEARED|DESEMBARAC/.test(L)) { rec.status = "Desembaraçado"; if (date) rec.clearedAt = date; continue; }
+      if (!date) continue;
+      dated.push({ c, L, date, extra });
+    }
+    for (const d of dated) {
+      if (/CHANNEL ASSIGNMENT|分配|CANAL/.test(d.L)) rec.assignedAt = d.date;
+      else if (/SUBMITTED|提交/.test(d.L)) { const last = rec.rounds[rec.rounds.length - 1]; if (last && !last.sub) last.sub = d.date; else rec.rounds.push({ req: "", sub: d.date }); }
+      else if (/REQUEST|要求/.test(d.L)) rec.rounds.push({ req: d.date, sub: "", note: d.extra });
+      else if (!rec.clearedAt && rec.status === "Desembaraçado") rec.clearedAt = d.date;
+    }
+    rec.rounds = rec.rounds.filter((x) => x.req || x.sub);
+    const held = nums(colOf.daysHeld);
+    rec.daysHeld = held.length ? held[0] : null;
+    if (!rec.status) rec.status = "Em andamento";
+    return rec;
+  },
+};
+</script>
+<script>
+/* Base de dados: salva automaticamente no navegador (IndexedDB) e, se você escolher uma pasta de trabalho
+ * (Edge/Chrome), também em <pasta>/custos-aduaneiros.json + cópia das planilhas importadas em <pasta>/SANTOS_BRASIL e <pasta>/RED_CHANNEL.
+ * A pasta pode ser do OneDrive/SharePoint para ter backup e compartilhar com a equipe. */
+const KV = {
+  _db: null,
+  open() {
+    if (this._db) return Promise.resolve(this._db);
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("custos-aduaneiros", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => res((this._db = r.result));
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async get(k) { const db = await this.open(); return new Promise((res, rej) => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  async set(k, v) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); },
+};
+
+const DB_FILE = "custos-aduaneiros.json";
+
+const Data = {
+  db: null,
+  folder: null,
+
+  empty() {
+    return { version: 1, processes: {}, red: {}, notes: {}, rules: DEFAULT_RULES.map((r) => ({ ...r })), settings: { freeDays: 15, usdRate: 5.4 }, log: [] };
+  },
+
+  async load() {
+    let db = null;
+    try { db = await KV.get("db"); } catch { /* navegador sem IndexedDB */ }
+    if (!db) { try { db = JSON.parse(localStorage.getItem("custos-aduaneiros-db") || "null"); } catch { db = null; } }
+    this.db = Object.assign(this.empty(), db || {});
+    try {
+      const h = await KV.get("folder");
+      if (h && (await h.queryPermission({ mode: "readwrite" })) === "granted") await this.useFolder(h, true);
+      else if (h) this.pendingFolder = h;
+    } catch { /* sem pasta */ }
+  },
+
+  async save() {
+    this.db.savedAt = new Date().toISOString();
+    try { await KV.set("db", this.db); } catch { try { localStorage.setItem("custos-aduaneiros-db", JSON.stringify(this.db)); } catch { /* cheio */ } }
+    if (this.folder) { try { await this.write(DB_FILE, JSON.stringify(this.db, null, 1)); } catch (e) { console.warn("Falha ao gravar na pasta", e); } }
+  },
+
+  log(msg) { this.db.log.unshift({ at: new Date().toISOString(), msg }); this.db.log.length = Math.min(this.db.log.length, 300); },
+
+  /* ---------- pasta de trabalho (opcional) */
+  folderSupported: () => typeof window.showDirectoryPicker === "function",
+  async pickFolder() {
+    const h = await window.showDirectoryPicker({ id: "custos-aduaneiros", mode: "readwrite" });
+    await this.useFolder(h);
+  },
+  async reconnect() {
+    const h = this.pendingFolder;
+    if (h && (await h.requestPermission({ mode: "readwrite" })) === "granted") { await this.useFolder(h); this.pendingFolder = null; return true; }
+    return false;
+  },
+  async useFolder(h, silent) {
+    this.folder = h;
+    await KV.set("folder", h).catch(() => {});
+    // se a pasta já tem uma base mais recente, ela prevalece
+    try {
+      const f = await (await h.getFileHandle(DB_FILE)).getFile();
+      const other = JSON.parse(await f.text());
+      if (!this.db.savedAt || (other.savedAt && other.savedAt > this.db.savedAt) || !Object.keys(this.db.processes).length) {
+        this.db = Object.assign(this.empty(), other);
+        await KV.set("db", this.db).catch(() => {});
+        return;
+      }
+    } catch { /* ainda não existe */ }
+    if (!silent) await this.save();
+  },
+  async write(path, data) {
+    const parts = path.split("/").filter(Boolean), name = parts.pop();
+    let d = this.folder;
+    for (const p of parts) d = await d.getDirectoryHandle(p, { create: true });
+    const w = await (await d.getFileHandle(name, { create: true })).createWritable();
+    await w.write(data); await w.close();
+  },
+
+  /* ---------- consultas */
+  rules() { return this.db.rules?.length ? this.db.rules : DEFAULT_RULES; },
+  freeDays() { return +this.db.settings.freeDays || 15; },
+  analysis(id) { const P = this.db.processes[id]; return P ? analyze(P, this.rules(), this.freeDays()) : null; },
+
+  /** Lista unificada: processos com demonstrativo + processos só no controle de canal. */
+  rows() {
+    const ids = new Set([...Object.keys(this.db.processes), ...Object.keys(this.db.red)]);
+    return [...ids].map((id) => {
+      const P = this.db.processes[id] || null, R = this.db.red[id] || null;
+      return { id, P, R, A: P ? analyze(P, this.rules(), this.freeDays()) : null };
+    }).sort((a, b) => (b.A?.total || 0) - (a.A?.total || 0) || a.id.localeCompare(b.id));
+  },
+
+  upsertProcess(P) {
+    const prev = this.db.processes[P.id];
+    this.db.processes[P.id] = P;
+    this.log(`${prev ? "Atualizado" : "Importado"} demonstrativo ${P.id} (${P.containers.length} contêineres, arquivo ${P.file})`);
+  },
+  upsertRed(rec, merge = true) {
+    const prev = this.db.red[rec.id] || {};
+    const clean = Object.fromEntries(Object.entries(rec).filter(([, v]) => v !== "" && v !== null && v !== undefined && !(Array.isArray(v) && !v.length)));
+    this.db.red[rec.id] = merge ? { ...prev, ...clean, updatedAt: new Date().toISOString() } : { ...rec, updatedAt: new Date().toISOString() };
+  },
+};
+</script>
+<script>
+/* Dados de exemplo: os 5 primeiros demonstrativos enviados pela Santos Brasil (já interpretados). Gerado a partir das planilhas IRAxxxx-xx_Cost_Breakdown.xlsx. */
+const SEED = {"processes":[{"id":"IRA2419/26","file":"21f50986-IRA2419-26_Cost_Breakdown.xlsx","sheet":"Santos Brasil Details","importedAt":"2026-11-16T00:00:00.000Z","bl":"COSU6509964410","duimp":"DUIMP 26BR00021305049","vessel":"CMA CGM KRYPTON","voyage":"04813 2026","rps":"4062090","nfe":"2550377","client":"GREAT WALL MOTOR BRASIL LTDA","broker":"PINHO COMISSARIA DE DESPACHO S/A","table":"PAN 1270/2025 - REV. 1 (ASIA / GREAT WALL) IMPORTAÇÃO - GERAL","origin":"SHEKOU","cifUsd":425026.5,"cifBrl":425026.5,"periodFrom":"2026-10-29","periodTo":"2026-11-12","calcDate":"2026-11-04","issuedAt":"11/11/2026 14:14:44","containers":[{"id":"CSNU5959180","entry":"2026-10-29","exit":"2026-11-04","limit":"2026-11-12","periods":1,"stay":7,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3331.79},{"id":"CSNU7271283","entry":"2026-10-30","exit":"2026-11-04","limit":"2026-11-13","periods":1,"stay":6,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :30/10/2026 a 13/11/2026"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3331.79},{"id":"OOCU6189612","entry":"2026-10-29","exit":"2026-11-03","limit":"2026-11-12","periods":1,"stay":6,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3887.36},{"id":"OOCU6309560","entry":"2026-10-29","exit":"2026-11-04","limit":"2026-11-12","periods":1,"stay":7,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3887.36},{"id":"TGBU7779080","entry":"2026-10-29","exit":"2026-11-03","limit":"2026-11-12","periods":1,"stay":6,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3887.36}],"blTotal":18325.66,"grandTotal":18325.66,"warnings":[]},{"id":"IRA2416/26","file":"5ecd1e96-IRA2416-26_Cost_Breakdown.xlsx","sheet":"Santos Brasil Details","importedAt":"2026-11-16T00:00:00.000Z","bl":"COSU6509964380","duimp":"DUIMP 26BR00021304883","vessel":"CMA CGM KRYPTON","voyage":"04813 2026","rps":"4062085","nfe":"2550375","client":"GREAT WALL MOTOR BRASIL LTDA","broker":"PINHO COMISSARIA DE DESPACHO S/A","table":"PAN 1270/2025 - REV. 1 (ASIA / GREAT WALL) IMPORTAÇÃO - GERAL","origin":"SHEKOU","cifUsd":425026.5,"cifBrl":425026.5,"periodFrom":"2026-10-29","periodTo":"2026-11-12","calcDate":"2026-11-04","issuedAt":"10/11/2026 17:44:39","containers":[{"id":"CSGU6648711","entry":"2026-10-29","exit":"2026-11-04","limit":"2026-11-12","periods":1,"stay":7,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3331.79},{"id":"CSGU6705350","entry":"2026-10-30","exit":"2026-11-03","limit":"2026-11-13","periods":1,"stay":5,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :30/10/2026 a 13/11/2026"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3331.79},{"id":"CSNU8627975","entry":"2026-10-29","exit":"2026-11-04","limit":"2026-11-12","periods":1,"stay":7,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3887.36},{"id":"CSNU8747287","entry":"2026-10-29","exit":"2026-11-04","limit":"2026-11-12","periods":1,"stay":7,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3887.36},{"id":"OOCU5873997","entry":"2026-10-29","exit":"2026-11-03","limit":"2026-11-12","periods":1,"stay":6,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3887.36}],"blTotal":18325.66,"grandTotal":18325.66,"warnings":[]},{"id":"IRA1818/26","file":"6329f184-IRA1818-26_Cost_Breakdown.xlsx","sheet":"Santos Brasil Details","importedAt":"2026-11-16T00:00:00.000Z","bl":"COSU6504213651","duimp":"DUIMP 26BR00013997719","vessel":"KOTA ELOK","voyage":"03536 2026","rps":"4062952","nfe":"2551103","client":"GREAT WALL MOTOR BRASIL LTDA","broker":"PINHO COMISSARIA DE DESPACHO S/A","table":"PAN 1270/2025 - REV. 1 (ASIA / GREAT WALL) IMPORTAÇÃO - GERAL","origin":"HONG KONG","cifUsd":1530046,"cifBrl":1530046,"periodFrom":"2026-08-07","periodTo":"2026-11-05","calcDate":"2026-11-05","issuedAt":"10/11/2026 17:41:11","containers":[{"id":"BEAU5064941","entry":"2026-08-08","exit":"2026-11-05","limit":"2026-11-05","periods":76,"stay":90,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":20652.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :08/08/2026 a 22/08/2026\nHOUSE 2º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/08/2026 a 23/08/2026\nHOUSE 3º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/08/2026 a 24/08/2026\nHOUSE 4º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/08/2026 a 25/08/2026\nHOUSE 5º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/08/2026 a 26/08/2026\nHOUSE 6º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/08/2026 a 27/08/2026\nHOUSE 7º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/08/2026 a 28/08/2026\nHOUSE 8º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/08/2026 a 29/08/2026\nHOUSE 9º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/08/2026 a 30/08/2026\nHOUSE 10º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :31/08/2026 a 31/08/2026\nHOUSE 11º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/09/2026 a 01/09/2026\nHOUSE 12º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/09/2026 a 02/09/2026\nHOUSE 13º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/09/2026 a 03/09/2026\nHOUSE 14º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/09/2026 a 04/09/2026\nHOUSE 15º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/09/2026 a 05/09/2026\nHOUSE 16º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :06/09/2026 a 06/09/2026\nHOUSE 17º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :07/09/2026 a 07/09/2026\nHOUSE 18º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :08/09/2026 a 08/09/2026\nHOUSE 19º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :09/09/2026 a 09/09/2026\nHOUSE 20º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :10/09/2026 a 10/09/2026\nHOUSE 21º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :11/09/2026 a 11/09/2026\nHOUSE 22º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :12/09/2026 a 12/09/2026\nHOUSE 23º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :13/09/2026 a 13/09/2026\nHOUSE 24º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :14/09/2026 a 14/09/2026\nHOUSE 25º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :15/09/2026 a 15/09/2026\nHOUSE 26º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :16/09/2026 a 16/09/2026\nHOUSE 27º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :17/09/2026 a 17/09/2026\nHOUSE 28º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :18/09/2026 a 18/09/2026\nHOUSE 29º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :19/09/2026 a 19/09/2026\nHOUSE 30º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :20/09/2026 a 20/09/2026\nHOUSE 31º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :21/09/2026 a 21/09/2026\nHOUSE 32º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/09/2026 a 22/09/2026\nHOUSE 33º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/09/2026 a 23/09/2026\nHOUSE 34º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/09/2026 a 24/09/2026\nHOUSE 35º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/09/2026 a 25/09/2026\nHOUSE 36º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/09/2026 a 26/09/2026\nHOUSE 37º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/09/2026 a 27/09/2026\nHOUSE 38º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/09/2026 a 28/09/2026\nHOUSE 39º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/09/2026 a 29/09/2026\nHOUSE 40º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/09/2026 a 30/09/2026\nHOUSE 41º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/10/2026 a 01/10/2026\nHOUSE 42º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/10/2026 a 02/10/2026\nHOUSE 43º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/10/2026 a 03/10/2026\nHOUSE 44º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/10/2026 a 04/10/2026\nHOUSE 45º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/10/2026 a 05/10/2026\nHOUSE 46º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :06/10/2026 a 06/10/2026\nHOUSE 47º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :07/10/2026 a 07/10/2026\nHOUSE 48º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :08/10/2026 a 08/10/2026\nHOUSE 49º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :09/10/2026 a 09/10/2026\nHOUSE 50º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :10/10/2026 a 10/10/2026\nHOUSE 51º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :11/10/2026 a 11/10/2026\nHOUSE 52º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :12/10/2026 a 12/10/2026\nHOUSE 53º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :13/10/2026 a 13/10/2026\nHOUSE 54º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :14/10/2026 a 14/10/2026\nHOUSE 55º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :15/10/2026 a 15/10/2026\nHOUSE 56º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :16/10/2026 a 16/10/2026\nHOUSE 57º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :17/10/2026 a 17/10/2026\nHOUSE 58º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :18/10/2026 a 18/10/2026\nHOUSE 59º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :19/10/2026 a 19/10/2026\nHOUSE 60º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :20/10/2026 a 20/10/2026\nHOUSE 61º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :21/10/2026 a 21/10/2026\nHOUSE 62º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/10/2026 a 22/10/2026\nHOUSE 63º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/10/2026 a 23/10/2026\nHOUSE 64º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/10/2026 a 24/10/2026\nHOUSE 65º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/10/2026 a 25/10/2026\nHOUSE 66º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/10/2026 a 26/10/2026\nHOUSE 67º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/10/2026 a 27/10/2026\nHOUSE 68º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/10/2026 a 28/10/2026\nHOUSE 69º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/10/2026 a 29/10/2026\nHOUSE 70º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/10/2026 a 30/10/2026\nHOUSE 71º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :31/10/2026 a 31/10/2026\nHOUSE 72º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/11/2026 a 01/11/2026\nHOUSE 73º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/11/2026 a 02/11/2026\nHOUSE 74º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/11/2026 a 03/11/2026\nHOUSE 75º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/11/2026 a 04/11/2026\nHOUSE 76º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/11/2026 a 05/11/2026"},{"name":"DESCONSOLIDAÇÃO/ DESUNITIZAÇÃO MECANIZADA PARCIAL CNTR 40 - IMPORTAÇÃO","code":"2..2.9","value":935.39,"obs":"802,10 802,1 + PIS/COFINS: 9,25% + ISS: 5%% CPRB :0% Quantidade de Desovas : 1"},{"name":"CONSOLIDAÇÃO / UNITIZAÇÃO MECANIZADA PARCIAL VZ CNTR 40 - IMPORTAÇAO","code":"2..4.9","value":935.39,"obs":"802,10 802,1+ PIS/COFINS:9,25 + ISS 5 CPRB :0 Quantidade de Ovas : 1"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":23530.13},{"id":"CSNU6241582","entry":"2026-08-07","exit":"2026-11-05","limit":"2026-11-05","periods":77,"stay":91,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":20899.98,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :07/08/2026 a 21/08/2026\nHOUSE 2º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/08/2026 a 22/08/2026\nHOUSE 3º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/08/2026 a 23/08/2026\nHOUSE 4º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/08/2026 a 24/08/2026\nHOUSE 5º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/08/2026 a 25/08/2026\nHOUSE 6º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/08/2026 a 26/08/2026\nHOUSE 7º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/08/2026 a 27/08/2026\nHOUSE 8º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/08/2026 a 28/08/2026\nHOUSE 9º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/08/2026 a 29/08/2026\nHOUSE 10º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/08/2026 a 30/08/2026\nHOUSE 11º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :31/08/2026 a 31/08/2026\nHOUSE 12º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/09/2026 a 01/09/2026\nHOUSE 13º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/09/2026 a 02/09/2026\nHOUSE 14º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/09/2026 a 03/09/2026\nHOUSE 15º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/09/2026 a 04/09/2026\nHOUSE 16º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/09/2026 a 05/09/2026\nHOUSE 17º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :06/09/2026 a 06/09/2026\nHOUSE 18º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :07/09/2026 a 07/09/2026\nHOUSE 19º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :08/09/2026 a 08/09/2026\nHOUSE 20º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :09/09/2026 a 09/09/2026\nHOUSE 21º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :10/09/2026 a 10/09/2026\nHOUSE 22º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :11/09/2026 a 11/09/2026\nHOUSE 23º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :12/09/2026 a 12/09/2026\nHOUSE 24º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :13/09/2026 a 13/09/2026\nHOUSE 25º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :14/09/2026 a 14/09/2026\nHOUSE 26º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :15/09/2026 a 15/09/2026\nHOUSE 27º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :16/09/2026 a 16/09/2026\nHOUSE 28º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :17/09/2026 a 17/09/2026\nHOUSE 29º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :18/09/2026 a 18/09/2026\nHOUSE 30º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :19/09/2026 a 19/09/2026\nHOUSE 31º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :20/09/2026 a 20/09/2026\nHOUSE 32º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :21/09/2026 a 21/09/2026\nHOUSE 33º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/09/2026 a 22/09/2026\nHOUSE 34º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/09/2026 a 23/09/2026\nHOUSE 35º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/09/2026 a 24/09/2026\nHOUSE 36º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/09/2026 a 25/09/2026\nHOUSE 37º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/09/2026 a 26/09/2026\nHOUSE 38º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/09/2026 a 27/09/2026\nHOUSE 39º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/09/2026 a 28/09/2026\nHOUSE 40º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/09/2026 a 29/09/2026\nHOUSE 41º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/09/2026 a 30/09/2026\nHOUSE 42º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/10/2026 a 01/10/2026\nHOUSE 43º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/10/2026 a 02/10/2026\nHOUSE 44º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/10/2026 a 03/10/2026\nHOUSE 45º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/10/2026 a 04/10/2026\nHOUSE 46º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/10/2026 a 05/10/2026\nHOUSE 47º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :06/10/2026 a 06/10/2026\nHOUSE 48º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :07/10/2026 a 07/10/2026\nHOUSE 49º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :08/10/2026 a 08/10/2026\nHOUSE 50º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :09/10/2026 a 09/10/2026\nHOUSE 51º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :10/10/2026 a 10/10/2026\nHOUSE 52º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :11/10/2026 a 11/10/2026\nHOUSE 53º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :12/10/2026 a 12/10/2026\nHOUSE 54º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :13/10/2026 a 13/10/2026\nHOUSE 55º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :14/10/2026 a 14/10/2026\nHOUSE 56º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :15/10/2026 a 15/10/2026\nHOUSE 57º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :16/10/2026 a 16/10/2026\nHOUSE 58º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :17/10/2026 a 17/10/2026\nHOUSE 59º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :18/10/2026 a 18/10/2026\nHOUSE 60º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :19/10/2026 a 19/10/2026\nHOUSE 61º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :20/10/2026 a 20/10/2026\nHOUSE 62º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :21/10/2026 a 21/10/2026\nHOUSE 63º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/10/2026 a 22/10/2026\nHOUSE 64º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/10/2026 a 23/10/2026\nHOUSE 65º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/10/2026 a 24/10/2026\nHOUSE 66º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/10/2026 a 25/10/2026\nHOUSE 67º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/10/2026 a 26/10/2026\nHOUSE 68º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/10/2026 a 27/10/2026\nHOUSE 69º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/10/2026 a 28/10/2026\nHOUSE 70º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/10/2026 a 29/10/2026\nHOUSE 71º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/10/2026 a 30/10/2026\nHOUSE 72º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :31/10/2026 a 31/10/2026\nHOUSE 73º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/11/2026 a 01/11/2026\nHOUSE 74º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/11/2026 a 02/11/2026\nHOUSE 75º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/11/2026 a 03/11/2026\nHOUSE 76º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/11/2026 a 04/11/2026\nHOUSE 77º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/11/2026 a 05/11/2026"},{"name":"DESCONSOLIDAÇÃO/ DESUNITIZAÇÃO MECANIZADA PARCIAL CNTR 40 - IMPORTAÇÃO","code":"2..2.9","value":935.39,"obs":"802,10 802,1 + PIS/COFINS: 9,25% + ISS: 5%% CPRB :0% Quantidade de Desovas : 1"},{"name":"CONSOLIDAÇÃO / UNITIZAÇÃO MECANIZADA PARCIAL VZ CNTR 40 - IMPORTAÇAO","code":"2..4.9","value":935.39,"obs":"802,10 802,1+ PIS/COFINS:9,25 + ISS 5 CPRB :0 Quantidade de Ovas : 1"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":23777.97},{"id":"OOCU7685432","entry":"2026-08-08","exit":"2026-11-05","limit":"2026-11-05","periods":76,"stay":90,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":20652.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :08/08/2026 a 22/08/2026\nHOUSE 2º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/08/2026 a 23/08/2026\nHOUSE 3º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/08/2026 a 24/08/2026\nHOUSE 4º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/08/2026 a 25/08/2026\nHOUSE 5º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/08/2026 a 26/08/2026\nHOUSE 6º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/08/2026 a 27/08/2026\nHOUSE 7º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/08/2026 a 28/08/2026\nHOUSE 8º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/08/2026 a 29/08/2026\nHOUSE 9º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/08/2026 a 30/08/2026\nHOUSE 10º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :31/08/2026 a 31/08/2026\nHOUSE 11º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/09/2026 a 01/09/2026\nHOUSE 12º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/09/2026 a 02/09/2026\nHOUSE 13º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/09/2026 a 03/09/2026\nHOUSE 14º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/09/2026 a 04/09/2026\nHOUSE 15º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/09/2026 a 05/09/2026\nHOUSE 16º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :06/09/2026 a 06/09/2026\nHOUSE 17º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :07/09/2026 a 07/09/2026\nHOUSE 18º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :08/09/2026 a 08/09/2026\nHOUSE 19º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :09/09/2026 a 09/09/2026\nHOUSE 20º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :10/09/2026 a 10/09/2026\nHOUSE 21º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :11/09/2026 a 11/09/2026\nHOUSE 22º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :12/09/2026 a 12/09/2026\nHOUSE 23º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :13/09/2026 a 13/09/2026\nHOUSE 24º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :14/09/2026 a 14/09/2026\nHOUSE 25º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :15/09/2026 a 15/09/2026\nHOUSE 26º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :16/09/2026 a 16/09/2026\nHOUSE 27º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :17/09/2026 a 17/09/2026\nHOUSE 28º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :18/09/2026 a 18/09/2026\nHOUSE 29º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :19/09/2026 a 19/09/2026\nHOUSE 30º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :20/09/2026 a 20/09/2026\nHOUSE 31º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :21/09/2026 a 21/09/2026\nHOUSE 32º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/09/2026 a 22/09/2026\nHOUSE 33º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/09/2026 a 23/09/2026\nHOUSE 34º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/09/2026 a 24/09/2026\nHOUSE 35º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/09/2026 a 25/09/2026\nHOUSE 36º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/09/2026 a 26/09/2026\nHOUSE 37º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/09/2026 a 27/09/2026\nHOUSE 38º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/09/2026 a 28/09/2026\nHOUSE 39º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/09/2026 a 29/09/2026\nHOUSE 40º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/09/2026 a 30/09/2026\nHOUSE 41º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/10/2026 a 01/10/2026\nHOUSE 42º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/10/2026 a 02/10/2026\nHOUSE 43º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/10/2026 a 03/10/2026\nHOUSE 44º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/10/2026 a 04/10/2026\nHOUSE 45º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/10/2026 a 05/10/2026\nHOUSE 46º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :06/10/2026 a 06/10/2026\nHOUSE 47º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :07/10/2026 a 07/10/2026\nHOUSE 48º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :08/10/2026 a 08/10/2026\nHOUSE 49º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :09/10/2026 a 09/10/2026\nHOUSE 50º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :10/10/2026 a 10/10/2026\nHOUSE 51º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :11/10/2026 a 11/10/2026\nHOUSE 52º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :12/10/2026 a 12/10/2026\nHOUSE 53º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :13/10/2026 a 13/10/2026\nHOUSE 54º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :14/10/2026 a 14/10/2026\nHOUSE 55º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :15/10/2026 a 15/10/2026\nHOUSE 56º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :16/10/2026 a 16/10/2026\nHOUSE 57º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :17/10/2026 a 17/10/2026\nHOUSE 58º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :18/10/2026 a 18/10/2026\nHOUSE 59º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :19/10/2026 a 19/10/2026\nHOUSE 60º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :20/10/2026 a 20/10/2026\nHOUSE 61º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :21/10/2026 a 21/10/2026\nHOUSE 62º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/10/2026 a 22/10/2026\nHOUSE 63º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/10/2026 a 23/10/2026\nHOUSE 64º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/10/2026 a 24/10/2026\nHOUSE 65º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/10/2026 a 25/10/2026\nHOUSE 66º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/10/2026 a 26/10/2026\nHOUSE 67º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/10/2026 a 27/10/2026\nHOUSE 68º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/10/2026 a 28/10/2026\nHOUSE 69º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/10/2026 a 29/10/2026\nHOUSE 70º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/10/2026 a 30/10/2026\nHOUSE 71º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :31/10/2026 a 31/10/2026\nHOUSE 72º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/11/2026 a 01/11/2026\nHOUSE 73º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/11/2026 a 02/11/2026\nHOUSE 74º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/11/2026 a 03/11/2026\nHOUSE 75º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/11/2026 a 04/11/2026\nHOUSE 76º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/11/2026 a 05/11/2026"},{"name":"DESCONSOLIDAÇÃO/ DESUNITIZAÇÃO MECANIZADA PARCIAL CNTR 40 - IMPORTAÇÃO","code":"2..2.9","value":935.39,"obs":"802,10 802,1 + PIS/COFINS: 9,25% + ISS: 5%% CPRB :0% Quantidade de Desovas : 1"},{"name":"CONSOLIDAÇÃO / UNITIZAÇÃO MECANIZADA PARCIAL VZ CNTR 40 - IMPORTAÇAO","code":"2..4.9","value":935.39,"obs":"802,10 802,1+ PIS/COFINS:9,25 + ISS 5 CPRB :0 Quantidade de Ovas : 1"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":23530.13},{"id":"OOLU9383253","entry":"2026-08-08","exit":"2026-11-05","limit":"2026-11-05","periods":76,"stay":90,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":20652.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :08/08/2026 a 22/08/2026\nHOUSE 2º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/08/2026 a 23/08/2026\nHOUSE 3º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/08/2026 a 24/08/2026\nHOUSE 4º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/08/2026 a 25/08/2026\nHOUSE 5º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/08/2026 a 26/08/2026\nHOUSE 6º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/08/2026 a 27/08/2026\nHOUSE 7º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/08/2026 a 28/08/2026\nHOUSE 8º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/08/2026 a 29/08/2026\nHOUSE 9º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/08/2026 a 30/08/2026\nHOUSE 10º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :31/08/2026 a 31/08/2026\nHOUSE 11º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/09/2026 a 01/09/2026\nHOUSE 12º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/09/2026 a 02/09/2026\nHOUSE 13º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/09/2026 a 03/09/2026\nHOUSE 14º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/09/2026 a 04/09/2026\nHOUSE 15º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/09/2026 a 05/09/2026\nHOUSE 16º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :06/09/2026 a 06/09/2026\nHOUSE 17º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :07/09/2026 a 07/09/2026\nHOUSE 18º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :08/09/2026 a 08/09/2026\nHOUSE 19º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :09/09/2026 a 09/09/2026\nHOUSE 20º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :10/09/2026 a 10/09/2026\nHOUSE 21º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :11/09/2026 a 11/09/2026\nHOUSE 22º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :12/09/2026 a 12/09/2026\nHOUSE 23º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :13/09/2026 a 13/09/2026\nHOUSE 24º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :14/09/2026 a 14/09/2026\nHOUSE 25º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :15/09/2026 a 15/09/2026\nHOUSE 26º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :16/09/2026 a 16/09/2026\nHOUSE 27º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :17/09/2026 a 17/09/2026\nHOUSE 28º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :18/09/2026 a 18/09/2026\nHOUSE 29º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :19/09/2026 a 19/09/2026\nHOUSE 30º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :20/09/2026 a 20/09/2026\nHOUSE 31º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :21/09/2026 a 21/09/2026\nHOUSE 32º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/09/2026 a 22/09/2026\nHOUSE 33º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/09/2026 a 23/09/2026\nHOUSE 34º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/09/2026 a 24/09/2026\nHOUSE 35º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/09/2026 a 25/09/2026\nHOUSE 36º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/09/2026 a 26/09/2026\nHOUSE 37º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/09/2026 a 27/09/2026\nHOUSE 38º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/09/2026 a 28/09/2026\nHOUSE 39º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/09/2026 a 29/09/2026\nHOUSE 40º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/09/2026 a 30/09/2026\nHOUSE 41º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/10/2026 a 01/10/2026\nHOUSE 42º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/10/2026 a 02/10/2026\nHOUSE 43º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/10/2026 a 03/10/2026\nHOUSE 44º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/10/2026 a 04/10/2026\nHOUSE 45º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/10/2026 a 05/10/2026\nHOUSE 46º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :06/10/2026 a 06/10/2026\nHOUSE 47º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :07/10/2026 a 07/10/2026\nHOUSE 48º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :08/10/2026 a 08/10/2026\nHOUSE 49º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :09/10/2026 a 09/10/2026\nHOUSE 50º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :10/10/2026 a 10/10/2026\nHOUSE 51º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :11/10/2026 a 11/10/2026\nHOUSE 52º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :12/10/2026 a 12/10/2026\nHOUSE 53º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :13/10/2026 a 13/10/2026\nHOUSE 54º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :14/10/2026 a 14/10/2026\nHOUSE 55º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :15/10/2026 a 15/10/2026\nHOUSE 56º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :16/10/2026 a 16/10/2026\nHOUSE 57º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :17/10/2026 a 17/10/2026\nHOUSE 58º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :18/10/2026 a 18/10/2026\nHOUSE 59º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :19/10/2026 a 19/10/2026\nHOUSE 60º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :20/10/2026 a 20/10/2026\nHOUSE 61º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :21/10/2026 a 21/10/2026\nHOUSE 62º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/10/2026 a 22/10/2026\nHOUSE 63º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/10/2026 a 23/10/2026\nHOUSE 64º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/10/2026 a 24/10/2026\nHOUSE 65º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/10/2026 a 25/10/2026\nHOUSE 66º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/10/2026 a 26/10/2026\nHOUSE 67º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/10/2026 a 27/10/2026\nHOUSE 68º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/10/2026 a 28/10/2026\nHOUSE 69º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/10/2026 a 29/10/2026\nHOUSE 70º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/10/2026 a 30/10/2026\nHOUSE 71º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :31/10/2026 a 31/10/2026\nHOUSE 72º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/11/2026 a 01/11/2026\nHOUSE 73º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/11/2026 a 02/11/2026\nHOUSE 74º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/11/2026 a 03/11/2026\nHOUSE 75º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/11/2026 a 04/11/2026\nHOUSE 76º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/11/2026 a 05/11/2026"},{"name":"DESCONSOLIDAÇÃO/ DESUNITIZAÇÃO MECANIZADA PARCIAL CNTR 40 - IMPORTAÇÃO","code":"2..2.9","value":935.39,"obs":"802,10 802,1 + PIS/COFINS: 9,25% + ISS: 5%% CPRB :0% Quantidade de Desovas : 1"},{"name":"CONSOLIDAÇÃO / UNITIZAÇÃO MECANIZADA PARCIAL VZ CNTR 40 - IMPORTAÇAO","code":"2..4.9","value":935.39,"obs":"802,10 802,1+ PIS/COFINS:9,25 + ISS 5 CPRB :0 Quantidade de Ovas : 1"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":23530.13},{"id":"TEMU7855560","entry":"2026-08-07","exit":"2026-11-05","limit":"2026-11-05","periods":77,"stay":91,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":20899.98,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :07/08/2026 a 21/08/2026\nHOUSE 2º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/08/2026 a 22/08/2026\nHOUSE 3º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/08/2026 a 23/08/2026\nHOUSE 4º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/08/2026 a 24/08/2026\nHOUSE 5º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/08/2026 a 25/08/2026\nHOUSE 6º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/08/2026 a 26/08/2026\nHOUSE 7º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/08/2026 a 27/08/2026\nHOUSE 8º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/08/2026 a 28/08/2026\nHOUSE 9º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/08/2026 a 29/08/2026\nHOUSE 10º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/08/2026 a 30/08/2026\nHOUSE 11º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :31/08/2026 a 31/08/2026\nHOUSE 12º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/09/2026 a 01/09/2026\nHOUSE 13º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/09/2026 a 02/09/2026\nHOUSE 14º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/09/2026 a 03/09/2026\nHOUSE 15º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/09/2026 a 04/09/2026\nHOUSE 16º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/09/2026 a 05/09/2026\nHOUSE 17º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :06/09/2026 a 06/09/2026\nHOUSE 18º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :07/09/2026 a 07/09/2026\nHOUSE 19º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :08/09/2026 a 08/09/2026\nHOUSE 20º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :09/09/2026 a 09/09/2026\nHOUSE 21º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :10/09/2026 a 10/09/2026\nHOUSE 22º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :11/09/2026 a 11/09/2026\nHOUSE 23º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :12/09/2026 a 12/09/2026\nHOUSE 24º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :13/09/2026 a 13/09/2026\nHOUSE 25º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :14/09/2026 a 14/09/2026\nHOUSE 26º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :15/09/2026 a 15/09/2026\nHOUSE 27º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :16/09/2026 a 16/09/2026\nHOUSE 28º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :17/09/2026 a 17/09/2026\nHOUSE 29º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :18/09/2026 a 18/09/2026\nHOUSE 30º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :19/09/2026 a 19/09/2026\nHOUSE 31º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :20/09/2026 a 20/09/2026\nHOUSE 32º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :21/09/2026 a 21/09/2026\nHOUSE 33º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/09/2026 a 22/09/2026\nHOUSE 34º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/09/2026 a 23/09/2026\nHOUSE 35º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/09/2026 a 24/09/2026\nHOUSE 36º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/09/2026 a 25/09/2026\nHOUSE 37º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/09/2026 a 26/09/2026\nHOUSE 38º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/09/2026 a 27/09/2026\nHOUSE 39º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/09/2026 a 28/09/2026\nHOUSE 40º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/09/2026 a 29/09/2026\nHOUSE 41º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/09/2026 a 30/09/2026\nHOUSE 42º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/10/2026 a 01/10/2026\nHOUSE 43º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/10/2026 a 02/10/2026\nHOUSE 44º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/10/2026 a 03/10/2026\nHOUSE 45º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/10/2026 a 04/10/2026\nHOUSE 46º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/10/2026 a 05/10/2026\nHOUSE 47º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :06/10/2026 a 06/10/2026\nHOUSE 48º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :07/10/2026 a 07/10/2026\nHOUSE 49º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :08/10/2026 a 08/10/2026\nHOUSE 50º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :09/10/2026 a 09/10/2026\nHOUSE 51º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :10/10/2026 a 10/10/2026\nHOUSE 52º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :11/10/2026 a 11/10/2026\nHOUSE 53º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :12/10/2026 a 12/10/2026\nHOUSE 54º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :13/10/2026 a 13/10/2026\nHOUSE 55º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :14/10/2026 a 14/10/2026\nHOUSE 56º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :15/10/2026 a 15/10/2026\nHOUSE 57º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :16/10/2026 a 16/10/2026\nHOUSE 58º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :17/10/2026 a 17/10/2026\nHOUSE 59º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :18/10/2026 a 18/10/2026\nHOUSE 60º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :19/10/2026 a 19/10/2026\nHOUSE 61º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :20/10/2026 a 20/10/2026\nHOUSE 62º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :21/10/2026 a 21/10/2026\nHOUSE 63º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :22/10/2026 a 22/10/2026\nHOUSE 64º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :23/10/2026 a 23/10/2026\nHOUSE 65º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :24/10/2026 a 24/10/2026\nHOUSE 66º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :25/10/2026 a 25/10/2026\nHOUSE 67º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :26/10/2026 a 26/10/2026\nHOUSE 68º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :27/10/2026 a 27/10/2026\nHOUSE 69º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :28/10/2026 a 28/10/2026\nHOUSE 70º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :29/10/2026 a 29/10/2026\nHOUSE 71º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :30/10/2026 a 30/10/2026\nHOUSE 72º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :31/10/2026 a 31/10/2026\nHOUSE 73º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :01/11/2026 a 01/11/2026\nHOUSE 74º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :02/11/2026 a 02/11/2026\nHOUSE 75º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :03/11/2026 a 03/11/2026\nHOUSE 76º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :04/11/2026 a 04/11/2026\nHOUSE 77º Período (1 dias)- Tx. Min. R$ 212,52 = Tot. 212,52 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=247,84 de :05/11/2026 a 05/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":21907.19}],"blTotal":116275.55,"grandTotal":116275.55,"warnings":[]},{"id":"IRA2420/26","file":"d31b7291-IRA2420-26_Cost_Breakdown.xlsx","sheet":"Santos Brasil Details","importedAt":"2026-11-16T00:00:00.000Z","bl":"COSU6509964411","duimp":"DUIMP 26BR00021418803","vessel":"CMA CGM KRYPTON","voyage":"04813 2026","rps":"4062098","nfe":"2550382","client":"GREAT WALL MOTOR BRASIL LTDA","broker":"PINHO COMISSARIA DE DESPACHO S/A","table":"PAN 1270/2025 - REV. 1 (ASIA / GREAT WALL) IMPORTAÇÃO - GERAL","origin":"SHEKOU","cifUsd":1985500,"cifBrl":1985500,"periodFrom":"2026-10-29","periodTo":"2026-11-12","calcDate":"2026-11-04","issuedAt":"11/11/2026 14:17:29","containers":[{"id":"CSGU6196191","entry":"2026-10-29","exit":"2026-11-04","limit":"2026-11-12","periods":1,"stay":7,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3887.36},{"id":"CSNU7898313","entry":"2026-10-29","exit":"2026-11-04","limit":"2026-11-12","periods":1,"stay":7,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3887.36},{"id":"OOCU5744650","entry":"2026-10-29","exit":"2026-11-03","limit":"2026-11-12","periods":1,"stay":6,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3331.79},{"id":"OOCU6936322","entry":"2026-10-29","exit":"2026-11-04","limit":"2026-11-12","periods":1,"stay":7,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :29/10/2026 a 12/11/2026"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3331.79},{"id":"OOCU9138218","entry":"2026-10-30","exit":"2026-11-03","limit":"2026-11-13","periods":1,"stay":5,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :30/10/2026 a 13/11/2026"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3331.79}],"blTotal":17770.09,"grandTotal":17770.09,"warnings":[]},{"id":"IRA2424/26","file":"f8f42814-IRA2424-26_Cost_Breakdown.xlsx","sheet":"Santos Brasil Details","importedAt":"2026-11-16T00:00:00.000Z","bl":"COSU6509964432","duimp":"DUIMP 26BR00021262960","vessel":"CMA CGM KRYPTON","voyage":"04813 2026","rps":"4062961","nfe":"2551112","client":"GREAT WALL MOTOR BRASIL LTDA","broker":"PINHO COMISSARIA DE DESPACHO S/A","table":"PAN 1270/2025 - REV. 1 (ASIA / GREAT WALL) IMPORTAÇÃO - GERAL","origin":"SHEKOU","cifUsd":495041.4,"cifBrl":495041.4,"periodFrom":"2026-10-30","periodTo":"2026-11-13","calcDate":"2026-11-05","issuedAt":"11/11/2026 14:18:51","containers":[{"id":"CSGU6455841","entry":"2026-10-30","exit":"2026-11-04","limit":"2026-11-13","periods":1,"stay":6,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :30/10/2026 a 13/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3887.36},{"id":"CSGU6877810","entry":"2026-10-30","exit":"2026-11-05","limit":"2026-11-13","periods":1,"stay":7,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :30/10/2026 a 13/11/2026"},{"name":"POSICIONAMENTO - IMPORTAÇÃO","code":"2.90.6.9","value":389.21,"obs":"333,75 333,75 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"COLOCAÇÃO DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"RETIRADA DE LACRE - IMPORTAÇÃO","code":"2..9.9","value":83.18,"obs":"71,33 71,33 + PIS/COFINS: 9,25% + ISS: 5% CPRB :0 %"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3887.36},{"id":"OOCU6240191","entry":"2026-10-30","exit":"2026-11-04","limit":"2026-11-13","periods":1,"stay":6,"regimeChange":"NAO","services":[{"name":"ARMAZENAGEM CNTR 40 - IMPORTAÇÃO","code":"2.14.2.9","value":2064.14,"obs":"HOUSE 1º Período (15 dias)- Tx. Min. R$ 1.770,00 = Tot. 1.770,00 + PIS/COFINS:9,25% + ISS: 5% CPRB: 0% R$=2064,14 de :30/10/2026 a 13/11/2026"},{"name":"INSPEÇÃO NÃO INVASIVA DE CNTR 40 - IMPORTAÇÃO","code":"2..13.9","value":346.5,"obs":"R$297,12 + PIS/COFINS:9,25% + ISS 5% CPRB :0% Serviço Efetuado por 1 solicitações."},{"name":"CARREGAMENTO BITREM/RODOTREM - IMPORTAÇÃO","code":"2..8.9","value":816.01,"obs":"Serviço Efetuado por 1 solicitações. 699,73 + PIS/COFINS:9,25% + ISS 5% CPRB :0"},{"name":"PROCESSAMENTO ELETRÔNICO - IMPORTAÇÃO","code":"2..9.9","value":105.14,"obs":"90,16 + PIS/COFINS:9,25% + ISS 5% CPRB :0 105,14"}],"reported":3331.79}],"blTotal":11106.51,"grandTotal":11106.51,"warnings":[]}]};
+</script>
+<script>
+/* Interface do sistema de custos aduaneiros. */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const brl = (v) => (v === null || v === undefined || isNaN(v) ? "—" : BRL.format(v));
+const brlK = (v) => (Math.abs(v) >= 1e6 ? "R$ " + (v / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + " mi" : Math.abs(v) >= 1e4 ? "R$ " + (v / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mil" : brl(v));
+const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : 0).toLocaleString("pt-BR") + "%";
+const fmtD = (iso) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(8, 10) + "/" + iso.slice(5, 7) + "/" + iso.slice(0, 4) : iso || "—");
+const plural = (n, s, p) => `${n.toLocaleString("pt-BR")} ${n === 1 ? s : p || s + "s"}`;
+const today = () => new Date().toISOString().slice(0, 10);
+const daysBetween = (a, b) => (a && b ? Math.round((Date.parse(b) - Date.parse(a)) / 864e5) : null);
+const key = (id) => encodeURIComponent(procKey(id));
+const unkey = (k) => decodeURIComponent(k).replace(/^(IRA\d+)-(\d{2})$/, "$1/$2");
+
+const view = () => $("#view");
+let F = { q: "", ch: "", month: "" };
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.add("hidden"), 2600); }
+function openModal(html) { $("#modal-body").innerHTML = html; $("#modal").classList.remove("hidden"); }
+function closeModal() { $("#modal").classList.add("hidden"); }
+
+function chBadge(ch) { return ch ? `<span class="badge ch-${esc(ch)}">${esc(ch)}</span>` : `<span class="badge b-none">sem canal</span>`; }
+function stBadge(R) {
+  if (!R) return `<span class="badge b-none">sem controle</span>`;
+  return R.status === "Desembaraçado" ? `<span class="badge b-ok">✓ Desembaraçado${R.clearedAt ? " " + fmtD(R.clearedAt) : ""}</span>` : `<span class="badge b-warn">◷ ${esc(R.status || "Em andamento")}</span>`;
+}
+const gKey = (g) => `<span class="key" style="background:${GROUPS[g].color}"></span>`;
+
+/* ------------------------------------------------------------------ tooltip */
+document.addEventListener("mousemove", (e) => {
+  const el = e.target.closest?.("[data-tip]"), tip = $("#tip");
+  if (!el) { tip.classList.add("hidden"); return; }
+  tip.innerHTML = el.dataset.tip; tip.classList.remove("hidden");
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(window.innerWidth - w - 8, e.clientX + 14) + "px";
+  tip.style.top = (e.clientY + 16 + h > window.innerHeight ? e.clientY - h - 10 : e.clientY + 16) + "px";
+});
+
+/* ------------------------------------------------------------------ filtros */
+function filtered() {
+  const q = F.q.trim().toUpperCase();
+  return Data.rows().filter(({ id, P, R, A }) => {
+    if (F.ch && (R?.channel || "") !== F.ch) return false;
+    if (F.month && !(A?.firstEntry || R?.assignedAt || "").startsWith(F.month)) return false;
+    if (q) {
+      const hay = [id, P?.bl, P?.duimp, P?.vessel, R?.batch, ...(P?.containers || []).map((c) => c.id)].join(" ").toUpperCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+function filterBar() {
+  const months = [...new Set(Data.rows().map(({ A, R }) => (A?.firstEntry || R?.assignedAt || "").slice(0, 7)).filter(Boolean))].sort().reverse();
+  const active = F.q || F.ch || F.month;
+  return `<div class="filters">
+    <input id="f-q" placeholder="Buscar processo, BL, DUIMP, contêiner…" value="${esc(F.q)}" style="min-width:260px">
+    <select id="f-ch"><option value="">Todos os canais</option>${["Vermelho", "Amarelo", "Verde", "Cinza"].map((c) => `<option ${F.ch === c ? "selected" : ""}>${c}</option>`).join("")}</select>
+    <select id="f-month"><option value="">Todas as entradas</option>${months.map((m) => `<option value="${m}" ${F.month === m ? "selected" : ""}>Entrada em ${m.slice(5)}/${m.slice(0, 4)}</option>`).join("")}</select>
+    ${active ? `<button class="btn sm" id="f-clear">Limpar filtros</button>` : ""}
+  </div>`;
+}
+function bindFilters() {
+  const re = () => { const pos = $("#f-q")?.selectionStart; route(); const i = $("#f-q"); if (i && document.activeElement !== i && pos !== undefined) { i.focus(); i.setSelectionRange(pos, pos); } };
+  $("#f-q")?.addEventListener("input", (e) => { F.q = e.target.value; clearTimeout(bindFilters._t); bindFilters._t = setTimeout(re, 250); });
+  $("#f-ch")?.addEventListener("change", (e) => { F.ch = e.target.value; route(); });
+  $("#f-month")?.addEventListener("change", (e) => { F.month = e.target.value; route(); });
+  $("#f-clear")?.addEventListener("click", () => { F = { q: "", ch: "", month: "" }; route(); });
+}
+
+function totals(rows) {
+  const t = { procs: 0, cont: 0, regular: 0, extra_storage: 0, extra_customs: 0, total: 0, over: 0, physical: 0, withExtra: 0, unknown: 0, redOpen: 0, redAll: 0, redCont: 0, byKey: {} };
+  for (const { A, R } of rows) {
+    if (R && R.channel === "Vermelho") { t.redAll++; if (R.status !== "Desembaraçado") t.redOpen++; t.redCont += A?.n || R.containers || 0; }
+    if (!A) continue;
+    t.procs++; t.cont += A.n; t.regular += A.regular; t.extra_storage += A.extra_storage; t.extra_customs += A.extra_customs; t.total += A.total;
+    t.over += A.over; t.physical += A.physical; t.unknown += A.unknown; if (A.extra > 0.004) t.withExtra++;
+    for (const l of A.lines) if (l.group !== "regular") {
+      const k = (t.byKey[l.key] ??= { key: l.key, group: l.group, value: 0, conts: new Set(), qty: 0 });
+      k.value += l.value; k.conts.add(l.container); k.qty += l.qty || 1;
+    }
+  }
+  t.extra = t.extra_storage + t.extra_customs;
+  return t;
+}
+
+/* ------------------------------------------------------------------ gráficos */
+function stackedBars(rows, { onclick = "p" } = {}) {
+  const data = rows.filter((r) => r.A).slice(0, 25);
+  if (!data.length) return `<p class="muted">Sem demonstrativos importados.</p>`;
+  const max = Math.max(...data.map((r) => r.A.total));
+  return `<div class="legend">${["regular", "extra_storage", "extra_customs"].map((g) => `<span>${gKey(g)}${GROUPS[g].short || GROUPS[g].label}</span>`).join("")}</div>
+  <div class="hbar">${data.map(({ id, A, R }) => {
+    const segs = ["regular", "extra_storage", "extra_customs"].filter((g) => A[g] > 0.004).map((g) =>
+      `<div class="seg" style="width:${(A[g] / max) * 100}%;background:${GROUPS[g].color}" onclick="location.hash='#p/${key(id)}'"
+        data-tip="<b>${esc(id)}</b><br>${esc(GROUPS[g].short || GROUPS[g].label)}: ${brl(A[g])}<br>${pct(A[g], A.total)} do total do processo"></div>`).join("");
+    return `<div class="lab"><a href="#p/${key(id)}">${esc(id)}</a> ${R?.channel === "Vermelho" ? `<span class="badge ch-Vermelho" title="Canal vermelho">V</span>` : ""}</div>
+      <div class="track">${segs}</div><div class="val">${brlK(A.total)} · <span title="parcela extra">${pct(A.extra, A.total)} extra</span></div>`;
+  }).join("")}</div>
+  ${rows.filter((r) => r.A).length > 25 ? `<p class="axis-note">Mostrando os 25 maiores. Veja todos em Processos.</p>` : ""}`;
+}
+
+function extraByType(t) {
+  const items = Object.values(t.byKey).sort((a, b) => b.value - a.value);
+  if (!items.length) return `<p class="muted">Nenhum custo extra nos processos filtrados.</p>`;
+  const max = items[0].value;
+  const groups = [...new Set(items.map((i) => i.group))];
+  return `${groups.length > 1 ? `<div class="legend">${groups.map((g) => `<span>${gKey(g)}${GROUPS[g].kpi}</span>`).join("")}</div>` : ""}
+  <div class="hbar">${items.map((i) => `<div class="lab" title="${esc(i.key)}"><a href="#extras/${encodeURIComponent(i.key)}">${esc(i.key)}</a></div>
+    <div class="track"><div class="seg" style="width:${(i.value / max) * 100}%;background:${GROUPS[i.group].color}" onclick="location.hash='#extras/${encodeURIComponent(i.key)}'"
+      data-tip="<b>${esc(i.key)}</b><br>${brl(i.value)} · ${plural(i.conts.size, "contêiner", "contêineres")}<br>${esc(GROUPS[i.group].kpi)}"></div></div>
+    <div class="val">${brlK(i.value)}</div>`).join("")}</div>`;
+}
+
+function stayBars(rows) {
+  const data = rows.filter((r) => r.A || r.R?.daysHeld).map((r) => ({ ...r, stay: r.A?.maxStay || r.R?.daysHeld || 0 })).sort((a, b) => b.stay - a.stay).slice(0, 25);
+  if (!data.length) return `<p class="muted">Sem dados de estadia.</p>`;
+  const free = Data.freeDays();
+  const max = Math.max(free * 1.2, ...data.map((d) => d.stay));
+  return `<div class="hbar">${data.map(({ id, stay, A }) => `<div class="lab"><a href="#p/${key(id)}">${esc(id)}</a></div>
+    <div class="track ref" style="--ref:${(free / max) * 100}%"><div class="seg" style="width:${(stay / max) * 100}%;background:${stay > free ? "var(--s-storage)" : "var(--s-regular)"}"
+      data-tip="<b>${esc(id)}</b><br>Maior estadia: ${stay} dias${A ? `<br>${A.over} de ${A.n} contêineres além de ${free} dias` : ""}"></div></div>
+    <div class="val">${stay} dias</div>`).join("")}</div>
+  <p class="axis-note">Linha tracejada = período livre de ${free} dias (1º período de armazenagem). Laranja = passou do período livre.</p>`;
+}
+
+function compBar(A) {
+  return `<div class="compbar">${["regular", "extra_storage", "extra_customs"].filter((g) => A[g] > 0.004).map((g) =>
+    `<div class="seg" style="flex:${A[g]};background:${GROUPS[g].color}" data-tip="${esc(GROUPS[g].label)}<br>${brl(A[g])} (${pct(A[g], A.total)})"></div>`).join("")}</div>
+  <div class="legend">${["regular", "extra_storage", "extra_customs"].map((g) => `<span>${gKey(g)}${esc(GROUPS[g].short || GROUPS[g].label)}: <b>${brl(A[g])}</b> (${pct(A[g], A.total)})</span>`).join("")}</div>`;
+}
+
+/* ------------------------------------------------------------------ resumo em texto */
+function summaryText(rows, t) {
+  const free = Data.freeDays();
+  const s = [];
+  s.push(`Há <b>${plural(t.procs, "processo")}</b> com demonstrativo da Santos Brasil, somando <b>${plural(t.cont, "contêiner", "contêineres")}</b> e <b>${brl(t.total)}</b> em custos de terminal.`);
+  if (t.total) s.push(`Desse total, <b>${brl(t.extra)} (${pct(t.extra, t.total)})</b> são custos extras: ${brl(t.extra_storage)} de armazenagem além do período livre (KPI 1) e ${brl(t.extra_customs)} de inspeção/desembaraço (KPI 3), em ${plural(t.withExtra, "processo")}.`);
+  if (t.over || t.physical) s.push(`<b>${plural(t.over, "contêiner", "contêineres")}</b> passaram do período livre de ${free} dias e <b>${t.physical}</b> tiveram inspeção física (posicionamento).`);
+  if (t.redAll) s.push(`<b>${plural(t.redAll, "processo")}</b> no canal vermelho (${t.redOpen} ainda não desembaraçado${t.redOpen === 1 ? "" : "s"}).`);
+  return s.join(" ");
+}
+
+/* ------------------------------------------------------------------ PAINEL */
+function viewPainel() {
+  const all = Data.rows();
+  if (!all.length) return emptyState();
+  const rows = filtered(), t = totals(rows);
+  view().innerHTML = `
+  <div class="title-row"><h1>Painel de custos aduaneiros</h1><div class="row"><a class="btn" href="#importar">⬆ Importar planilhas</a><button class="btn" onclick="exportCsv()">⬇ Exportar CSV</button></div></div>
+  ${filterBar()}
+  <p class="lead">${summaryText(rows, t)}</p>
+  <div class="tiles">
+    <a class="tile hero" href="#processos"><div class="k">Processos</div><div class="v">${t.procs}</div><div class="s">${plural(t.cont, "contêiner", "contêineres")}${rows.length > t.procs ? ` · +${rows.length - t.procs} só no controle de canal` : ""}</div></a>
+    <a class="tile hero" href="#processos"><div class="k">Custo total</div><div class="v">${brlK(t.total)}</div><div class="s">${t.cont ? brl(t.total / t.cont) + " por contêiner" : ""}</div></a>
+    <div class="tile"><div class="k">${gKey("regular")}Custos regulares</div><div class="v">${brlK(t.regular)}</div><div class="s">${pct(t.regular, t.total)} do total</div></div>
+    <a class="tile" href="#extras"><div class="k"><span class="key" style="background:var(--brand)"></span>Custos extras</div><div class="v">${brlK(t.extra)}</div><div class="s">${pct(t.extra, t.total)} do total · ${plural(t.withExtra, "processo")}</div></a>
+    <a class="tile" href="#extras"><div class="k">${gKey("extra_storage")}Extra armazenagem</div><div class="v">${brlK(t.extra_storage)}</div><div class="s">KPI 1 · Storage</div></a>
+    <a class="tile" href="#extras"><div class="k">${gKey("extra_customs")}Extra desembaraço</div><div class="v">${brlK(t.extra_customs)}</div><div class="s">KPI 3 · Customs costs</div></a>
+    <div class="tile"><div class="k">Além do período livre</div><div class="v">${t.over}</div><div class="s">de ${plural(t.cont, "contêiner", "contêineres")} (> ${Data.freeDays()} dias)</div></div>
+    <div class="tile"><div class="k">Inspeção física</div><div class="v">${t.physical}</div><div class="s">contêineres com posicionamento</div></div>
+    <a class="tile" href="#canal"><div class="k"><span class="badge ch-Vermelho">Vermelho</span></div><div class="v">${t.redOpen}</div><div class="s">em aberto · ${t.redAll} no total</div></a>
+  </div>
+  ${t.unknown ? `<div class="warnbox">⚠ ${plural(t.unknown, "serviço")} sem regra de classificação (contado como extra de desembaraço). Revise em <a href="#config">Configurações → Regras</a>.</div>` : ""}
+  <div class="grid3">
+    <div class="panel"><h2>Custo por processo</h2><p class="muted small">Clique numa barra para abrir o processo.</p>${stackedBars(rows)}</div>
+    <div class="panel"><h2>Custos extras por tipo</h2><p class="muted small">Clique para ver quais processos e contêineres.</p>${extraByType(t)}</div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h2>Estadia no terminal</h2>${stayBars(rows)}</div>
+    <div class="panel"><h2>Processos que exigem atenção</h2>${attention(rows)}</div>
+  </div>
+  <div class="panel"><div class="title-row"><h2>Processos</h2><a href="#processos" class="small">ver tabela completa →</a></div>${procTable(rows.slice(0, 10))}</div>`;
+  bindFilters();
+}
+
+function attention(rows) {
+  const items = [];
+  for (const { id, A, R } of rows) {
+    if (R && R.status !== "Desembaraçado" && R.nextStepDate && R.nextStepDate < today()) items.push({ id, w: 3, t: `Próximo passo vencido em ${fmtD(R.nextStepDate)}: ${R.nextStep || "—"}` });
+    if (A && A.extra > 0.004 && !(R?.reason || R?.infoRequested)) items.push({ id, w: 2, t: `${brl(A.extra)} de custo extra sem motivo registrado` });
+    if (R && R.channel === "Vermelho" && R.status !== "Desembaraçado") items.push({ id, w: 2, t: `Canal vermelho em aberto${R.assignedAt ? ` há ${daysBetween(R.assignedAt, today())} dias` : ""}${R.rounds?.length ? ` · ${R.rounds.length} exigência(s)` : ""}` });
+    if (A && A.over) items.push({ id, w: 1, t: `${A.over} de ${A.n} contêineres além do período livre (máx. ${A.maxStay} dias)` });
+    if (!A && R) items.push({ id, w: 1, t: `Sem demonstrativo da Santos Brasil importado` });
+    if (A && Data.db.processes[id]?.warnings?.length) items.push({ id, w: 2, t: `Valores não conferem com o total do terminal` });
+  }
+  items.sort((a, b) => b.w - a.w);
+  if (!items.length) return `<p class="okbox">Nada pendente nos processos filtrados.</p>`;
+  return `<table><tbody>${items.slice(0, 12).map((i) => `<tr class="click" onclick="location.hash='#p/${key(i.id)}'"><td style="width:110px"><b>${esc(i.id)}</b></td><td>${i.w === 3 ? "🔴" : i.w === 2 ? "🟠" : "🟡"} ${esc(i.t)}</td></tr>`).join("")}</tbody></table>
+  ${items.length > 12 ? `<p class="axis-note">+${items.length - 12} outros pontos.</p>` : ""}`;
+}
+
+function procTable(rows) {
+  if (!rows.length) return `<p class="muted">Nenhum processo com esses filtros.</p>`;
+  const tot = totals(rows);
+  return `<div class="tbl-wrap"><table><thead><tr><th>Processo</th><th>Canal</th><th>Status</th><th>BL / DUIMP</th><th>Navio</th><th class="n">Cont.</th><th class="n">Estadia máx.</th>
+    <th class="n">Regular</th><th class="n">Extra armaz.</th><th class="n">Extra desemb.</th><th class="n">Total</th><th class="n">% extra</th></tr></thead><tbody>
+  ${rows.map(({ id, P, A, R }) => `<tr class="click" onclick="location.hash='#p/${key(id)}'">
+    <td><b>${esc(id)}</b></td><td>${chBadge(R?.channel)}</td><td>${stBadge(R)}</td>
+    <td class="small">${esc(P?.bl || "—")}<br><span class="muted">${esc(P?.duimp || "")}</span></td><td class="small">${esc(P?.vessel || "—")}</td>
+    <td class="n">${A?.n ?? R?.containers ?? "—"}</td><td class="n">${A ? A.maxStay + " d" : R?.daysHeld ? R.daysHeld + " d" : "—"}</td>
+    <td class="n">${A ? brl(A.regular) : "—"}</td><td class="n">${A ? brl(A.extra_storage) : "—"}</td><td class="n">${A ? brl(A.extra_customs) : "—"}</td>
+    <td class="n"><b>${A ? brl(A.total) : "—"}</b></td><td class="n">${A ? pct(A.extra, A.total) : "—"}</td></tr>`).join("")}
+  </tbody><tfoot><tr><td colspan="5">Total (${plural(tot.procs, "processo")})</td><td class="n">${tot.cont}</td><td></td><td class="n">${brl(tot.regular)}</td><td class="n">${brl(tot.extra_storage)}</td><td class="n">${brl(tot.extra_customs)}</td><td class="n">${brl(tot.total)}</td><td class="n">${pct(tot.extra, tot.total)}</td></tr></tfoot></table></div>`;
+}
+
+function viewProcessos() {
+  const rows = filtered();
+  view().innerHTML = `<div class="title-row"><h1>Processos</h1><div class="row"><a class="btn" href="#importar">⬆ Importar planilhas</a><button class="btn" onclick="exportCsv()">⬇ Exportar CSV</button></div></div>
+  ${filterBar()}<div class="panel">${procTable(rows)}</div>`;
+  bindFilters();
+}
+
+/* ------------------------------------------------------------------ PROCESSO */
+function viewProcesso(id) {
+  const P = Data.db.processes[id], R = Data.db.red[id] || null;
+  if (!P && !R) { view().innerHTML = `<h1>Processo não encontrado</h1><p><a href="#processos">← voltar</a></p>`; return; }
+  const A = P ? Data.analysis(id) : null;
+  const free = Data.freeDays();
+
+  // breakdown por tipo
+  const agg = (group) => {
+    const m = {};
+    for (const l of A.lines.filter((x) => (group === "regular" ? x.group === "regular" : x.group !== "regular"))) {
+      const k = (m[l.key] ??= { key: l.key, group: l.group, value: 0, conts: new Set(), qty: 0, unit: new Set() });
+      k.value += l.value; k.conts.add(l.container); k.qty += l.qty || 1; k.unit.add((l.unit ?? l.value).toFixed(2));
+    }
+    return Object.values(m).sort((a, b) => b.value - a.value);
+  };
+  const brkTable = (items, sum, isExtra) => items.length ? `<table><thead><tr><th>Item</th>${isExtra ? "<th>KPI</th>" : ""}<th class="n">Contêineres</th><th class="n">Qtd.</th><th class="n">Valor unit.</th><th class="n">Total</th><th class="n">%</th></tr></thead><tbody>
+    ${items.map((i) => `<tr><td>${gKey(i.group)} ${esc(i.key)}</td>${isExtra ? `<td><span class="kpi-tag">${esc(GROUPS[i.group].kpi)}</span></td>` : ""}<td class="n">${i.conts.size}</td><td class="n">${i.qty}${i.group === "extra_storage" ? " dias" : ""}</td>
+      <td class="n">${i.unit.size === 1 ? brl(+[...i.unit][0]) : "variável"}</td><td class="n">${brl(i.value)}</td><td class="n">${pct(i.value, sum)}</td></tr>`).join("")}
+    </tbody><tfoot><tr><td colspan="${isExtra ? 5 : 4}">Total</td><td class="n">${brl(sum)}</td><td></td></tr></tfoot></table>` : `<p class="okbox">Nenhum custo extra neste processo.</p>`;
+
+  view().innerHTML = `
+  <p class="small"><a href="#processos">← Processos</a></p>
+  <div class="title-row"><h1>${esc(id)} ${R ? chBadge(R.channel) : ""} ${stBadge(R)}</h1>
+    <div class="row"><button class="btn" onclick="editRed('${esc(id)}')">✎ Desembaraço / motivo</button>${P ? `<button class="btn danger" onclick="delProcess('${esc(id)}')">Excluir demonstrativo</button>` : ""}</div></div>
+  ${P ? `<p class="muted small">BL <b>${esc(P.bl)}</b> · ${esc(P.duimp)} · Navio ${esc(P.vessel)} ${esc(P.voyage)} · Origem ${esc(P.origin)} · CIF US$ ${(P.cifUsd ?? 0).toLocaleString("pt-BR")} · NF-e ${esc(P.nfe)} · RPS ${esc(P.rps)} · Despachante ${esc(P.broker)}<br>
+    Demonstrativo Santos Brasil emitido em ${esc(P.issuedAt || "—")} · período ${fmtD(P.periodFrom)} a ${fmtD(P.periodTo)} · arquivo <i>${esc(P.file)}</i></p>` : `<div class="warnbox">Este processo está só no controle de canal: importe o demonstrativo da Santos Brasil (${esc(id)}) para ver os custos.</div>`}
+  ${P?.warnings?.length ? P.warnings.map((w) => `<div class="warnbox">⚠ ${esc(w)}</div>`).join("") : P ? `<div class="okbox small">✓ Valores conferidos: a soma dos serviços bate com os totais informados pelo terminal (${brl(P.grandTotal)}).</div>` : ""}
+  ${A ? `<div class="tiles">
+    <div class="tile hero"><div class="k">Custo total</div><div class="v">${brl(A.total)}</div><div class="s">${brl(A.total / A.n)} por contêiner</div></div>
+    <div class="tile"><div class="k">${gKey("regular")}Regular</div><div class="v">${brl(A.regular)}</div><div class="s">${pct(A.regular, A.total)}</div></div>
+    <div class="tile"><div class="k">${gKey("extra_storage")}Extra armazenagem</div><div class="v">${brl(A.extra_storage)}</div><div class="s">KPI 1 · ${A.containers.reduce((a, c) => a + c.extraDays, 0)} contêiner-dias</div></div>
+    <div class="tile"><div class="k">${gKey("extra_customs")}Extra desembaraço</div><div class="v">${brl(A.extra_customs)}</div><div class="s">KPI 3 · ${A.physical} com inspeção física</div></div>
+    <div class="tile"><div class="k">Contêineres</div><div class="v">${A.n}</div><div class="s">${A.over} além de ${free} dias</div></div>
+    <div class="tile"><div class="k">Estadia</div><div class="v">${A.maxStay} dias</div><div class="s">${fmtD(A.firstEntry)} → ${fmtD(A.lastExit)}</div></div>
+  </div>
+  <div class="panel"><h2>Composição do custo</h2>${compBar(A)}</div>` : ""}
+  <div class="panel"><div class="title-row"><h2>Desembaraço e motivo da estadia / custos extras</h2><button class="btn sm" onclick="editRed('${esc(id)}')">✎ Editar</button></div>${redPanel(id, R, A)}</div>
+  ${A ? `<div class="grid2">
+    <div class="panel"><h2>Breakdown dos custos extras</h2>${brkTable(agg("extra"), A.extra, true)}</div>
+    <div class="panel"><h2>Custos regulares</h2>${brkTable(agg("regular"), A.regular, false)}</div>
+  </div>
+  <div class="panel"><h2>Contêineres</h2><p class="muted small">Clique num contêiner para ver os serviços cobrados pelo terminal e as observações (períodos de armazenagem).</p>
+  <div class="tbl-wrap"><table><thead><tr><th>Contêiner</th><th>Entrada</th><th>Saída</th><th class="n">Estadia</th><th class="n">Períodos</th><th>Inspeção física</th><th class="n">Regular</th><th class="n">Extra armaz.</th><th class="n">Extra desemb.</th><th class="n">Total</th><th>Conferência</th></tr></thead><tbody>
+  ${A.containers.map((c, i) => `<tr class="click" onclick="toggleRow(${i})"><td><b>${esc(c.id)}</b> <span class="muted">▸</span></td><td>${fmtD(c.entry)}</td><td>${fmtD(c.exit)}</td>
+    <td class="n">${c.stay ?? "—"} d ${c.overFree ? `<span class="badge b-warn">> ${free}</span>` : ""}</td><td class="n">${c.periods ?? "—"}</td><td>${c.physical ? "Sim" : "—"}</td>
+    <td class="n">${brl(c.regular)}</td><td class="n">${brl(c.extra_storage)}${c.extraDays ? `<br><span class="muted small">${c.extraDays} d × ${brl(c.dayRate)}</span>` : ""}</td><td class="n">${brl(c.extra_customs)}</td><td class="n"><b>${brl(c.total)}</b></td>
+    <td>${c.reported === null ? "—" : Math.abs(c.reported - c.total) < 0.05 ? `<span class="badge b-ok">✓ ${brl(c.reported)}</span>` : `<span class="badge b-warn">terminal: ${brl(c.reported)}</span>`}</td></tr>
+    <tr class="sub hidden" id="sub-${i}"><td colspan="11"><table><thead><tr><th>Serviço (como no terminal)</th><th>Código</th><th>Classificação</th><th class="n">Valor</th><th>Observação do terminal</th></tr></thead><tbody>
+      ${c.lines.map((l) => `<tr><td>${esc(l.service.name)}</td><td>${esc(l.service.code)}</td><td>${gKey(l.group)} ${esc(l.label)} ${l.unknown ? `<span class="badge b-warn">sem regra</span>` : ""}</td><td class="n">${brl(l.value)}</td><td><div class="obs">${esc(l.service.obs.split("\n").slice(0, 3).join("\n"))}${l.service.obs.split("\n").length > 3 ? `\n… +${l.service.obs.split("\n").length - 3} períodos de 1 dia` : ""}</div></td></tr>`).join("")}
+    </tbody></table></td></tr>`).join("")}
+  </tbody><tfoot><tr><td colspan="6">Total</td><td class="n">${brl(A.regular)}</td><td class="n">${brl(A.extra_storage)}</td><td class="n">${brl(A.extra_customs)}</td><td class="n">${brl(A.total)}</td><td></td></tr></tfoot></table></div></div>` : ""}
+  <div class="panel"><h2>Anotações</h2><textarea id="note" placeholder="Anotações livres sobre o processo (negociação, contestação de cobrança, contato com o terminal…)">${esc(Data.db.notes[id] || "")}</textarea>
+    <div class="row" style="margin-top:6px"><button class="btn sm" onclick="saveNote('${esc(id)}')">Salvar anotação</button></div></div>`;
+}
+function toggleRow(i) { $("#sub-" + i).classList.toggle("hidden"); }
+async function saveNote(id) { Data.db.notes[id] = $("#note").value; await Data.save(); toast("Anotação salva"); }
+async function delProcess(id) {
+  if (!confirm(`Excluir o demonstrativo de ${id}? (O controle de canal e as anotações continuam.)`)) return;
+  delete Data.db.processes[id]; Data.log(`Excluído demonstrativo ${id}`); await Data.save(); location.hash = "#processos";
+}
+
+function redPanel(id, R, A) {
+  if (!R) return `<p class="muted">Sem informações de desembaraço. Use <b>Editar</b> para registrar o canal, as exigências da fiscalização e o motivo da estadia longa ou dos custos extras — ou importe a planilha Red Channel.</p>`;
+  const ev = [];
+  if (A?.firstEntry) ev.push({ d: A.firstEntry, t: "Entrada no terminal" });
+  if (R.assignedAt) ev.push({ d: R.assignedAt, t: `Canal ${R.channel || ""}` });
+  (R.rounds || []).forEach((r, i) => { if (r.req) ev.push({ d: r.req, t: `${i + 1}ª exigência${r.note ? " · " + r.note : ""}` }); if (r.sub) ev.push({ d: r.sub, t: `Resposta à ${i + 1}ª exigência` }); });
+  if (R.clearedAt) ev.push({ d: R.clearedAt, t: "Desembaraçado" });
+  if (A?.lastExit) ev.push({ d: A.lastExit, t: "Saída do terminal" });
+  if (R.nextStepDate && R.status !== "Desembaraçado") ev.push({ d: R.nextStepDate, t: "Próximo passo", off: true });
+  ev.sort((a, b) => a.d.localeCompare(b.d));
+  const dur = R.assignedAt && R.clearedAt ? daysBetween(R.assignedAt, R.clearedAt) : null;
+  const f = (k, v) => (v ? `<div><div class="muted small">${k}</div><div>${v}</div></div>` : "");
+  return `${ev.length ? `<div class="timeline">${ev.map((e, i) => `<div class="tl">${i < ev.length - 1 ? '<div class="line"></div>' : ""}<div class="dot ${e.off ? "off" : ""}"></div><div class="d">${fmtD(e.d)}</div><div class="t">${esc(e.t)}</div></div>`).join("")}</div>` : ""}
+  ${dur !== null ? `<p class="small">Do canal ao desembaraço: <b>${dur} dias</b>${R.rounds?.length ? ` · ${plural(R.rounds.length, "exigência")} da fiscalização` : ""}.</p>` : ""}
+  <div class="form" style="margin-top:10px">
+    ${f("Motivo da estadia longa / custos extras", R.reason ? `<b>${esc(R.reason)}</b>` : "")}
+    ${f("Informação solicitada pela fiscalização", esc(R.infoRequested))}
+    ${f("Lote (batch)", esc(R.batch))}
+    ${f("Ex-tarifário", esc(R.exTariff))}
+    ${f("Documentos / laudos", esc(R.official))}
+    ${f("Próximo passo", R.nextStep ? esc(R.nextStep) + (R.nextStepDate ? ` (até ${fmtD(R.nextStepDate)})` : "") : "")}
+    ${f("Total de dias no porto (planilha)", R.daysHeld ? R.daysHeld + " dias" : "")}
+    ${f("Demurrage estimado", R.demurrage ? "US$ " + (+R.demurrage).toLocaleString("pt-BR") : "")}
+    ${R.notes ? `<div class="wide">${f("Observações", esc(R.notes))}</div>` : ""}
+  </div>
+  <p class="axis-note">Fonte: ${esc(R.source || "registro manual")} · atualizado em ${fmtD((R.updatedAt || "").slice(0, 10))}</p>`;
+}
+
+function editRed(id) {
+  const R = Data.db.red[id] || { channel: "", status: "Em andamento", rounds: [] };
+  const rounds = [...(R.rounds || [])];
+  while (rounds.length < 3) rounds.push({ req: "", sub: "", note: "" });
+  const isNew = !id;
+  openModal(`<h2>${isNew ? "Novo registro de desembaraço" : "Desembaraço · " + esc(id)}</h2>
+  <form id="red-form" class="form">
+    ${isNew ? `<label class="f">Processo (IRA)<input name="id" placeholder="IRA1818/26" required></label>` : ""}
+    <label class="f">Canal<select name="channel">${["", "Verde", "Amarelo", "Vermelho", "Cinza"].map((c) => `<option ${R.channel === c ? "selected" : ""} value="${c}">${c || "—"}</option>`).join("")}</select></label>
+    <label class="f">Data do canal<input type="date" name="assignedAt" value="${esc(R.assignedAt || "")}"></label>
+    <label class="f">Status<select name="status">${["Em andamento", "Aguardando fiscalização", "Exigência em aberto", "Desembaraçado"].map((c) => `<option ${R.status === c ? "selected" : ""}>${c}</option>`).join("")}</select></label>
+    <label class="f">Data do desembaraço<input type="date" name="clearedAt" value="${esc(R.clearedAt || "")}"></label>
+    <label class="f">Lote (batch)<input name="batch" value="${esc(R.batch || "")}"></label>
+    <label class="f">Contêineres<input type="number" name="containers" value="${esc(R.containers ?? "")}"></label>
+    <label class="f">Total de dias no porto<input type="number" name="daysHeld" value="${esc(R.daysHeld ?? "")}"></label>
+    <label class="f">Demurrage estimado (US$)<input type="number" step="0.01" name="demurrage" value="${esc(R.demurrage ?? "")}"></label>
+    <label class="f">Ex-tarifário<input name="exTariff" value="${esc(R.exTariff || "")}" placeholder="Sim / Não / itens"></label>
+    <div class="wide"><h3>Exigências da fiscalização</h3>
+      <table><thead><tr><th>#</th><th>Data da exigência</th><th>Data da resposta</th><th>Observação</th></tr></thead><tbody>
+      ${rounds.map((r, i) => `<tr><td>${i + 1}ª</td><td><input type="date" name="req-${i}" value="${esc(r.req || "")}"></td><td><input type="date" name="sub-${i}" value="${esc(r.sub || "")}"></td><td><input name="note-${i}" value="${esc(r.note || "")}" style="width:100%"></td></tr>`).join("")}
+      </tbody></table></div>
+    <label class="f wide">Motivo da estadia longa / custos extras<textarea name="reason" placeholder="Ex.: canal vermelho com conferência física; exigência de laudo técnico; retificação da DUIMP…">${esc(R.reason || "")}</textarea></label>
+    <label class="f wide">Informação solicitada pela fiscalização<textarea name="infoRequested">${esc(R.infoRequested || "")}</textarea></label>
+    <label class="f wide">Documentos / laudos (Official)<input name="official" value="${esc(R.official || "")}"></label>
+    <label class="f wide">Próximo passo<input name="nextStep" value="${esc(R.nextStep || "")}"></label>
+    <label class="f">Data do próximo passo<input type="date" name="nextStepDate" value="${esc(R.nextStepDate || "")}"></label>
+    <label class="f wide">Observações<textarea name="notes">${esc(R.notes || "")}</textarea></label>
+    <div class="wide row"><button class="btn primary" type="submit">Salvar</button><button class="btn" type="button" onclick="closeModal()">Cancelar</button>
+      ${!isNew && Data.db.red[id] ? `<button class="btn danger" type="button" onclick="delRed('${esc(id)}')">Excluir registro</button>` : ""}</div>
+  </form>`);
+  $("#red-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target));
+    const pid = isNew ? procId(fd.id) || fd.id.trim().toUpperCase() : id;
+    if (!pid) return toast("Informe o número do processo");
+    const rec = { id: pid, source: R.source || "registro manual", rounds: [] };
+    for (const k of ["channel", "assignedAt", "status", "clearedAt", "batch", "exTariff", "reason", "infoRequested", "official", "nextStep", "nextStepDate", "notes"]) rec[k] = fd[k] || "";
+    for (const k of ["containers", "daysHeld", "demurrage"]) rec[k] = fd[k] === "" ? null : +fd[k];
+    for (let i = 0; i < rounds.length; i++) if (fd["req-" + i] || fd["sub-" + i]) rec.rounds.push({ req: fd["req-" + i], sub: fd["sub-" + i], note: fd["note-" + i] });
+    Data.db.red[pid] = { ...(Data.db.red[pid] || {}), ...rec, updatedAt: new Date().toISOString() };
+    Data.log(`Desembaraço ${pid} atualizado`);
+    await Data.save(); closeModal(); toast("Salvo"); route();
+  });
+}
+async function delRed(id) { if (!confirm("Excluir o registro de desembaraço de " + id + "?")) return; delete Data.db.red[id]; await Data.save(); closeModal(); route(); }
+
+/* ------------------------------------------------------------------ CUSTOS EXTRAS */
+function viewExtras(sel) {
+  const rows = filtered(), t = totals(rows);
+  const items = Object.values(t.byKey).sort((a, b) => b.value - a.value);
+  const lines = [];
+  for (const { id, A, R } of rows) if (A) for (const l of A.lines) if (l.group !== "regular" && (!sel || l.key === sel)) lines.push({ id, R, l });
+  const perProc = rows.filter((r) => r.A && r.A.extra > 0.004).sort((a, b) => b.A.extra - a.A.extra);
+  view().innerHTML = `<div class="title-row"><h1>Custos extras ${sel ? "· " + esc(sel) : ""}</h1>${sel ? `<a class="btn" href="#extras">← todos os tipos</a>` : ""}</div>
+  ${filterBar()}
+  <div class="tiles">
+    <div class="tile hero"><div class="k">Custos extras</div><div class="v">${brl(t.extra)}</div><div class="s">${pct(t.extra, t.total)} do custo total</div></div>
+    <div class="tile"><div class="k">${gKey("extra_storage")}Armazenagem além do período livre</div><div class="v">${brl(t.extra_storage)}</div><div class="s">KPI 1 · Storage</div></div>
+    <div class="tile"><div class="k">${gKey("extra_customs")}Inspeção e desembaraço</div><div class="v">${brl(t.extra_customs)}</div><div class="s">KPI 3 · Customs costs</div></div>
+  </div>
+  <div class="grid2">
+  <div class="panel"><h2>Por tipo de custo</h2><p class="muted small">Clique num tipo para ver os contêineres.</p>
+    <table><thead><tr><th>Tipo</th><th>KPI</th><th class="n">Processos</th><th class="n">Contêineres</th><th class="n">Total</th><th class="n">% extra</th></tr></thead><tbody>
+    ${items.map((i) => { const procs = new Set(rows.filter((r) => r.A?.lines.some((l) => l.key === i.key)).map((r) => r.id)); return `<tr class="click ${sel === i.key ? "sel" : ""}" onclick="location.hash='#extras/${encodeURIComponent(i.key)}'" ${sel === i.key ? 'style="outline:2px solid var(--brand)"' : ""}><td>${gKey(i.group)} ${esc(i.key)}</td><td><span class="kpi-tag">${esc(GROUPS[i.group].kpi)}</span></td><td class="n">${procs.size}</td><td class="n">${i.conts.size}</td><td class="n">${brl(i.value)}</td><td class="n">${pct(i.value, t.extra)}</td></tr>`; }).join("") || `<tr><td colspan="6" class="muted">Nenhum custo extra.</td></tr>`}
+    </tbody></table></div>
+  <div class="panel"><h2>Por processo e motivo</h2>
+    <table><thead><tr><th>Processo</th><th class="n">Armazenagem</th><th class="n">Desembaraço</th><th class="n">Total extra</th><th>Motivo registrado</th></tr></thead><tbody>
+    ${perProc.map(({ id, A, R }) => `<tr class="click" onclick="location.hash='#p/${key(id)}'"><td><b>${esc(id)}</b><br>${chBadge(R?.channel)}</td><td class="n">${brl(A.extra_storage)}</td><td class="n">${brl(A.extra_customs)}</td><td class="n"><b>${brl(A.extra)}</b></td>
+      <td class="small">${R?.reason ? esc(R.reason) : R?.infoRequested ? esc(R.infoRequested) : `<span class="badge b-warn">sem motivo</span>`}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">Nenhum.</td></tr>`}
+    </tbody></table></div>
+  </div>
+  <div class="panel"><h2>Detalhe por contêiner ${sel ? "· " + esc(sel) : ""}</h2><div class="tbl-wrap"><table><thead><tr><th>Processo</th><th>Contêiner</th><th>Item</th><th class="n">Qtd.</th><th class="n">Valor</th><th>Canal</th><th>Status</th></tr></thead><tbody>
+  ${lines.sort((a, b) => b.l.value - a.l.value).map(({ id, R, l }) => `<tr class="click" onclick="location.hash='#p/${key(id)}'"><td><b>${esc(id)}</b></td><td>${esc(l.container)}</td><td>${gKey(l.group)} ${esc(l.label)}</td><td class="n">${l.qty ? l.qty + " d" : 1}</td><td class="n">${brl(l.value)}</td><td>${chBadge(R?.channel)}</td><td>${stBadge(R)}</td></tr>`).join("") || `<tr><td colspan="7" class="muted">Nenhum.</td></tr>`}
+  </tbody></table></div></div>`;
+  bindFilters();
+}
+
+/* ------------------------------------------------------------------ CANAL VERMELHO */
+function redSummary(rows) {
+  const red = rows.filter((r) => r.R?.channel === "Vermelho");
+  const free = Data.freeDays();
+  const cont = red.reduce((a, r) => a + (r.A?.n || r.R.containers || 0), 0);
+  const over = red.reduce((a, r) => a + (r.A ? r.A.over : (r.R.daysHeld || 0) > free ? r.R.containers || 0 : 0), 0);
+  const ex = red.filter((r) => /^(S|Y|SIM|YES)/i.test(r.R.exTariff || "")).length;
+  return {
+    pt: `Há ${plural(red.length, "processo")} no canal vermelho, totalizando ${plural(cont, "contêiner", "contêineres")}. ${over === 1 ? "1 contêiner já excedeu" : over + " contêineres já excederam"} o período livre de armazenagem. Desses processos, ${ex === 1 ? "1 inclui" : ex + " incluem"} peças com benefício de Ex-tarifário.`,
+    en: `Summary: There are currently ${red.length} shipments in the red customs channel, totaling ${cont} containers. ${over} containers have already exceeded the free storage period. Of these shipments, ${ex} include parts covered by Ex-tariff benefits.`,
+    zh: `总结：目前有${red.length}批货物处于海关红色通道，共涉及${cont}个集装箱。其中，${over}个集装箱已超过免费堆存期。在这些批次中，${ex}批包含适用Ex-tariff关税优惠的零部件。`,
+  };
+}
+function viewCanal() {
+  const rows = filtered().filter((r) => r.R);
+  const s = redSummary(rows);
+  view().innerHTML = `<div class="title-row"><h1>Canal vermelho e desembaraço</h1><div class="row">
+    <button class="btn primary" onclick="editRed('')">+ Novo registro</button><a class="btn" href="#importar">⬆ Importar planilha Red Channel</a></div></div>
+  ${filterBar()}
+  <div class="panel"><h2>Resumo</h2><p>${esc(s.pt)}</p><p class="muted small">${esc(s.en)}<br>${esc(s.zh)}</p>
+    <button class="btn sm" onclick="copySummary()">Copiar resumo (EN / 中文)</button></div>
+  <div class="panel"><div class="tbl-wrap"><table><thead><tr><th>Processo</th><th>Lote</th><th class="n">Cont.</th><th>Canal</th><th>Data canal</th><th>Exigências</th><th>Status</th><th class="n">Dias</th>
+    <th class="n">Armazenagem 1º período</th><th class="n">Período adicional</th><th>Motivo</th><th>Próximo passo</th></tr></thead><tbody>
+  ${rows.map(({ id, A, R }) => {
+    const days = R.status === "Desembaraçado" ? (R.assignedAt && R.clearedAt ? daysBetween(R.assignedAt, R.clearedAt) : R.daysHeld) : R.assignedAt ? daysBetween(R.assignedAt, today()) : R.daysHeld;
+    const late = R.nextStepDate && R.nextStepDate < today() && R.status !== "Desembaraçado";
+    return `<tr class="click" onclick="location.hash='#p/${key(id)}'"><td><b>${esc(id)}</b></td><td class="small">${esc(R.batch || "")}</td><td class="n">${A?.n ?? R.containers ?? "—"}</td><td>${chBadge(R.channel)}</td><td>${fmtD(R.assignedAt)}</td>
+      <td class="small" style="white-space:nowrap">${(R.rounds || []).map((r, i) => `${i + 1}ª ${fmtD(r.req).slice(0, 5)}${r.sub ? " → " + fmtD(r.sub).slice(0, 5) : " <b>(sem resposta)</b>"}`).join("<br>") || "—"}</td>
+      <td>${stBadge(R)}</td><td class="n">${days ?? "—"}</td>
+      <td class="n">${A ? brl(A.storageFirst) : R.storageFirst ? brl(R.storageFirst) : "—"}</td><td class="n">${A ? brl(A.extra_storage) : R.storageAdd ? brl(R.storageAdd) : "—"}</td>
+      <td class="small">${esc(R.reason || R.infoRequested || "")}</td><td class="small">${esc(R.nextStep || "")}${R.nextStepDate ? `<br><span class="${late ? "badge b-warn" : "muted"}">${late ? "vencido " : ""}${fmtD(R.nextStepDate)}</span>` : ""}</td></tr>`;
+  }).join("") || `<tr><td colspan="12" class="muted">Nenhum registro. Importe a planilha Red Channel ou clique em “Novo registro”.</td></tr>`}
+  </tbody></table></div><p class="axis-note">“Armazenagem 1º período” e “Período adicional” vêm do demonstrativo da Santos Brasil quando ele foi importado (senão, da planilha). Dias = do canal ao desembaraço (ou até hoje).</p></div>`;
+  bindFilters();
+}
+function copySummary() { const s = redSummary(filtered().filter((r) => r.R)); navigator.clipboard?.writeText(s.en + "\n" + s.zh).then(() => toast("Resumo copiado"), () => toast("Não foi possível copiar")); }
+
+/* ------------------------------------------------------------------ IMPORTAR */
+let pending = [];
+function viewImportar() {
+  view().innerHTML = `<h1>Importar planilhas</h1>
+  <div class="grid2">
+    <div class="panel"><h2>Demonstrativos da Santos Brasil</h2><p class="small">Arquivos <b>IRAxxxx-xx_Cost_Breakdown.xlsx</b> (ou o demonstrativo puro do terminal). O sistema lê a aba do demonstrativo,
+      separa cada contêiner e serviço, divide a armazenagem em período livre × períodos adicionais e confere os valores com os totais do terminal.</p></div>
+    <div class="panel"><h2>Planilha Red Channel</h2><p class="small">A planilha de controle do desembaraço (<i>RED CHANNEL STATUS</i>). Cada processo é localizado pelo número IRA
+      e o sistema traz canal, datas das exigências, status, próximos passos e informações pedidas pela fiscalização. Os registros podem ser editados depois.</p></div>
+  </div>
+  <label class="drop" id="drop"><input type="file" id="files" multiple accept=".xlsx,.xlsm,.csv" hidden>
+    <b>Arraste os arquivos aqui</b> ou clique para escolher<br><span class="muted small">Pode mandar vários de uma vez. O tipo de cada planilha é reconhecido sozinho.</span></label>
+  <div id="pending"></div>`;
+  const drop = $("#drop"), inp = $("#files");
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); readFiles([...e.dataTransfer.files]); });
+  inp.addEventListener("change", () => readFiles([...inp.files]));
+  renderPending();
+}
+
+async function readFiles(files) {
+  for (const file of files) {
+    const item = { file, name: file.name };
+    try {
+      const book = await Book.read(file);
+      if (SB.pickSheet(book)) { item.kind = "sb"; item.P = SB.parse(book, file.name); }
+      else {
+        const recs = RC.parse(book);
+        if (recs.length) { item.kind = "rc"; item.recs = recs; }
+        else throw new Error("Não reconheci a planilha: não há demonstrativo da Santos Brasil nem números de processo IRA.");
+      }
+    } catch (e) { item.error = e.message || String(e); }
+    pending.push(item);
+  }
+  renderPending();
+}
+
+function renderPending() {
+  const el = $("#pending"); if (!el) return;
+  if (!pending.length) { el.innerHTML = ""; return; }
+  const rules = Data.rules(), free = Data.freeDays();
+  el.innerHTML = `<div class="panel" style="margin-top:16px"><h2>Conferir antes de salvar</h2>
+  <table><thead><tr><th>Arquivo</th><th>Tipo</th><th>Processo</th><th>Conteúdo</th><th>Conferência</th><th></th></tr></thead><tbody>
+  ${pending.map((it, i) => {
+    if (it.error) return `<tr><td>${esc(it.name)}</td><td colspan="4"><span class="badge b-warn">erro</span> ${esc(it.error)}</td><td><button class="btn sm" onclick="pending.splice(${i},1);renderPending()">remover</button></td></tr>`;
+    if (it.kind === "sb") {
+      const A = analyze(it.P, rules, free), exists = !!Data.db.processes[it.P.id];
+      return `<tr><td>${esc(it.name)}</td><td>Demonstrativo Santos Brasil</td>
+        <td><input value="${esc(it.P.id)}" placeholder="IRA0000/26" onchange="pending[${i}].P.id=procId(this.value)||this.value.trim().toUpperCase();renderPending()" style="width:120px">
+          ${!it.P.id ? `<br><span class="badge b-warn">informe o número IRA</span>` : exists ? `<br><span class="badge b-warn">já existe: será substituído</span>` : ""}</td>
+        <td class="small">BL ${esc(it.P.bl)} · ${plural(A.n, "contêiner", "contêineres")} · total <b>${brl(A.total)}</b><br>regular ${brl(A.regular)} · extra armaz. ${brl(A.extra_storage)} · extra desemb. ${brl(A.extra_customs)}${A.unknown ? `<br><span class="badge b-warn">${A.unknown} serviço(s) sem regra</span>` : ""}</td>
+        <td>${it.P.warnings.length ? it.P.warnings.map((w) => `<div class="small" style="color:var(--warn)">⚠ ${esc(w)}</div>`).join("") : `<span class="badge b-ok">✓ bate com o terminal</span>`}</td>
+        <td><button class="btn sm" onclick="pending.splice(${i},1);renderPending()">remover</button></td></tr>`;
+    }
+    return `<tr><td>${esc(it.name)}</td><td>Planilha Red Channel</td><td>${it.recs.length} processos</td>
+      <td class="small">${it.recs.map((r) => `<b>${esc(r.id)}</b> ${esc(r.status)}${r.rounds.length ? ` · ${r.rounds.length} exig.` : ""}${Data.db.red[r.id] ? " (atualiza)" : ""}`).join("<br>")}</td>
+      <td class="small muted">Campos vazios na planilha não apagam o que já foi registrado no sistema.</td><td><button class="btn sm" onclick="pending.splice(${i},1);renderPending()">remover</button></td></tr>`;
+  }).join("")}</tbody></table>
+  <div class="row" style="margin-top:12px"><button class="btn primary" onclick="commitPending()">Salvar ${plural(pending.filter((p) => !p.error).length, "arquivo")}</button><button class="btn" onclick="pending=[];renderPending()">Descartar</button></div></div>`;
+}
+
+async function commitPending() {
+  const ok = pending.filter((p) => !p.error);
+  if (ok.some((p) => p.kind === "sb" && !p.P.id)) return toast("Informe o número IRA de todos os demonstrativos");
+  let n = 0;
+  for (const it of ok) {
+    if (it.kind === "sb") { Data.upsertProcess(it.P); n++; }
+    else { for (const r of it.recs) Data.upsertRed(r); Data.log(`Importada planilha Red Channel ${it.name} (${it.recs.length} processos)`); n += it.recs.length; }
+    if (Data.folder) {
+      try { await Data.write(`${it.kind === "sb" ? "SANTOS_BRASIL" : "RED_CHANNEL"}/${today()}_${it.name.replace(/[\\/:*?"<>|]/g, "_")}`, it.file); } catch (e) { console.warn(e); }
+    }
+  }
+  pending = pending.filter((p) => p.error);
+  await Data.save();
+  toast(`${n} registro(s) salvos`);
+  location.hash = "#painel";
+}
+
+/* ------------------------------------------------------------------ CONFIG */
+function viewConfig() {
+  const rules = Data.rules();
+  const unknown = new Map();
+  for (const P of Object.values(Data.db.processes)) for (const c of P.containers) for (const s of c.services) if (classify(s.name, rules).unknown) unknown.set(s.name, (unknown.get(s.name) || 0) + 1);
+  view().innerHTML = `<h1>Configurações</h1>
+  <div class="panel"><h2>Regras de classificação dos serviços</h2>
+    <p class="small">Cada serviço cobrado pela Santos Brasil é comparado com as regras de cima para baixo (texto sem acentos; use | para alternativas).
+    <b>Armazenagem</b> é dividida sozinha: o 1º período (período livre) é custo regular e os períodos adicionais são extra de armazenagem (KPI 1).
+    Padrão inicial = mesma lógica da planilha de breakdown manual (escaneamento conta como regular; posicionamento, lacres, ova/desova = extra de desembaraço, KPI 3).</p>
+    ${unknown.size ? `<div class="warnbox">Serviços sem regra: ${[...unknown].map(([n, q]) => `<b>${esc(n)}</b> (${q}×)`).join(", ")}</div>` : ""}
+    <table><thead><tr><th>Texto no nome do serviço</th><th>Nome no sistema</th><th>Grupo</th><th></th></tr></thead><tbody id="rules">
+    ${rules.map((r, i) => `<tr><td><input data-i="${i}" data-k="match" value="${esc(r.match)}" style="width:100%"></td><td><input data-i="${i}" data-k="label" value="${esc(r.label)}" style="width:100%"></td>
+      <td><select data-i="${i}" data-k="group">${[["storage", "Armazenagem (divide por período)"], ["regular", "Regular"], ["extra_customs", "Extra · desembaraço (KPI 3)"], ["extra_storage", "Extra · armazenagem (KPI 1)"]].map(([v, l]) => `<option value="${v}" ${r.group === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
+      <td class="n"><button class="btn sm" onclick="moveRule(${i},-1)">↑</button> <button class="btn sm" onclick="moveRule(${i},1)">↓</button> <button class="btn sm danger" onclick="delRule(${i})">×</button></td></tr>`).join("")}
+    </tbody></table>
+    <div class="row" style="margin-top:8px"><button class="btn sm" onclick="addRule()">+ Regra</button><button class="btn sm primary" onclick="saveRules()">Salvar regras</button><button class="btn sm" onclick="resetRules()">Restaurar padrão</button></div></div>
+  <div class="grid2">
+    <div class="panel"><h2>Parâmetros</h2><div class="form">
+      <label class="f">Período livre de armazenagem (dias)<input type="number" id="freeDays" value="${Data.freeDays()}"></label></div>
+      <div class="row" style="margin-top:8px"><button class="btn sm primary" onclick="saveParams()">Salvar</button></div>
+      <p class="small muted">Usado para marcar contêineres “além do período livre” e a linha de referência do gráfico de estadia. O valor cobrado vem sempre do demonstrativo.</p></div>
+    <div class="panel"><h2>Onde ficam os dados</h2>
+      <p class="small">Os dados são salvos automaticamente <b>neste navegador</b>. Para ter backup e usar em equipe, escolha uma <b>pasta de trabalho</b> (ex.: pasta do OneDrive/SharePoint): a base vai para <code>custos-aduaneiros.json</code> e as planilhas importadas são arquivadas em <code>SANTOS_BRASIL/</code> e <code>RED_CHANNEL/</code>.</p>
+      <p>${Data.folder ? `<span class="store-badge on">Pasta: ${esc(Data.folder.name)}</span>` : `<span class="store-badge">Só neste navegador</span>`}</p>
+      <div class="row">${Data.folderSupported() ? `<button class="btn sm" onclick="pickFolder()">${Data.folder ? "Trocar pasta" : "Escolher pasta de trabalho"}</button>` : `<span class="muted small">Pasta de trabalho exige Edge ou Chrome.</span>`}
+      ${Data.pendingFolder && !Data.folder ? `<button class="btn sm" onclick="reconnect()">Continuar com a pasta ${esc(Data.pendingFolder.name)}</button>` : ""}</div>
+      <h3>Backup</h3><div class="row"><button class="btn sm" onclick="exportJson()">⬇ Baixar backup (.json)</button><label class="btn sm">⬆ Restaurar backup<input type="file" accept=".json" hidden onchange="importJson(this.files[0])"></label>
+      <button class="btn sm" onclick="exportCsv()">⬇ Linhas de custo (.csv)</button></div>
+      <h3>Dados de exemplo</h3><div class="row">${typeof SEED !== "undefined" ? `<button class="btn sm" onclick="loadSeed()">Carregar os 5 processos de exemplo</button>` : ""}<button class="btn sm danger" onclick="clearAll()">Apagar todos os dados</button></div></div>
+  </div>
+  <div class="panel"><h2>Histórico</h2><table><tbody>${Data.db.log.slice(0, 30).map((l) => `<tr><td class="small muted" style="width:160px">${esc(l.at.slice(0, 16).replace("T", " "))}</td><td class="small">${esc(l.msg)}</td></tr>`).join("") || `<tr><td class="muted">Sem registros.</td></tr>`}</tbody></table></div>`;
+}
+function readRules() { const r = Data.rules().map((x) => ({ ...x })); $$("#rules [data-i]").forEach((el) => { r[+el.dataset.i][el.dataset.k] = el.value; }); return r; }
+function addRule() { Data.db.rules = [...readRules(), { match: "", label: "", group: "extra_customs" }]; viewConfig(); }
+function delRule(i) { const r = readRules(); r.splice(i, 1); Data.db.rules = r; viewConfig(); }
+function moveRule(i, d) { const r = readRules(); const j = i + d; if (j < 0 || j >= r.length) return; [r[i], r[j]] = [r[j], r[i]]; Data.db.rules = r; viewConfig(); }
+async function saveRules() { Data.db.rules = readRules().filter((r) => r.match.trim()); Data.log("Regras de classificação alteradas"); await Data.save(); toast("Regras salvas: os custos foram recalculados"); viewConfig(); }
+async function resetRules() { if (!confirm("Restaurar as regras padrão?")) return; Data.db.rules = DEFAULT_RULES.map((r) => ({ ...r })); await Data.save(); viewConfig(); }
+async function saveParams() { Data.db.settings.freeDays = +$("#freeDays").value || 15; await Data.save(); toast("Salvo"); }
+async function pickFolder() { try { await Data.pickFolder(); updateBadge(); toast("Pasta conectada"); route(); } catch (e) { if (e.name !== "AbortError") toast(e.message); } }
+async function reconnect() { if (await Data.reconnect()) { updateBadge(); route(); } }
+function download(name, data, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+function exportJson() { download(`custos-aduaneiros-backup-${today()}.json`, JSON.stringify(Data.db, null, 1), "application/json"); }
+async function importJson(file) {
+  if (!file) return;
+  try { const db = JSON.parse(await file.text()); if (!db.processes) throw new Error("arquivo inválido"); if (!confirm("Substituir todos os dados atuais pelo backup?")) return; Data.db = Object.assign(Data.empty(), db); await Data.save(); toast("Backup restaurado"); route(); }
+  catch (e) { toast("Erro: " + e.message); }
+}
+function exportCsv() {
+  const n2 = (v) => (v ?? 0).toFixed(2).replace(".", ",");
+  const out = [["Processo", "BL", "DUIMP", "Navio", "Canal", "Status", "Contêiner", "Entrada", "Saída", "Estadia (dias)", "Serviço (terminal)", "Código", "Item", "Grupo", "KPI", "Qtd", "Valor (R$)"].join(";")];
+  for (const { id, P, A, R } of filtered()) if (A) for (const c of A.containers) for (const l of c.lines)
+    out.push([id, P.bl, P.duimp, P.vessel, R?.channel || "", R?.status || "", c.id, fmtD(c.entry), fmtD(c.exit), c.stay ?? "", l.service.name, l.service.code, l.label, GROUPS[l.group].short || GROUPS[l.group].label, GROUPS[l.group].kpi, l.qty || 1, n2(l.value)].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";"));
+  download(`custos-aduaneiros-${today()}.csv`, "﻿" + out.join("\r\n"), "text/csv");
+}
+async function loadSeed() {
+  for (const P of SEED.processes) Data.db.processes[P.id] = P;
+  Data.log(`Carregados ${SEED.processes.length} processos de exemplo`); await Data.save(); toast("Exemplos carregados"); location.hash = "#painel"; route();
+}
+async function clearAll() { if (!confirm("Apagar TODOS os processos, registros de canal e anotações?")) return; const rules = Data.db.rules, settings = Data.db.settings; Data.db = Object.assign(Data.empty(), { rules, settings }); await Data.save(); route(); }
+
+function emptyState() {
+  view().innerHTML = `<div class="panel empty"><h1>Custos aduaneiros</h1>
+    <p>Comece importando os demonstrativos da Santos Brasil (<b>IRAxxxx-xx_Cost_Breakdown.xlsx</b>) e, se quiser, a planilha <b>Red Channel Status</b>.</p>
+    <div class="row" style="justify-content:center"><a class="btn primary" href="#importar">⬆ Importar planilhas</a>${typeof SEED !== "undefined" ? `<button class="btn" onclick="loadSeed()">Ver com os 5 processos de exemplo</button>` : ""}</div></div>`;
+}
+
+/* ------------------------------------------------------------------ roteamento */
+function updateBadge() {
+  const b = $("#store"); if (!b) return;
+  b.className = "store-badge" + (Data.folder ? " on" : "");
+  b.textContent = Data.folder ? "Pasta: " + Data.folder.name : "Salvo neste navegador";
+}
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1) || "painel");
+  const [page, ...rest] = h.split("/");
+  const arg = rest.join("/");
+  $$("nav a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + (page === "p" ? "processos" : page)));
+  if (page === "p") viewProcesso(unkey(arg));
+  else if (page === "processos") viewProcessos();
+  else if (page === "extras") viewExtras(arg || "");
+  else if (page === "canal") viewCanal();
+  else if (page === "importar") viewImportar();
+  else if (page === "config") viewConfig();
+  else viewPainel();
+}
+window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+$("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") closeModal(); });
+(async () => { await Data.load(); updateBadge(); route(); })();
+</script>
+</body>
+</html>

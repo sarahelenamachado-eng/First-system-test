@@ -3,6 +3,8 @@
 Plataforma local (navegador + pasta no computador) que implementa a lógica de governança da planilha
 *Systems flows*: **Inputs management → Lista geral de governança → Projetos, Reuniões e Riscos → Summaries**.
 
+> **Novo:** sistema de **custos aduaneiros** (Santos Brasil, storage e customs costs) em [`custos-aduaneiros/`](custos-aduaneiros/README.md) — abra `custos-aduaneiros/index.html`.
+
 ## Como usar (sem instalar nada)
 
 1. Baixe o repositório (botão **Code → Download ZIP** no GitHub) e descompacte numa pasta do computador.
