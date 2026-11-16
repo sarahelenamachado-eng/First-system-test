@@ -176,8 +176,8 @@ const SB = {
 };
 
 /** Custos derivados de um processo, segundo as regras atuais. */
-function analyze(P, rules, freeDays = 15) {
-  const out = { regular: 0, extra_storage: 0, extra_customs: 0, total: 0, lines: [], containers: [], unknown: 0 };
+function analyze(P, rules, freeDays = 15, tariff = null) {
+  const out = { regular: 0, extra_storage: 0, extra_customs: 0, total: 0, lines: [], containers: [], unknown: 0, tariffIssues: 0, aboveMin: 0 };
   for (const c of P.containers) {
     const cc = { id: c.id, regular: 0, extra_storage: 0, extra_customs: 0, total: 0, extraDays: 0, dayRate: 0, physical: false, lines: [] };
     for (const s of c.services) {
@@ -201,7 +201,12 @@ function analyze(P, rules, freeDays = 15) {
         cc.lines.push({ label: r.label, key: r.label, group: r.group, value: s.value, service: s, unknown: !!r.unknown });
       }
     }
-    for (const l of cc.lines) { cc[l.group] += l.value; cc.total += l.value; }
+    for (const l of cc.lines) {
+      cc[l.group] += l.value; cc.total += l.value;
+      l.tariff = tariff ? tariffCheck(l, tariff) : null;
+      if (l.tariff && !l.tariff.ok) out.tariffIssues++;
+      if (l.tariff?.aboveMin) out.aboveMin++;
+    }
     cc.stay = c.stay; cc.entry = c.entry; cc.exit = c.exit; cc.periods = c.periods; cc.reported = c.reported;
     cc.overFree = (c.stay || 0) > freeDays || cc.extraDays > 0;
     out.containers.push(cc);
@@ -318,5 +323,116 @@ const RC = {
     rec.daysHeld = held.length ? held[0] : null;
     if (!rec.status) rec.status = "Em andamento";
     return rec;
+  },
+};
+
+/* ------------------------------------------------------------------ tarifário Santos Brasil (valores com impostos) */
+/** Valor unitário esperado por serviço (tarifário PAN 1270/2025). "min" = valor mínimo (pode ser % do CIF). null = pode variar. */
+const DEFAULT_TARIFF = [
+  { match: "ARMAZENAGEM#1", label: "Armazenagem 1º período (15 dias)", value: 2064.14, min: true },
+  { match: "ARMAZENAGEM#2", label: "Armazenagem diária adicional", value: 247.84, min: true },
+  { match: "INSPECAO NAO INVASIVA", label: "Inspeção não invasiva (escaneamento)", value: 346.5 },
+  { match: "CARREGAMENTO", label: "Carregamento bitrem/rodotrem", value: 816.01 },
+  { match: "PROCESSAMENTO ELETRONICO", label: "Processamento eletrônico", value: 105.14 },
+  { match: "POSICIONAMENTO", label: "Posicionamento", value: 389.21, nonGreen: true },
+  { match: "RETIRADA DE LACRE", label: "Retirada de lacre", value: 83.18, nonGreen: true },
+  { match: "COLOCACAO DE LACRE", label: "Colocação de lacre", value: 83.18, nonGreen: true },
+  { match: "DESCONSOLIDACAO|DESUNITIZACAO", label: "Desova (retirada de material)", value: null, nonGreen: true },
+  { match: "CONSOLIDACAO|UNITIZACAO", label: "Ova (alocação de material)", value: null, nonGreen: true },
+];
+const REF_CPU = { green: 3331.79, other: 3887.37 };
+
+/** Confere uma linha de custo com o tarifário. Retorna { expected, ok, note } ou null. */
+function tariffCheck(line, tariff) {
+  const n = norm(line.service.name);
+  let t;
+  if (/ARMAZENAGEM/.test(n)) t = tariff.find((x) => x.match === (line.group === "extra_storage" ? "ARMAZENAGEM#2" : "ARMAZENAGEM#1"));
+  else t = tariff.find((x) => !x.match.startsWith("ARMAZENAGEM") && new RegExp(norm(x.match).split("|").map((y) => y.replace(/[.*+?^${}()[\]\\]/g, "\\$&")).join("|")).test(n));
+  if (!t) return null;
+  if (t.value === null || t.value === undefined || t.value === "") return { expected: null, ok: true, variable: true, t };
+  const qtyM = String(line.service.obs || "").match(/por\s+(\d+)\s+solicita/i);
+  const qty = line.group === "extra_storage" ? line.qty || 1 : qtyM ? +qtyM[1] : 1;
+  const expected = +t.value * qty;
+  const diff = line.value - expected;
+  const ok = t.min ? diff > -0.05 : Math.abs(diff) <= 0.05;
+  return { expected, diff, ok, aboveMin: t.min && diff > 0.05, t, nonGreen: !!t.nonGreen };
+}
+
+/* ------------------------------------------------------------------ planilha COMEX (histórico de muitos processos) */
+const CX = {
+  HEAD: {
+    id: /^IRA$/, duimp: /^DUIMP$/, batch: /^BATCH$/, bl: /^BL$/, cont: /^CONTAINER ID$/, channel: /^CHANNEL$/,
+    presence: /CARGO PRESENCE/, cleared: /CLEARANCE COMPLETED/, pickup: /PICK-?UP DATE/, returned: /CONTAINER RETURNED DATE/,
+    storageDays: /^STORAGE PERIOD/, overDays: /^OVER STORAGE/, demDays: /^DEMURRAGE PERIOD/, demTime: /^DEMURRAGE TIME/,
+    cif: /^CIF$/, ff: /FREIGHT FORWARDER FEE/, storage: /^STORAGE FEE/, demurrage: /^DEMURRAGE FEE/, siscomex: /^SISCOMEX FEE/,
+    broker: /^BROKER FEE/, inspection: /CUSTOMS INSPECTION FEE/, other: /OTHER CUSTOMS CLEARANCE FEE/, afrmm: /^AFRMM/,
+  },
+  findHeader(g) {
+    for (let r = 0; r < Math.min(g.length, 30); r++) {
+      const map = {};
+      (g[r] || []).forEach((v, c) => { const n = norm(v); for (const [k, re] of Object.entries(this.HEAD)) if (!(k in map) && re.test(n)) map[k] = c; });
+      if ("id" in map && "cont" in map && ("storage" in map || "channel" in map)) return { r, map };
+    }
+    return null;
+  },
+  isComex(book) { return book.sheets.some((sh) => this.findHeader(sh.grid)) || book.sheets.some((sh) => this.payHeader(sh.grid)); },
+  parse(book) {
+    const procs = {};
+    for (const sh of book.sheets) {
+      const h = this.findHeader(sh.grid);
+      if (!h) continue;
+      const M = h.map, g = sh.grid;
+      const v = (row, k) => (k in M ? row[M[k]] : undefined);
+      const nn = (x) => { const y = num(x); return isNaN(y) ? null : y; };
+      const day = (x) => { const y = nn(x); return y === null || y < 0 || y > 2000 ? null : y; };
+      const ch = (x) => { const n = norm(x); return /VERM|RED/.test(n) ? "Vermelho" : /AMAR|YELL/.test(n) ? "Amarelo" : /VERD|GREEN/.test(n) ? "Verde" : /CINZ|GREY|GRAY/.test(n) ? "Cinza" : ""; };
+      for (let r = h.r + 1; r < g.length; r++) {
+        const row = g[r]; if (!row) continue;
+        const id = procId(v(row, "id")); if (!id) continue;
+        let p = procs[id];
+        if (!p) {
+          p = procs[id] = {
+            id, duimp: String(v(row, "duimp") ?? ""), batch: String(v(row, "batch") ?? ""), bl: String(v(row, "bl") ?? ""), n: 0, channel: ch(v(row, "channel")),
+            presence: toISO(v(row, "presence")), cleared: toISO(v(row, "cleared")), pickup: toISO(v(row, "pickup")), returned: "",
+            storageDays: null, overDays: null, demDays: null, demTime: null, cif: nn(v(row, "cif")),
+            ff: nn(v(row, "ff")) || 0, storage: nn(v(row, "storage")) || 0, demurrage: nn(v(row, "demurrage")) || 0, siscomex: nn(v(row, "siscomex")) || 0,
+            broker: nn(v(row, "broker")) || 0, inspection: nn(v(row, "inspection")) || 0, other: nn(v(row, "other")) || 0, afrmm: nn(v(row, "afrmm")) || 0,
+          };
+        }
+        p.n++;
+        const mx = (k, x) => { if (x !== null && (p[k] === null || x > p[k])) p[k] = x; };
+        mx("storageDays", day(v(row, "storageDays"))); mx("overDays", day(v(row, "overDays"))); mx("demDays", day(v(row, "demDays"))); mx("demTime", day(v(row, "demTime")));
+        const ret = toISO(v(row, "returned")); if (ret > p.returned) p.returned = ret;
+        if (!p.channel) p.channel = ch(v(row, "channel"));
+        if (!p.pickup) p.pickup = toISO(v(row, "pickup"));
+      }
+    }
+    return { processes: procs, payments: this.payments(book) };
+  },
+  payHeader(g) {
+    for (let r = 0; r < Math.min(g.length, 10); r++) {
+      const n = (g[r] || []).map(norm);
+      if (n.some((x) => /PRIMEIRO APROVADOR/.test(x)) && n.some((x) => /^PROCESSO$/.test(x))) {
+        const f = (re) => n.findIndex((x) => re.test(x));
+        return { r, map: { id: f(/^PROCESSO$/), date: f(/DATE OF PAYMENT|DATA PREVISTA/), status: f(/^STATUS$/), value: f(/VALOR TOTAL/), type: f(/TIPO IMPOSTO/), supplier: f(/^FORNECEDOR$/), ap1: f(/PRIMEIRO APROVADOR/), ap2: f(/SEGUNDO APROVADOR/), obs: f(/^OBSERVACOES$/) } };
+      }
+    }
+    return null;
+  },
+  /** Pagamentos feitos pelo sistema (ex.: aba "Other Fees"). Nomes de pessoas não são guardados: só se houve 1º/2º aprovador. */
+  payments(book) {
+    const out = [];
+    for (const sh of book.sheets) {
+      const h = this.payHeader(sh.grid); if (!h) continue;
+      const M = h.map;
+      for (let r = h.r + 1; r < sh.grid.length; r++) {
+        const row = sh.grid[r]; if (!row) continue;
+        const id = procId(row[M.id]); if (!id) continue;
+        const has = (i) => i >= 0 && String(row[i] ?? "").trim() !== "";
+        out.push({ id, date: toISO(row[M.date]), status: String(row[M.status] ?? ""), value: num(row[M.value]) || 0, type: String(row[M.type] ?? ""),
+          kind: /LAUDO|ENGENH/i.test(String(row[M.obs] ?? "") + " " + String(row[M.supplier] ?? "")) ? "laudo" : "outro", ap1: has(M.ap1), ap2: has(M.ap2), obs: String(row[M.obs] ?? "").replace(/\s+/g, " ").trim().slice(0, 120) });
+      }
+    }
+    return out;
   },
 };

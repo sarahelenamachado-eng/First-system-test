@@ -7,27 +7,18 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="top">
-  <div class="top-row">
-    <div class="brand">Custos Aduaneiros <small>Storage · Customs costs · Santos Brasil</small></div>
-    <span id="store" class="store-badge"></span>
-  </div>
-  <div class="redbar"></div>
-  <nav>
-    <a href="#painel">Painel</a>
-    <a href="#processos">Processos</a>
-    <a href="#extras">Custos extras</a>
-    <a href="#canal">Canal vermelho</a>
-    <a href="#importar">Importar</a>
-    <a href="#config">Config.</a>
-  </nav>
-</header>
-<main id="view"><p class="muted">Carregando…</p></main>
+<div class="layout">
+  <aside id="side" class="side"></aside>
+  <main id="view"><p class="muted">Carregando…</p></main>
+</div>
 <div id="modal" class="modal hidden"><div class="modal-box"><button class="close" onclick="closeModal()">×</button><div id="modal-body"></div></div></div>
 <div id="toast" class="toast hidden"></div>
 <div id="tip" class="hidden"></div>
+<script src="i18n.js"></script>
+<script src="dict.js"></script>
 <script src="book.js"></script>
 <script src="parse.js"></script>
+<script src="flows.js"></script>
 <script src="data.js"></script>
 <script src="seed.js"></script>
 <script src="app.js"></script>

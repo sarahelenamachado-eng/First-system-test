@@ -27,7 +27,7 @@ const Book = {
     };
   },
 
-  async read(file) {
+  async read(file, opts = {}) {
     const ext = file.name.toLowerCase().split(".").pop();
     if (ext === "csv" || ext === "txt") return { sheets: [{ name: file.name, grid: this.parseCsv((await file.text()).replace(/^﻿/, "")), merges: [] }] };
     const get = await this.unzip(await file.arrayBuffer());
@@ -45,33 +45,39 @@ const Book = {
 
     const out = [];
     for (const s of byTag(wb, "sheet")) {
+      const name = s.getAttribute("name") || "";
+      if (opts.only && !opts.only(name)) continue;
       const rid = s.getAttribute("r:id") || s.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
       const rel = byTag(rels, "Relationship").find((r) => r.getAttribute("Id") === rid);
       if (!rel) continue;
       const t = rel.getAttribute("Target");
       const path = t.startsWith("/") ? t.slice(1) : "xl/" + t.replace(/^\.\//, "");
-      const sheet = xml(await get(path));
-      if (!sheet) continue;
+      const text = await get(path);
+      if (!text) continue;
       const grid = [];
-      for (const row of byTag(sheet, "row")) {
-        for (const c of byTag(row, "c")) {
-          const ref = c.getAttribute("r") || "A1";
-          const ty = c.getAttribute("t"), v = byTag(c, "v")[0]?.textContent ?? "";
-          let val = v;
-          if (ty === "s") val = shared[+v] ?? "";
-          else if (ty === "inlineStr") val = byTag(c, "t").map((x) => x.textContent).join("");
-          else if (ty === "str" || ty === "e") val = v;
-          else if (ty === "b") val = v === "1" ? "TRUE" : "FALSE";
-          else if (v !== "" && isDateFmt(xfs[+(c.getAttribute("s") || 0)] ?? 0)) val = serialToDate(+v);
-          else if (v !== "" && !isNaN(+v)) val = +v;
-          if (val !== "") (grid[rowIdx(ref)] ??= [])[colIdx(ref)] = val;
-        }
+      // leitura por expressão regular (rápida, aguenta abas de dezenas de MB)
+      const unx = (x) => x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&amp;/g, "&");
+      const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+      const attr = (a, k) => { const m = a.match(new RegExp("\\b" + k + '="([^"]*)"')); return m ? m[1] : null; };
+      let m, maxRow = opts.maxRows || Infinity;
+      while ((m = cellRe.exec(text))) {
+        const a = m[1], inner = m[2] || "";
+        const ref = attr(a, "r"); if (!ref) continue;
+        const ri = rowIdx(ref); if (ri >= maxRow) break;
+        const ty = attr(a, "t"), st = +(attr(a, "s") || 0);
+        const vm = inner.match(/<v>([\s\S]*?)<\/v>/);
+        const v = vm ? unx(vm[1]) : "";
+        let val = v;
+        if (ty === "s") val = shared[+v] ?? "";
+        else if (ty === "inlineStr") val = unx((inner.match(/<t[^>]*>([\s\S]*?)<\/t>/g) || []).map((x) => x.replace(/<[^>]+>/g, "")).join(""));
+        else if (ty === "str" || ty === "e") val = v;
+        else if (ty === "b") val = v === "1" ? "TRUE" : "FALSE";
+        else if (v !== "" && isDateFmt(xfs[st] ?? 0)) val = serialToDate(+v);
+        else if (v !== "" && !isNaN(+v)) val = +v;
+        if (val !== "") (grid[ri] ??= [])[colIdx(ref)] = val;
       }
-      const merges = byTag(sheet, "mergeCell").map((m) => {
-        const [a, b] = (m.getAttribute("ref") || "").split(":");
-        return b ? { r0: rowIdx(a), c0: colIdx(a), r1: rowIdx(b), c1: colIdx(b) } : null;
-      }).filter(Boolean);
-      out.push({ name: s.getAttribute("name") || path, grid, merges });
+      const merges = [...text.matchAll(/<mergeCell ref="([A-Z]+\d+):([A-Z]+\d+)"/g)].map((mm) => ({ r0: rowIdx(mm[1]), c0: colIdx(mm[1]), r1: rowIdx(mm[2]), c1: colIdx(mm[2]) }));
+      out.push({ name: name || path, grid, merges });
     }
     return { sheets: out };
   },

@@ -23,7 +23,11 @@ const Data = {
   folder: null,
 
   empty() {
-    return { version: 1, processes: {}, red: {}, notes: {}, rules: DEFAULT_RULES.map((r) => ({ ...r })), settings: { freeDays: 15, usdRate: 5.4 }, log: [] };
+    return {
+      version: 2, processes: {}, red: {}, notes: {}, pay: {}, uploads: [], history: null, payments: [],
+      rules: DEFAULT_RULES.map((r) => ({ ...r })), tariff: DEFAULT_TARIFF.map((t) => ({ ...t })),
+      settings: { freeDays: 15, demurrageDays: 40 }, log: [],
+    };
   },
 
   async load() {
@@ -82,26 +86,82 @@ const Data = {
 
   /* ---------- consultas */
   rules() { return this.db.rules?.length ? this.db.rules : DEFAULT_RULES; },
+  tariff() { return this.db.tariff?.length ? this.db.tariff : DEFAULT_TARIFF; },
   freeDays() { return +this.db.settings.freeDays || 15; },
-  analysis(id) { const P = this.db.processes[id]; return P ? analyze(P, this.rules(), this.freeDays()) : null; },
+  analysis(id) { const P = this.db.processes[id]; return P ? analyze(P, this.rules(), this.freeDays(), this.tariff()) : null; },
+  hist(id) { return this.db.history?.processes?.[id] || null; },
 
-  /** Lista unificada: processos com demonstrativo + processos só no controle de canal. */
-  rows() {
-    const ids = new Set([...Object.keys(this.db.processes), ...Object.keys(this.db.red)]);
+  /** Canal e situação unificados: planilha Red Channel > histórico COMEX > demonstrativo. */
+  merged(id, P, R, A, H) {
+    const channel = R?.channel || H?.channel || "";
+    // na COMEX, "clearance completed" anterior à presença de carga é a data de registro da DUIMP: não vale como desembaraço
+    const hCleared = H?.cleared && (!H.presence || H.cleared >= H.presence) ? H.cleared : "";
+    let stage = "";
+    if (R ? R.status === "Desembaraçado" || R.clearedAt : hCleared) stage = "cleared";
+    else if (R) stage = (R.rounds || []).some((r) => r.req && !r.sub) ? "pending" : "inspection";
+    if (A?.lastExit && A.lastExit <= new Date().toISOString().slice(0, 10) && (stage === "cleared" || H?.pickup)) stage = "out";
+    if (!stage && P) stage = "unknown";
+    const green = channel === "Verde";
+    const mapaFlag = !!(A && green && A.extra_customs > 0.004);
+    return { channel, stage, clearedAt: R ? R.clearedAt || "" : hCleared, mapaFlag, channelSource: R?.channel ? "red" : H?.channel ? "comex" : "" };
+  },
+
+  /** Processos acompanhados = os que têm demonstrativo da Santos Brasil. A planilha Red Channel só complementa. */
+  rows(includeRedOnly = false) {
+    const ids = new Set(Object.keys(this.db.processes));
+    if (includeRedOnly) Object.keys(this.db.red).forEach((k) => ids.add(k));
     return [...ids].map((id) => {
-      const P = this.db.processes[id] || null, R = this.db.red[id] || null;
-      return { id, P, R, A: P ? analyze(P, this.rules(), this.freeDays()) : null };
+      const P = this.db.processes[id] || null, R = this.db.red[id] || null, H = this.hist(id);
+      const A = P ? analyze(P, this.rules(), this.freeDays(), this.tariff()) : null;
+      return { id, P, R, A, H, M: this.merged(id, P, R, A, H) };
     }).sort((a, b) => (b.A?.total || 0) - (a.A?.total || 0) || a.id.localeCompare(b.id));
   },
+  redOnly() { return Object.keys(this.db.red).filter((id) => !this.db.processes[id]); },
 
-  upsertProcess(P) {
+  /* ---------- importações (cada arquivo vira um registro que pode ser excluído) */
+  newUpload(name, kind) {
+    const u = { id: "U" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, kind, at: new Date().toISOString(), ids: [], prev: {} };
+    this.db.uploads.unshift(u);
+    return u;
+  },
+  upsertProcess(P, u) {
     const prev = this.db.processes[P.id];
-    this.db.processes[P.id] = P;
+    u.prev[P.id] = prev ? JSON.parse(JSON.stringify(prev)) : null;
+    u.ids.push(P.id);
+    this.db.processes[P.id] = { ...P, uploadId: u.id };
     this.log(`${prev ? "Atualizado" : "Importado"} demonstrativo ${P.id} (${P.containers.length} contêineres, arquivo ${P.file})`);
   },
-  upsertRed(rec, merge = true) {
-    const prev = this.db.red[rec.id] || {};
+  upsertRed(rec, u) {
+    const prev = this.db.red[rec.id] || null;
+    u.prev[rec.id] = prev ? JSON.parse(JSON.stringify(prev)) : null;
+    u.ids.push(rec.id);
     const clean = Object.fromEntries(Object.entries(rec).filter(([, v]) => v !== "" && v !== null && v !== undefined && !(Array.isArray(v) && !v.length)));
-    this.db.red[rec.id] = merge ? { ...prev, ...clean, updatedAt: new Date().toISOString() } : { ...rec, updatedAt: new Date().toISOString() };
+    this.db.red[rec.id] = { ...(prev || {}), ...clean, uploadId: u.id, updatedAt: new Date().toISOString() };
+  },
+  setHistory(h, u) {
+    u.prev.history = this.db.history ? { uploadId: this.db.history.uploadId } : null;
+    this.db.history = { ...h, payments: undefined, uploadId: u.id, file: u.name, at: u.at };
+    this.db.payments = (h.payments || []).map((p) => ({ ...p, uploadId: u.id }));
+    u.ids = Object.keys(h.processes);
+    this.db.uploads = this.db.uploads.filter((x) => x.kind !== "cx" || x.id === u.id); // só um histórico por vez
+  },
+  /** Exclui um arquivo importado: desfaz o que ele trouxe (volta à versão anterior, se houver). */
+  async deleteUpload(uid) {
+    const u = this.db.uploads.find((x) => x.id === uid);
+    if (!u) return;
+    if (u.kind === "sb" || u.kind === "rc") {
+      const store = u.kind === "sb" ? this.db.processes : this.db.red;
+      for (const id of new Set(u.ids)) {
+        if (store[id]?.uploadId !== uid) continue; // já substituído por outro arquivo
+        const prev = u.prev[id];
+        if (prev) store[id] = prev; else delete store[id];
+      }
+    } else if (u.kind === "cx") {
+      if (this.db.history?.uploadId === uid) this.db.history = null;
+      this.db.payments = (this.db.payments || []).filter((p) => p.uploadId !== uid);
+    }
+    this.db.uploads = this.db.uploads.filter((x) => x.id !== uid);
+    if (this.folder && u.path) { try { const parts = u.path.split("/"); const d = await this.folder.getDirectoryHandle(parts[0]); await d.removeEntry(parts[1]); } catch { /* arquivo já removido */ } }
+    this.log(`Excluído o arquivo importado ${u.name}`);
   },
 };
