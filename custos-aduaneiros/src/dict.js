@@ -282,6 +282,8 @@ const DICT = Object.fromEntries([
   ["Nomes de pessoas e de fornecedores não são guardados no sistema.", "Names of people and suppliers are not stored in the system.", "系统不保存个人及供应商名称。"],
   ["Laudo técnico (engenheiro)", "Technical report (engineer)", "技术鉴定报告（工程师）"],
   ["Outros", "Other", "其他"],
+  ["Confirmar", "Confirm", "确认"],
+  ["Na página publicada o download pode ser bloqueado: use o arquivo index.html para exportar.", "On the published page downloads may be blocked: use the index.html file to export.", "在发布的页面上下载可能被阻止：请使用 index.html 文件导出。"],
   ["Só processos com taxa de armazenagem lançada.", "Only processes with a storage fee recorded.", "仅统计已录入堆存费的单票。"],
   ["Importe a planilha COMEX para ver os pagamentos feitos pelo sistema e quantos aprovadores cada um teve.", "Import the COMEX sheet to see the payments made through the system and how many approvers each had.", "导入 COMEX 表查看系统付款及每笔的审批人数。"],
   ["Aprovação dos processos", "Process approvals", "单票审批"],

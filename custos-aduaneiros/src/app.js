@@ -26,6 +26,17 @@ let F = { q: "", ch: "", month: "" };
 function toast(msg) { const el = $("#toast"); el.textContent = msg; el.classList.remove("hidden"); clearTimeout(el._h); el._h = setTimeout(() => el.classList.add("hidden"), 2600); }
 function openModal(html) { $("#modal-body").innerHTML = html; $("#modal").classList.remove("hidden"); }
 function closeModal() { $("#modal").classList.add("hidden"); }
+/** Confirmação dentro da página (substitui confirm(), que não aparece na página publicada). */
+function ask(msg) {
+  return new Promise((res) => {
+    const box = document.createElement("div");
+    box.className = "modal"; box.style.zIndex = 40;
+    box.innerHTML = `<div class="modal-box" style="width:min(460px,100%)"><p>${esc(msg)}</p><div class="row"><button class="btn primary" data-a="1">${t("Confirmar")}</button><button class="btn" data-a="0">${t("Cancelar")}</button></div></div>`;
+    document.body.appendChild(box);
+    box.addEventListener("click", (e) => { const a = e.target.closest("[data-a]"); if (!a && e.target !== box) return; box.remove(); res(a?.dataset.a === "1"); });
+    box.querySelector("[data-a='1']").focus();
+  });
+}
 
 function chBadge(ch, src) { return ch ? `<span class="badge ch-${esc(ch)}" ${src === "comex" ? `title="${esc(t("Canal da planilha COMEX"))}"` : ""}>${esc(t(ch))}${src === "comex" ? " ·C" : ""}</span>` : `<span class="badge b-none">${t("sem canal")}</span>`; }
 function stageBadge(M, R) {
@@ -372,7 +383,7 @@ function editPay(id) {
   $("#pay-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target));
-    if (fd.icg && fd.approval !== "aprovado" && !confirm(t("Atenção: lançamento no ICG sem aprovação dos diretores registrada. Salvar mesmo assim?"))) return;
+    if (fd.icg && fd.approval !== "aprovado" && !(await ask(t("Atenção: lançamento no ICG sem aprovação dos diretores registrada. Salvar mesmo assim?")))) return;
     Data.db.pay[id] = { ...fd, paid: fd.paid === "" ? null : +fd.paid, nfeOk: !!fd.nfeOk, updatedAt: new Date().toISOString() };
     Data.log(`Pagamento ${id}: ${fd.approval}`); await Data.save(); closeModal(); toast(t("Salvo")); route();
   });
@@ -473,7 +484,7 @@ function editRed(id) {
     await Data.save(); closeModal(); toast(t("Salvo")); route();
   });
 }
-async function delRed(id) { if (!confirm(t("Excluir o registro de desembaraço de {id}?", { id }))) return; delete Data.db.red[id]; await Data.save(); closeModal(); route(); }
+async function delRed(id) { if (!(await ask(t("Excluir o registro de desembaraço de {id}?", { id })))) return; delete Data.db.red[id]; await Data.save(); closeModal(); route(); }
 
 /* ------------------------------------------------------------------ CUSTOS EXTRAS */
 function viewExtras(sel) {
@@ -734,7 +745,7 @@ function viewImportar() {
 }
 async function delUpload(uid) {
   const u = Data.db.uploads.find((x) => x.id === uid);
-  if (!u || !confirm(t("Excluir o arquivo {f} e desfazer o que ele trouxe?", { f: u.name }))) return;
+  if (!u || !(await ask(t("Excluir o arquivo {f} e desfazer o que ele trouxe?", { f: u.name })))) return;
   await Data.deleteUpload(uid); await Data.save(); toast(t("Arquivo excluído")); route();
 }
 async function readFiles(files) {
@@ -847,16 +858,16 @@ function addRule() { Data.db.rules = [...readRules(), { match: "", label: "", gr
 function delRule(i) { const r = readRules(); r.splice(i, 1); Data.db.rules = r; viewConfig(); }
 function moveRule(i, d) { const r = readRules(); const j = i + d; if (j < 0 || j >= r.length) return; [r[i], r[j]] = [r[j], r[i]]; Data.db.rules = r; viewConfig(); }
 async function saveRules() { Data.db.rules = readRules().filter((r) => r.match.trim()); Data.log("Regras de classificação alteradas"); await Data.save(); toast(t("Regras salvas: os custos foram recalculados")); viewConfig(); }
-async function resetRules() { if (!confirm(t("Restaurar as regras padrão?"))) return; Data.db.rules = DEFAULT_RULES.map((r) => ({ ...r })); await Data.save(); viewConfig(); }
+async function resetRules() { if (!(await ask(t("Restaurar as regras padrão?")))) return; Data.db.rules = DEFAULT_RULES.map((r) => ({ ...r })); await Data.save(); viewConfig(); }
 async function saveTariff() { const tf = Data.tariff().map((x) => ({ ...x })); $$("#tariff [data-t]").forEach((el) => { tf[+el.dataset.t].value = el.value === "" ? null : +el.value; }); Data.db.tariff = tf; Data.log("Tarifário alterado"); await Data.save(); toast(t("Salvo")); }
 async function saveParams() { Data.db.settings.freeDays = +$("#freeDays").value || 15; Data.db.settings.demurrageDays = +$("#demDays").value || 40; await Data.save(); toast(t("Salvo")); }
 async function pickFolder() { try { await Data.pickFolder(); renderShell(); toast(t("Pasta conectada")); route(); } catch (e) { if (e.name !== "AbortError") toast(e.message); } }
 async function reconnect() { if (await Data.reconnect()) { renderShell(); route(); } }
-function download(name, data, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+function download(name, data, type) { let framed = false; try { framed = window.top !== window.self; } catch { framed = true; } if (framed) toast(t("Na página publicada o download pode ser bloqueado: use o arquivo index.html para exportar.")); const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 function exportJson() { download(`custos-aduaneiros-backup-${today()}.json`, JSON.stringify(Data.db, null, 1), "application/json"); }
 async function importJson(file) {
   if (!file) return;
-  try { const db = JSON.parse(await file.text()); if (!db.processes) throw new Error("?"); if (!confirm(t("Substituir todos os dados atuais pelo backup?"))) return; Data.db = Object.assign(Data.empty(), db); await Data.save(); toast(t("Backup restaurado")); route(); }
+  try { const db = JSON.parse(await file.text()); if (!db.processes) throw new Error("?"); if (!(await ask(t("Substituir todos os dados atuais pelo backup?")))) return; Data.db = Object.assign(Data.empty(), db); await Data.save(); toast(t("Backup restaurado")); route(); }
   catch { toast(t("Arquivo inválido")); }
 }
 function exportCsv() {
@@ -878,7 +889,7 @@ async function loadSeed() {
   }
   Data.log("Carregados os exemplos"); await Data.save(); toast(t("Exemplos carregados")); location.hash = "#painel"; route();
 }
-async function clearAll() { if (!confirm(t("Apagar TODOS os processos, registros de canal, histórico e anotações?"))) return; const { rules, settings, tariff } = Data.db; Data.db = Object.assign(Data.empty(), { rules, settings, tariff }); await Data.save(); route(); }
+async function clearAll() { if (!(await ask(t("Apagar TODOS os processos, registros de canal, histórico e anotações?")))) return; const { rules, settings, tariff } = Data.db; Data.db = Object.assign(Data.empty(), { rules, settings, tariff }); await Data.save(); route(); }
 function emptyState() {
   view().innerHTML = `<div class="panel empty"><h1>${t("Custos aduaneiros")}</h1>
     <p>${t("Comece importando os demonstrativos da Santos Brasil (IRAxxxx-xx_Cost_Breakdown.xlsx) e, se quiser, a planilha Red Channel e a planilha COMEX.")}</p>
