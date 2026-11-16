@@ -429,7 +429,7 @@ function approvalEmail(id) {
     <label class="f" style="margin-top:8px">${t("Texto")}<textarea id="mail-body" style="min-height:300px;font-family:inherit"></textarea></label>
     <div class="row" style="margin-top:8px"><button class="btn primary" id="mail-copy">${t("Copiar texto")}</button><a class="btn" id="mail-link">${t("Abrir no e-mail")}</a>
       <button class="btn" id="mail-sent">${t("Marcar como enviado")}</button></div>`);
-  $("#mail-lang").value = LANG; render(LANG);
+  const ml = LANG === "bi" ? "en+zh" : LANG; $("#mail-lang").value = ml; render(ml);
   $("#mail-lang").addEventListener("change", (e) => render(e.target.value));
   $("#mail-copy").addEventListener("click", () => navigator.clipboard?.writeText($("#mail-subject").value + "\n\n" + $("#mail-body").value).then(() => toast(t("Copiado")), () => toast(t("Não foi possível copiar"))));
   $("#mail-sent").addEventListener("click", async () => {
@@ -537,7 +537,7 @@ function viewCanal() {
   view().innerHTML = `<div class="title-row"><h1>${t("Canal vermelho e desembaraço")}</h1><div class="row">
     <button class="btn primary" onclick="editRed('')">+ ${t("Novo registro")}</button><a class="btn" href="#importar">⬆ ${t("Importar planilha Red Channel")}</a></div></div>
   ${filterBar()}
-  <div class="panel"><h2>${t("Resumo")}</h2><p>${esc(s[LANG])}</p>${LANG !== "pt" ? "" : `<p class="muted small">${esc(s.en)}<br>${esc(s.zh)}</p>`}
+  <div class="panel"><h2>${t("Resumo")}</h2><p>${LANG === "bi" ? `${esc(s.zh)}<br><span class="bi-en">${esc(s.en.replace(/^Summary: /, ""))}</span>` : esc(s[LANG])}</p>${LANG !== "pt" ? "" : `<p class="muted small">${esc(s.en)}<br>${esc(s.zh)}</p>`}
     <p class="small">${t("Cruzamento com a Santos Brasil: {a} de {b} processos da planilha Red Channel têm demonstrativo importado; os demais aguardam o demonstrativo (não são duplicados).", { a: found, b: rows.length })}</p>
     <button class="btn sm" onclick="copySummary()">${t("Copiar resumo (EN / 中文)")}</button></div>
   <div class="panel"><div class="tbl-wrap"><table><thead><tr><th>${t("Processo")}</th><th>${t("Demonstrativo Santos Brasil")}</th><th>${t("Lote")}</th><th class="n">${t("Cont.")}</th><th>${t("Canal")}</th><th>${t("Data canal")}</th><th>${t("Exigências")}</th><th>${t("Situação")}</th><th class="n">${t("Dias")}</th>
@@ -905,10 +905,10 @@ const NAV = [
 function renderShell() {
   $("#side").innerHTML = `<div class="brand">${t("Custos Aduaneiros")}<small>Storage · Customs costs · Santos Brasil</small></div>
     <select class="lang" onchange="setLang(this.value)" aria-label="Idioma / Language / 语言">
-      <option value="pt" ${LANG === "pt" ? "selected" : ""}>Português</option><option value="en" ${LANG === "en" ? "selected" : ""}>English</option><option value="zh" ${LANG === "zh" ? "selected" : ""}>中文</option></select>
+      <option value="pt" ${LANG === "pt" ? "selected" : ""}>Português</option><option value="en" ${LANG === "en" ? "selected" : ""}>English</option><option value="zh" ${LANG === "zh" ? "selected" : ""}>中文</option><option value="bi" ${LANG === "bi" ? "selected" : ""}>中文 + English</option></select>
     <nav>${NAV.map(([h, label, ic]) => `<a href="#${h}" data-h="${h}"><span class="ic">${ic}</span>${t(label)}</a>`).join("")}</nav>
     <span class="store-badge ${Data.folder ? "on" : ""}">${Data.folder ? t("Pasta") + ": " + esc(Data.folder.name) : t("Salvo neste navegador")}</span>`;
-  document.title = t("Custos Aduaneiros");
+  document.title = biFlat(t("Custos Aduaneiros"));
   markNav();
 }
 function markNav() {

@@ -197,3 +197,8 @@ tr.risk-row td { background: #fff3f3; }
 tr.counter-row td { background: var(--ok-bg); }
 .hidden { display: none !important; }
 .pnode .tag { overflow-wrap: anywhere; }
+/* modo bilíngue 中文 + English */
+.bi-en { color: var(--ink-2); font-size: .88em; font-weight: inherit; }
+.bi-block { display: block; margin-top: 2px; }
+.bi-pair { display: inline-block; line-height: 1.25; }
+.lead .bi-en, .lead .bi-block { font-size: .92em; }

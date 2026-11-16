@@ -1,7 +1,7 @@
 # Custos Aduaneiros — monitoramento, breakdown e controle de pagamentos
 
 Sistema para acompanhar os custos de terminal do desembaraço (**KPI 1 · Storage**, **KPI 2 · Demurrage**, **KPI 3 · Customs costs**),
-com os demonstrativos da Santos Brasil, o controle do canal vermelho e o histórico COMEX. Interface em **português, inglês e chinês**
+com os demonstrativos da Santos Brasil, o controle do canal vermelho e o histórico COMEX. Interface em **português, inglês, chinês ou 中文 + English** (chinês e inglês juntos, um abaixo do outro)
 (seletor no menu lateral).
 
 ## Como usar
