@@ -530,18 +530,17 @@ critério da organização e siga-os quando aplicáveis.`; },
   },
 
   // ---------------------------------------------------------------- summaries
+  /** Conclusão do summary (item 1 do modelo): um parágrafo + pontos-chave numerados. */
   async narrative(summary) {
-    const k = summary.kpis;
-    const pp = summary.project_progress || [], pi = summary.progress_items || [];
-    const basic = t("NARRATIVE_BASIC", { ...k, alerts: summary.alerts.length })
-      + (pp.length ? "\n" + t("Progresso registrado em {n} projetos: {list}.", { n: pp.length, list: pp.map((p) => `${p.id} ${p.name} (${p.updates.length})`).join("; ") }) : "")
-      + (pi.length ? "\n" + `${t(summary.progress_title || "Itens com progresso hoje")}: ${pi.length}` + "\n" + pi.map((i) => `• ${i.kind === "items" ? i.id : i.project + " · " + i.id} ${i.title}: ${i.updates.map((u) => u.text).join("; ")}`).join("\n") : "");
+    const basic = Core.reportConclusion(summary);
     if (!this.enabled()) return basic;
-    const prompt = `Escreva os DESTAQUES deste summary de governança (${summary.type}) em até 8 bullets curtos, em ${I18N.aiLanguage()}: `
-      + `comece por um bullet "${t(summary.progress_title || "Itens com progresso hoje")}:" listando cada item de progress_items com o progresso registrado; depois `
-      + "o que mudou (inclua os progressos registrados nos projetos e itens, e o que saiu das reuniões), o que exige atenção da diretoria, riscos, decisões e próximos passos. Use Hoshin Kanri "
-      + "para conectar com os objetivos estratégicos. Dados:\n" + JSON.stringify(summary).slice(0, 80000);
-    try { return await this.call(prompt, null, "low", 4000); }
+    const r = summary.report;
+    const data = { periodo: summary.period, indicadores: summary.kpis, reunioes: r.meetings, pendentes: r.open, concluidos: r.done, projetos_e_itens_com_progresso: r.projects, alertas: summary.alerts.map((a) => a.text) };
+    const prompt = `Escreva a CONCLUSÃO do resumo de governança (${summary.type}) em ${I18N.aiLanguage()}, no formato: `
+      + "um parágrafo curto dizendo quantas reuniões houve, quantos tópicos foram discutidos e o principal resultado; "
+      + "depois uma lista numerada (1., 2., …) com até 8 pontos-chave: decisões e resultados das reuniões, progresso dos projetos e itens, "
+      + "pendências que exigem atenção (prazos vencidos) e próximos passos. Texto direto, sem títulos e sem markdown. Dados:\n" + JSON.stringify(data).slice(0, 80000);
+    try { return (await this.call(prompt, null, "low", 4000)).trim(); }
     catch (e) { return `${basic}\n(${t("Destaques da IA indisponíveis:")} ${e.message})`; }
   },
 };

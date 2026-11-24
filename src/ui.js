@@ -267,8 +267,14 @@ function viewEntradas() {
   return `<h1>${t("Inputs management")}</h1>
   <div class="steps"><span class="step on">${t("1. Entrada da informação")}</span><span class="step">${t("2. Assessment (relação + classificação)")}</span><span class="step">${t("3. Definição")}</span><span class="step">${t("4. Lista geral + módulos")}</span></div>
   <div class="grid" style="grid-template-columns: minmax(320px, 1.1fr) minmax(300px, 1fr)">
-  <div class="card"><h2>${t("Nova entrada")}</h2>${inputForm()}
-    <div class="actions"><button onclick="busy(this, saveInput)">${t("Registrar e avaliar com IA")}</button></div></div>
+  <div class="card quick-input"><h2>⚡ ${t("Nova entrada")}</h2>${LAST_QUICK ? quickResult(LAST_QUICK) : ""}
+    <p class="muted">${t("QUICK_INPUT_HINT")}</p>
+    <textarea id="f-text" style="min-height:120px" placeholder="${esc(t("QUICK_INPUT_PLACEHOLDER"))}"></textarea>
+    <div class="row"><div>${L("Origem")}<select id="f-source">${opts(LIST("sources"), LIST("sources")[0])}</select></div>
+      <div>${L("Responsável")}${personSelect("f-owner", "", "f-area")}</div><div>${L("Prazo")}<input id="f-due" type="date"></div></div>
+    <details class="more"><summary>${t("Mais detalhes (opcional)")}</summary>${inputForm()}</details>
+    <div class="actions"><button id="f-quick" onclick="busy(this, ()=>saveInput(false))">${t("Registrar")}</button>
+      <button class="ghost" id="f-review" onclick="busy(this, ()=>saveInput(true))">${t("Registrar e revisar a classificação")}</button></div></div>
   <div class="card"><h2>${t(FI.all ? "Entradas" : "Entradas pendentes")} (${all.length})</h2>
     <div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(FI.q)}" onchange="FI.q=this.value;FI.page=0;render()">
       <label class="inline-check"><input type="checkbox" ${FI.all ? "checked" : ""} onchange="FI.all=this.checked;FI.page=0;render()"> ${t("Mostrar registradas")}</label></div>
@@ -278,37 +284,59 @@ function viewEntradas() {
   </table>
   ${pages > 1 ? `<div class="pager"><span></span><span><button class="small ghost" ${FI.page === 0 ? "disabled" : ""} onclick="FI.page--;render()">←</button> ${FI.page + 1} / ${pages} <button class="small ghost" ${FI.page >= pages - 1 ? "disabled" : ""} onclick="FI.page++;render()">→</button></span></div>` : ""}</div></div>`;
 }
+let LAST_QUICK = null;
+function quickResult(r) {
+  const c = r.created || {};
+  return `<div class="alert lv-baixa quick-ok">✓ ${t("Registrado")}: <a href="#lista/${c.item}">${esc(c.item)}</a> · ${esc(r.title)}
+    ${c.project ? ` · <a href="#projetos/${c.project}/itens">${t("projeto")} ${esc(c.project)}</a>${c.pitems?.length ? ` (${t("{n} itens", { n: c.pitems.length })})` : ""}` : ""}
+    ${(c.risks || []).length ? ` · ${c.risks.map((x) => `<a href="#riscos/${x}">${x}</a>`).join(", ")}` : ""}
+    <a class="btn small ghost" href="#entradas/${r.input}">${t("Revisar")}</a></div>`;
+}
 function inputForm(pre = {}) {
   const meetings = S.db.meetings.slice().reverse();
-  return `<div class="row"><div>${L("Origem")}<select id="f-source">${opts(LIST("sources"), pre.source || LIST("sources")[0])}</select></div>
-    <div>${L("Tipo")}<select id="f-kind">${opts(LIST("input_kinds"), pre.kind)}</select></div></div>
-  ${L("Título / assunto")}<input id="f-title" value="${esc(pre.title)}">
-  ${L("Descrição do input")}<textarea id="f-desc">${esc(pre.description)}</textarea>
+  return `<div class="row"><div>${L("Tipo")}<select id="f-kind">${opts(LIST("input_kinds"), pre.kind)}</select></div>
+    <div>${L("Título (se quiser outro)")}<input id="f-title" value="${esc(pre.title)}"></div></div>
   ${L("Background / contexto")}<textarea id="f-bg" style="min-height:60px">${esc(pre.background)}</textarea>
   <div class="row"><div>${L("De onde a demanda veio (pessoa / fórum)")}<input id="f-origin" value="${esc(pre.origin)}"></div>
     <div>${L("Reunião")}<select id="f-meeting"><option value="">—</option>${meetings.map((m) => `<option value="${m.id}" ${m.id === pre.meeting_id ? "selected" : ""}>${m.id} · ${esc(titleOf(m))}</option>`).join("")}</select></div></div>
   <div class="row"><div>${L("Departamento (área principal)")}${deptSelect("f-area", pre.area_main)}</div>
     <div>${L("Áreas impactadas")}${chipsPicker("f-areas-imp", pre.areas_impacted, depts())}</div>
     <div>${L("Áreas que impactam")}${chipsPicker("f-areas-by", pre.areas_impacting, depts())}</div></div>
-  <div class="row"><div>${L("Responsável")}${personSelect("f-owner", pre.owner, "f-area")}</div><div>${L("Prazo")}<input id="f-due" type="date" value="${esc(pre.due_date)}"></div></div>`;
+`;
+}
+/** Texto livre -> título (1ª linha) + descrição. Lista numerada logo no início: o título é o 1º subitem. */
+function splitEntry(text) {
+  const lines = text.trim().split("\n"), first = lines[0].replace(/^\s*[-•*]\s*/, "").trim();
+  const subs = AI.subitems(text);
+  if (subs.length >= 2 && /^\s*1\s*(?:[.．]|[)、])/.test(first)) return { title: subs[0].slice(0, 80) + (subs[0].length > 80 ? "…" : ""), description: text.trim() };
+  if (first.length > 160) return { title: first.slice(0, 80).trim() + "…", description: text.trim() };
+  return { title: first, description: lines.slice(1).join("\n").trim() };
 }
 function readInputForm() {
-  return { source: $("#f-source").value, source_detail: $("#f-kind").value, title: $("#f-title").value.trim(), description: $("#f-desc").value,
+  const e = splitEntry($("#f-text").value);
+  return { source: $("#f-source").value, source_detail: $("#f-kind").value, title: $("#f-title").value.trim() || e.title, description: e.description,
     background: $("#f-bg").value, origin: $("#f-origin").value, meeting_id: $("#f-meeting").value, area_main: $("#f-area").value,
     areas_impacted: $("#f-areas-imp").value, areas_impacting: $("#f-areas-by").value, owner: $("#f-owner").value, due_date: $("#f-due").value };
 }
-async function saveInput() {
+async function saveInput(review) {
+  if (!$("#f-text").value.trim()) throw new Error(t("Escreva o que chegou."));
   const data = readInputForm();
-  if (!data.title) throw new Error(t("Informe o título."));
   // evita registrar a mesma demanda duas vezes
   const dupItems = Core.findDuplicates(data.title);
   const norm = (x) => AI.norm(x).replace(/\s+/g, " ").trim();
   const dupInputs = S.db.inputs.filter((i) => i.status !== "Registrado" && norm(i.title) === norm(data.title));
   if ((dupItems.length || dupInputs.length) && !confirm(t("DUP_CONFIRM", { ids: [...dupItems, ...dupInputs.map((i) => i.id)].join(", ") }))) return;
   const rec = await api("inputs", "POST", data);
-  await api(`inputs/${rec.id}/suggest`, "POST");
+  if (review) {
+    await api(`inputs/${rec.id}/suggest`, "POST");
+    await refresh();
+    location.hash = "entradas/" + rec.id;
+    return;
+  }
+  const r = await api(`inputs/${rec.id}/quick`, "POST");
+  LAST_QUICK = { input: rec.id, title: data.title, created: r.created };
+  toast(`${t("Registrado em")} ${r.created.item}` + (r.created.project ? ` · ${t("projeto")} ${r.created.project}` : ""));
   await refresh();
-  location.hash = "entradas/" + rec.id;
 }
 
 /* Itens relacionados escolhidos na avaliação (busca em vez de listar a lista geral inteira). */
@@ -351,6 +379,7 @@ function openTriage(id) {
   ${!done && dups.length ? `<div class="alert lv-alta">⚠ ${t("Possível duplicidade: já existe {ids} com o mesmo título. A entrada será incluída no item existente, a menos que você mude a relação.", { ids: dups.join(", ") })}</div>` : ""}
   ${sug ? `<div class="ai-box"><b>${t("Sugestão da IA")}</b> (${esc(tv(sug.engine))}): ${esc(sug.msg ? msg(sug) : sug.rationale)}${sug.gap_analysis ? "\n" + t("Gaps:") + " " + esc(sug.gap_analysis) : ""}${sug.relation_explanation ? "\n" + t("Relação:") + " " + esc(t(sug.relation_explanation)) : ""}</div>`
         : `<div class="actions"><button onclick="busy(this, async()=>{await api('inputs/${id}/suggest','POST'); await refresh();})">${t("Pedir sugestão da IA")}</button></div>`}
+  ${!done && sug ? `<div class="actions"><button onclick="busy(this, ()=>commitTriage('${id}'))">✓ ${t("Aceitar a sugestão e registrar")}</button><span class="muted">${t("ou ajuste abaixo antes de confirmar")}</span></div>` : ""}
   <div class="steps"><span class="step on">${t("2. Assessment")}</span></div>
   <h3>${t("2.1 Tem relação com item já levantado?")}</h3>
   <div class="row"><div>${L("Relação")}<select id="t-mode" onchange="if(this.value==='novo'){TRI.include='';$('#t-rel-box').innerHTML=triRelBox();}">
@@ -364,11 +393,12 @@ function openTriage(id) {
   <div class="row"><div>${L("Prioridade")}<select id="t-prio">${opts(LEVELS, a.priority || "Média")}</select></div>
     <div>${L("Urgência")}<select id="t-urg">${opts(LEVELS, a.urgency || "Média")}</select></div>
     <div>${L("De onde a demanda veio")}<input id="t-origin" value="${esc(a.origin || inp.origin || tv(inp.source))}"></div></div>
+  <details class="more"><summary>${t("Mais detalhes: riscos, impactos, gaps e sua análise")}</summary>
   ${L("Riscos e urgência — explique o porquê")}<textarea id="t-risk" style="min-height:50px">${esc(a.risk_reason)}</textarea>
   ${L("Impactos")}<div class="checks inline">${S.impact_types.map((x) => `<label><input type="checkbox" class="t-imp" value="${esc(x)}" ${(a.impacts || []).includes(x) ? "checked" : ""}> ${esc(t(x))}</label>`).join("")}</div>
   ${L("Impactos em quais projetos / operações, por quê")}<textarea id="t-impd" style="min-height:50px">${esc(a.impact_details)}</textarea>
   ${L("Gaps (por que não foi previsto antes?)")}<textarea id="t-gap" style="min-height:50px">${esc(a.gap_analysis)}</textarea>
-  ${L("Sua análise de risco (ensina a IA)")}<textarea id="t-teach" style="min-height:50px" placeholder="${esc(t("TEACH_RISK_PLACEHOLDER"))}">${esc(inp.risk_analysis?.analysis)}</textarea>
+  ${L("Sua análise de risco (ensina a IA)")}<textarea id="t-teach" style="min-height:50px" placeholder="${esc(t("TEACH_RISK_PLACEHOLDER"))}">${esc(inp.risk_analysis?.analysis)}</textarea></details>
   <div class="steps" style="margin-top:14px"><span class="step on">${t("3. Definição (pode ser mais de uma)")}</span></div>
   <div class="checks">${Object.entries(S.definitions).map(([k, v]) => `<label><input type="checkbox" class="t-def" value="${k}" ${defs.includes(k) ? "checked" : ""}> ${esc(t(v))}</label>`).join("")}</div>
   <p class="muted">${t("“Ação dentro de um projeto” entra automaticamente na aba Itens adicionais do projeto.")}</p>
@@ -1054,22 +1084,19 @@ function summaryDoc({ summary: s, narrative }) {
   const k = s.kpis;
   const tbl = (rows, cols, heads) => `<table>${th(heads)}${rows.map((r) => `<tr>${cols.map((c) => `<td>${c === "priority" ? prio(r[c]) : c === "pct" ? bar(r[c]) : ["status", "mode", "probability", "impact"].includes(c) ? esc(tv(r[c])) : esc(r[c])}</td>`).join("")}</tr>`).join("") || `<tr><td colspan=${cols.length} class="muted">—</td></tr>`}</table>`;
   const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Itens com progresso", k.items_progress ?? 0], ["Em aberto", k.open_items], ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
-  return `<div class="summary-doc"><h1>${esc(t(s.type))}</h1><p class="muted">${t("Período")} ${esc(s.period.start)}${s.period.end !== s.period.start ? " – " + esc(s.period.end) : ""} · ${t("gerado")} ${fmt(s.generated_at)}</p>
-  <h2>1. ${t("Destaques")}</h2><div class="ai-box">${esc(narrative)}</div>
-  <h2>2. ${t("Indicadores")}</h2><div class="kpis">${kp.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${t(n)}</span></div>`).join("")}</div>
-  <h2>3. ${t(s.progress_title || "Itens com progresso hoje")}</h2><div id="s-progress">${(s.progress_items || []).map((i) => `<div class="prog-box"><b>${i.kind === "items" ? `<a href="#lista/${i.id}">${esc(i.id)}</a> · ${esc(i.title)}` : `<a href="#projetos/${i.project}/${i.kind === "pitems" ? "itens" : "atividades"}">${esc(i.project)} · ${esc(i.id)}</a> · ${esc(i.title)}`}</b>
-    <span class="muted">— ${esc(i.kind === "items" ? t("Lista geral") : t(i.kind === "pitems" ? "Item do projeto {name}" : "Atividade do projeto {name}", { name: i.project_name }))}</span> ${statusPill(i.status)}${i.kind === "activities" ? ` ${bar(i.pct)}` : i.kind === "pitems" && i.pct != null ? ` <span class="muted">${t("projeto {pct}% concluído", { pct: i.pct })}</span>` : ""}
-    <ul>${i.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum item teve progresso registrado no período.")}</p>`}</div>
-  <h2>4. ${t("Progressos dos projetos")}</h2>${(s.project_progress || []).map((p) => `<div class="prog-box"><b>${p.main ? "★ " : ""}<a href="#projetos/${p.id}">${esc(p.id)}</a> · ${esc(p.name)}</b>${p.pct != null ? ` <span class="muted">(${p.pct}%)</span>` : ""}<ul>${p.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum progresso registrado em projetos no período.")}</p>`}
-  <h2>5. ${t("Novas demandas por origem")}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(tv(src))} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || `<p class="muted">${t("Nenhuma nova demanda.")}</p>`}
-  <h2>6. ${t("Itens críticos (alta prioridade)")}</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
-  <h2>7. ${t("Prazos — vencidos e próximos 7 dias")}</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
-  <h2>8. ${t("Projetos")}</h2>${tbl(s.projects, ["id", "name", "status", "pct", "open_actions", "last_monitored", "next_meeting"], ["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Últ. monitoramento", "Próx. reunião"])}
-  <h2>9. ${t("Riscos")}</h2>${tbl(s.risks, ["id", "title", "mode", "probability", "impact"], ["ID", "Risco", "Modo", "Prob.", "Impacto"])}
-  <h2>10. ${t("Reuniões e decisões")}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(lc(m, "title"))}</b> (${esc(m.date)}) ${statusPill(m.status)}</p><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || `<li class="muted">${t("Sem decisões registradas")}</li>`}${(m.outcomes || []).filter((r) => r.kind !== "ignore").map((r) => `<li>→ ${esc(t(ASSIST_KIND_LABEL[r.kind]))}: ${linkTo(r.target)} — ${esc(r.title)}</li>`).join("")}</ul>`).join("") || `<p class="muted">${t("Nenhuma reunião no período.")}</p>`}
-  <h2>11. ${t("Infos a reportar")}</h2>${tbl(s.report_items, ["id", "title", "owner", "status"], ["ID", "Item", "Responsável", "Status"])}
-  <h2>12. ${t("Alertas")}</h2><ul>${s.alerts.map((a) => `<li>${esc(msg(a))}</li>`).join("") || '<li class="muted">—</li>'}</ul>
-  <h2>13. ${t("Linha do tempo")}</h2><ul class="tl">${timeline(s.activity)}</ul></div>`;
+  return `<div class="summary-doc"><p class="muted">${esc(t(s.type))} · ${t("Período")} ${esc(s.period.start)}${s.period.end !== s.period.start ? " – " + esc(s.period.end) : ""} · ${t("gerado")} ${fmt(s.generated_at)}</p>
+  ${s.report ? Core.reportHtml(s, narrative, esc, (h, label) => `<a href="#${esc(h)}">${esc(label)}</a>`) : `<div class="ai-box">${esc(narrative)}</div>`}
+  <details class="more annex"><summary>${t("Anexo")}: ${t("indicadores, demandas, itens críticos, riscos, alertas e linha do tempo")}</summary>
+  <h2>${t("Indicadores")}</h2><div class="kpis">${kp.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${t(n)}</span></div>`).join("")}</div>
+  <h2>${t("Novas demandas por origem")}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(tv(src))} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || `<p class="muted">${t("Nenhuma nova demanda.")}</p>`}
+  <h2>${t("Itens críticos (alta prioridade)")}</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
+  <h2>${t("Prazos — vencidos e próximos 7 dias")}</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
+  <h2>${t("Projetos")}</h2>${tbl(s.projects, ["id", "name", "status", "pct", "open_actions", "last_monitored", "next_meeting"], ["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Últ. monitoramento", "Próx. reunião"])}
+  <h2>${t("Riscos")}</h2>${tbl(s.risks, ["id", "title", "mode", "probability", "impact"], ["ID", "Risco", "Modo", "Prob.", "Impacto"])}
+  <h2>${t("Reuniões e decisões")}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(lc(m, "title"))}</b> (${esc(m.date)}) ${statusPill(m.status)}</p><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || `<li class="muted">${t("Sem decisões registradas")}</li>`}${(m.outcomes || []).filter((r) => r.kind !== "ignore").map((r) => `<li>→ ${esc(t(ASSIST_KIND_LABEL[r.kind]))}: ${linkTo(r.target)} — ${esc(r.title)}</li>`).join("")}</ul>`).join("") || `<p class="muted">${t("Nenhuma reunião no período.")}</p>`}
+  <h2>${t("Infos a reportar")}</h2>${tbl(s.report_items, ["id", "title", "owner", "status"], ["ID", "Item", "Responsável", "Status"])}
+  <h2>${t("Alertas")}</h2><ul>${s.alerts.map((a) => `<li>${esc(msg(a))}</li>`).join("") || '<li class="muted">—</li>'}</ul>
+  <h2>${t("Linha do tempo")}</h2><ul class="tl">${timeline(s.activity)}</ul></details></div>`;
 }
 
 // ------------------------------------------------------------------ configurações

@@ -259,3 +259,12 @@ button.chip.on { background: var(--brand); border-color: var(--brand); color: #f
 /* itens de projeto parados há X dias, para confirmar na lista geral */
 .confirm-box { border-left: 4px solid #e0a800; margin-bottom: var(--gap); }
 .confirm-box textarea { min-width: 180px; }
+/* summary no formato do modelo (conclusão, reuniões, pendências, projetos) */
+.report .r-title { margin: 4px 0 10px; }
+.report h2 { margin-top: 22px; }
+.report .r-conclusion { white-space: pre-wrap; background: var(--card, #fff); border: 1px solid #e1e1e1; border-left: 4px solid var(--accent, #C00000); padding: 10px 14px; line-height: 1.6; }
+.report .r-table { width: 100%; }
+.report .r-table td { vertical-align: top; }
+.report .r-table td.c { text-align: center; width: 36px; }
+.report tr.overdue td { background: #fff4f4; }
+.summary-doc .annex { margin-top: 24px; }

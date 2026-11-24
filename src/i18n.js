@@ -845,5 +845,27 @@ Object.assign(D, {
   "Este item tem {n} subitens. Transforme em projeto: cada subitem vira um item do projeto.": ["This item has {n} sub-items. Turn it into a project: each sub-item becomes a project item.", "此事项包含 {n} 个子项。可转为项目：每个子项成为项目中的一个事项。"],
   "Transformar em projeto": ["Turn into a project", "转为项目"], "Adicionar os subitens ao projeto {id}": ["Add the sub-items to project {id}", "将子项添加到项目 {id}"],
   "Projeto {id}: {n} itens criados": ["Project {id}: {n} items created", "项目 {id}：已创建 {n} 个事项"],
-  "{n} itens criados em {id} a partir dos subitens de {ref}": ["{n} items created in {id} from the sub-items of {ref}", "已根据 {ref} 的子项在 {id} 中创建 {n} 个事项"]
+  "{n} itens criados em {id} a partir dos subitens de {ref}": ["{n} items created in {id} from the sub-items of {ref}", "已根据 {ref} 的子项在 {id} 中创建 {n} 个事项"],
+  // ---- summary no formato do modelo; entrada rápida
+  "Resumo de {date}": ["Summary — {date}", "{date}总结"], "Resumo da semana {start} – {end}": ["Weekly summary {start} – {end}", "{start} – {end} 周总结"],
+  "CONCLUSION_DAY": ["Today {meetings} meetings were held and {topics} topics were discussed; {inputs} new demands came in, {done} items were completed and {open} items are pending ({late} overdue).",
+    "今日共召开 {meetings} 场会议，讨论 {topics} 项议题；新增需求 {inputs} 项，完成事项 {done} 项，待办事项 {open} 项（其中逾期 {late} 项）。",
+    "Hoje foram realizadas {meetings} reuniões e discutidos {topics} tópicos; chegaram {inputs} novas demandas, {done} itens foram concluídos e há {open} pendências ({late} vencidas)."],
+  "CONCLUSION_WEEK": ["This week {meetings} meetings were held and {topics} topics were discussed; {inputs} new demands came in, {done} items were completed and {open} items are pending ({late} overdue).",
+    "本周共召开 {meetings} 场会议，讨论 {topics} 项议题；新增需求 {inputs} 项，完成事项 {done} 项，待办事项 {open} 项（其中逾期 {late} 项）。",
+    "Na semana foram realizadas {meetings} reuniões e discutidos {topics} tópicos; chegaram {inputs} novas demandas, {done} itens foram concluídos e há {open} pendências ({late} vencidas)."],
+  "Concluídos: {list}": ["Completed: {list}", "已完成：{list}"], "{n} pendências com prazo vencido — ver item 3.1.": ["{n} pending items overdue — see 3.1.", "{n} 项待办已逾期 — 见 3.1。"],
+  "Conclusão": ["Conclusion", "结论"], "Depto. principal": ["Main dept.", "主要部门"], "Tópicos": ["Topics", "课题"], "Responsável / depto.": ["Owner / dept.", "负责人/部门"],
+  "Pendências": ["Required items", "要求事项"], "Pendentes": ["To-do", "待办事项"], "Concluídos hoje": ["Completed today", "今日已完成事项"], "Concluídos na semana": ["Completed this week", "本周已完成事项"],
+  "Concluído em": ["Completed on", "完成时间"], "Projetos e itens com progresso hoje": ["Projects and items with progress today", "项目及今日有进展的事项"],
+  "Projetos e itens com progresso na semana": ["Projects and items with progress this week", "项目及本周有进展的事项"], "Projeto / item": ["Project / item", "项目 / 事项"],
+  "Anexo": ["Appendix", "附件"], "indicadores, demandas, itens críticos, riscos, alertas e linha do tempo": ["indicators, demands, critical items, risks, alerts and timeline", "指标、需求、关键事项、风险、提醒和时间线"],
+  "QUICK_INPUT_HINT": ["Paste or write what came in. The first line is the title; the rest is the description (numbered lists become a project). Click Register: the AI classifies it and it goes straight to the general list.",
+    "粘贴或输入收到的内容。第一行是标题，其余是描述（编号列表会变成项目）。点击“登记”：AI 自动分类并直接进入总清单。",
+    "Cole ou escreva o que chegou. A primeira linha é o título; o resto é a descrição (listas numeradas viram projeto). Clique em Registrar: a IA classifica e já vai para a lista geral."],
+  "QUICK_INPUT_PLACEHOLDER": ["E.g.: HQ asked for the Xushui report by Friday", "例如：总部要求周五前提交徐水报告", "Ex.: HQ pediu o relatório de Xushui até sexta"],
+  "Mais detalhes (opcional)": ["More details (optional)", "更多信息（可选）"], "Registrar": ["Register", "登记"], "Registrar e revisar a classificação": ["Register and review the classification", "登记并复核分类"],
+  "Título (se quiser outro)": ["Title (if you want a different one)", "标题（如需修改）"], "Revisar": ["Review", "复核"], "Escreva o que chegou.": ["Write what came in.", "请输入收到的内容。"],
+  "Aceitar a sugestão e registrar": ["Accept the suggestion and register", "接受建议并登记"], "ou ajuste abaixo antes de confirmar": ["or adjust below before confirming", "或在下方调整后再确认"],
+  "Mais detalhes: riscos, impactos, gaps e sua análise": ["More details: risks, impacts, gaps and your analysis", "更多信息：风险、影响、差距和您的分析"]
 });

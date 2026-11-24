@@ -267,6 +267,15 @@ button.chip.on { background: var(--brand); border-color: var(--brand); color: #f
 /* itens de projeto parados há X dias, para confirmar na lista geral */
 .confirm-box { border-left: 4px solid #e0a800; margin-bottom: var(--gap); }
 .confirm-box textarea { min-width: 180px; }
+/* summary no formato do modelo (conclusão, reuniões, pendências, projetos) */
+.report .r-title { margin: 4px 0 10px; }
+.report h2 { margin-top: 22px; }
+.report .r-conclusion { white-space: pre-wrap; background: var(--card, #fff); border: 1px solid #e1e1e1; border-left: 4px solid var(--accent, #C00000); padding: 10px 14px; line-height: 1.6; }
+.report .r-table { width: 100%; }
+.report .r-table td { vertical-align: top; }
+.report .r-table td.c { text-align: center; width: 36px; }
+.report tr.overdue td { background: #fff4f4; }
+.summary-doc .annex { margin-top: 24px; }
 </style>
 </head>
 <body data-density="normal">
@@ -1266,7 +1275,29 @@ Object.assign(D, {
   "Este item tem {n} subitens. Transforme em projeto: cada subitem vira um item do projeto.": ["This item has {n} sub-items. Turn it into a project: each sub-item becomes a project item.", "此事项包含 {n} 个子项。可转为项目：每个子项成为项目中的一个事项。"],
   "Transformar em projeto": ["Turn into a project", "转为项目"], "Adicionar os subitens ao projeto {id}": ["Add the sub-items to project {id}", "将子项添加到项目 {id}"],
   "Projeto {id}: {n} itens criados": ["Project {id}: {n} items created", "项目 {id}：已创建 {n} 个事项"],
-  "{n} itens criados em {id} a partir dos subitens de {ref}": ["{n} items created in {id} from the sub-items of {ref}", "已根据 {ref} 的子项在 {id} 中创建 {n} 个事项"]
+  "{n} itens criados em {id} a partir dos subitens de {ref}": ["{n} items created in {id} from the sub-items of {ref}", "已根据 {ref} 的子项在 {id} 中创建 {n} 个事项"],
+  // ---- summary no formato do modelo; entrada rápida
+  "Resumo de {date}": ["Summary — {date}", "{date}总结"], "Resumo da semana {start} – {end}": ["Weekly summary {start} – {end}", "{start} – {end} 周总结"],
+  "CONCLUSION_DAY": ["Today {meetings} meetings were held and {topics} topics were discussed; {inputs} new demands came in, {done} items were completed and {open} items are pending ({late} overdue).",
+    "今日共召开 {meetings} 场会议，讨论 {topics} 项议题；新增需求 {inputs} 项，完成事项 {done} 项，待办事项 {open} 项（其中逾期 {late} 项）。",
+    "Hoje foram realizadas {meetings} reuniões e discutidos {topics} tópicos; chegaram {inputs} novas demandas, {done} itens foram concluídos e há {open} pendências ({late} vencidas)."],
+  "CONCLUSION_WEEK": ["This week {meetings} meetings were held and {topics} topics were discussed; {inputs} new demands came in, {done} items were completed and {open} items are pending ({late} overdue).",
+    "本周共召开 {meetings} 场会议，讨论 {topics} 项议题；新增需求 {inputs} 项，完成事项 {done} 项，待办事项 {open} 项（其中逾期 {late} 项）。",
+    "Na semana foram realizadas {meetings} reuniões e discutidos {topics} tópicos; chegaram {inputs} novas demandas, {done} itens foram concluídos e há {open} pendências ({late} vencidas)."],
+  "Concluídos: {list}": ["Completed: {list}", "已完成：{list}"], "{n} pendências com prazo vencido — ver item 3.1.": ["{n} pending items overdue — see 3.1.", "{n} 项待办已逾期 — 见 3.1。"],
+  "Conclusão": ["Conclusion", "结论"], "Depto. principal": ["Main dept.", "主要部门"], "Tópicos": ["Topics", "课题"], "Responsável / depto.": ["Owner / dept.", "负责人/部门"],
+  "Pendências": ["Required items", "要求事项"], "Pendentes": ["To-do", "待办事项"], "Concluídos hoje": ["Completed today", "今日已完成事项"], "Concluídos na semana": ["Completed this week", "本周已完成事项"],
+  "Concluído em": ["Completed on", "完成时间"], "Projetos e itens com progresso hoje": ["Projects and items with progress today", "项目及今日有进展的事项"],
+  "Projetos e itens com progresso na semana": ["Projects and items with progress this week", "项目及本周有进展的事项"], "Projeto / item": ["Project / item", "项目 / 事项"],
+  "Anexo": ["Appendix", "附件"], "indicadores, demandas, itens críticos, riscos, alertas e linha do tempo": ["indicators, demands, critical items, risks, alerts and timeline", "指标、需求、关键事项、风险、提醒和时间线"],
+  "QUICK_INPUT_HINT": ["Paste or write what came in. The first line is the title; the rest is the description (numbered lists become a project). Click Register: the AI classifies it and it goes straight to the general list.",
+    "粘贴或输入收到的内容。第一行是标题，其余是描述（编号列表会变成项目）。点击“登记”：AI 自动分类并直接进入总清单。",
+    "Cole ou escreva o que chegou. A primeira linha é o título; o resto é a descrição (listas numeradas viram projeto). Clique em Registrar: a IA classifica e já vai para a lista geral."],
+  "QUICK_INPUT_PLACEHOLDER": ["E.g.: HQ asked for the Xushui report by Friday", "例如：总部要求周五前提交徐水报告", "Ex.: HQ pediu o relatório de Xushui até sexta"],
+  "Mais detalhes (opcional)": ["More details (optional)", "更多信息（可选）"], "Registrar": ["Register", "登记"], "Registrar e revisar a classificação": ["Register and review the classification", "登记并复核分类"],
+  "Título (se quiser outro)": ["Title (if you want a different one)", "标题（如需修改）"], "Revisar": ["Review", "复核"], "Escreva o que chegou.": ["Write what came in.", "请输入收到的内容。"],
+  "Aceitar a sugestão e registrar": ["Accept the suggestion and register", "接受建议并登记"], "ou ajuste abaixo antes de confirmar": ["or adjust below before confirming", "或在下方调整后再确认"],
+  "Mais detalhes: riscos, impactos, gaps e sua análise": ["More details: risks, impacts, gaps and your analysis", "更多信息：风险、影响、差距和您的分析"]
 });
 </script>
 <script>
@@ -1918,18 +1949,17 @@ critério da organização e siga-os quando aplicáveis.`; },
   },
 
   // ---------------------------------------------------------------- summaries
+  /** Conclusão do summary (item 1 do modelo): um parágrafo + pontos-chave numerados. */
   async narrative(summary) {
-    const k = summary.kpis;
-    const pp = summary.project_progress || [], pi = summary.progress_items || [];
-    const basic = t("NARRATIVE_BASIC", { ...k, alerts: summary.alerts.length })
-      + (pp.length ? "\n" + t("Progresso registrado em {n} projetos: {list}.", { n: pp.length, list: pp.map((p) => `${p.id} ${p.name} (${p.updates.length})`).join("; ") }) : "")
-      + (pi.length ? "\n" + `${t(summary.progress_title || "Itens com progresso hoje")}: ${pi.length}` + "\n" + pi.map((i) => `• ${i.kind === "items" ? i.id : i.project + " · " + i.id} ${i.title}: ${i.updates.map((u) => u.text).join("; ")}`).join("\n") : "");
+    const basic = Core.reportConclusion(summary);
     if (!this.enabled()) return basic;
-    const prompt = `Escreva os DESTAQUES deste summary de governança (${summary.type}) em até 8 bullets curtos, em ${I18N.aiLanguage()}: `
-      + `comece por um bullet "${t(summary.progress_title || "Itens com progresso hoje")}:" listando cada item de progress_items com o progresso registrado; depois `
-      + "o que mudou (inclua os progressos registrados nos projetos e itens, e o que saiu das reuniões), o que exige atenção da diretoria, riscos, decisões e próximos passos. Use Hoshin Kanri "
-      + "para conectar com os objetivos estratégicos. Dados:\n" + JSON.stringify(summary).slice(0, 80000);
-    try { return await this.call(prompt, null, "low", 4000); }
+    const r = summary.report;
+    const data = { periodo: summary.period, indicadores: summary.kpis, reunioes: r.meetings, pendentes: r.open, concluidos: r.done, projetos_e_itens_com_progresso: r.projects, alertas: summary.alerts.map((a) => a.text) };
+    const prompt = `Escreva a CONCLUSÃO do resumo de governança (${summary.type}) em ${I18N.aiLanguage()}, no formato: `
+      + "um parágrafo curto dizendo quantas reuniões houve, quantos tópicos foram discutidos e o principal resultado; "
+      + "depois uma lista numerada (1., 2., …) com até 8 pontos-chave: decisões e resultados das reuniões, progresso dos projetos e itens, "
+      + "pendências que exigem atenção (prazos vencidos) e próximos passos. Texto direto, sem títulos e sem markdown. Dados:\n" + JSON.stringify(data).slice(0, 80000);
+    try { return (await this.call(prompt, null, "low", 4000)).trim(); }
     catch (e) { return `${basic}\n(${t("Destaques da IA indisponíveis:")} ${e.message})`; }
   },
 };
@@ -2463,11 +2493,91 @@ ${(rec.item_actions || []).length ? `<h2>${esc(t("Ações do item"))}</h2><ul>${
       alerts: this.alerts(),
     };
     summary.kpis.items_progress = summary.progress_items.length;
+    summary.report = this.dailyReport(kind, s, e, inr, summary.progress_items);
     if (kind === "weekly") {
       summary.activity_per_day = {};
       for (const ev of events) summary.activity_per_day[ev.date] = (summary.activity_per_day[ev.date] || 0) + 1;
     }
     return summary;
+  },
+
+  /** Resumo no formato do modelo: conclusão, reuniões (tópicos por reunião), pendências / concluídos e projetos. */
+  dailyReport(kind, s, e, inr, progressItems) {
+    const db = this.db, horizon = addDays(e, 7);
+    const person = (name) => (db.settings.people || []).find((p) => normName(p.name) === normName(name));
+    const who = (owner, dept) => [owner, dept || person(owner)?.dept].filter(Boolean).join(" / ");
+    const end = (time, min) => { if (!/^\d{2}:\d{2}$/.test(time || "")) return ""; const [h, m] = time.split(":").map(Number), x = h * 60 + m + (+min || 0); return `${pad(Math.floor(x / 60) % 24)}:${pad(x % 60)}`; };
+    const meetings = db.meetings.filter((m) => inr(m.date) && !["Cancelada", "Não realizada"].includes(m.status))
+      .sort((a, b) => `${a.date} ${a.time || ""}`.localeCompare(`${b.date} ${b.time || ""}`)).map((m) => {
+        const topics = [];
+        const res = (m.allocation?.results || []).filter((r) => r.kind !== "ignore");
+        for (const r of res) {
+          const it = r.kind.startsWith("item") ? this.find("items", r.target) : null, pr = r.kind === "project_progress" ? this.find("projects", r.target) : null;
+          topics.push({ text: r.title, owner: who(it?.owner || pr?.owner || "", it?.area_main || ""), due: it?.due_date || "", ref: r.target });
+        }
+        if (!res.length) for (const d of m.extraction?.demands || []) topics.push({ text: d.title, owner: who(d.owner || "", d.area_main || ""), due: d.due_date || "", ref: d.related_item || "" });
+        for (const d of m.decisions || []) if (!topics.some((x) => x.text === d)) topics.push({ text: d, owner: "", due: "", ref: "" });
+        const att = m.attendees || [], depts = [...new Set(att.map((n) => person(n)?.dept).filter(Boolean))];
+        const time = m.time ? `${m.time}${end(m.time, m.actual_duration || m.duration) ? " – " + end(m.time, m.actual_duration || m.duration) : ""}` : "";
+        return { id: m.id, title: m.title_msg ? t(m.title_msg[0], m.title_msg[1]) : this.loc(m, "title"), date: m.date, time, status: m.status,
+          dept: m.resp_dept || m.departments || depts.join(", "), attendees: att, topics };
+      });
+    const open = [
+      ...db.items.filter((i) => i.status !== "Concluído" && ((i.due_date && i.due_date <= horizon) || inr(i.created_at)))
+        .map((i) => ({ id: i.id, title: this.loc(i, "title"), owner: who(i.owner || "", i.area_main), due: i.due_date || "", late: !!i.due_date && i.due_date < s })),
+      ...db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).flatMap((p) => (p.pitems || [])
+        .filter((x) => x.status !== "Finalizado" && x.due && x.due <= horizon)
+        .map((x) => ({ id: `${p.id} · ${x.id}`, title: `${x.title} (${this.loc(p, "name")})`, owner: who(x.owner || "", ""), due: x.due, late: x.due < s }))),
+    ].sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999")).slice(0, 40);
+    const done = (db.finished || []).filter((f) => inr(f.date)).map((f) => ({ id: f.kind === "pitems" ? `${f.project} · ${f.id}` : f.id, title: f.title, owner: who(f.owner || "", ""), date: f.date, scope: f.scope }));
+    // projetos (progresso dos projetos, itens do projeto e atividades) + itens da lista geral com progresso
+    const byProj = new Map();
+    for (const p of db.projects) {
+      const ups = (p.updates || []).filter((u) => inr(u.date));
+      if (ups.length) byProj.set(p.id, { kind: "project", id: p.id, title: this.loc(p, "name"), main: !!p.main, pct: this.projectPct(p), lines: ups.map((u) => u.text) });
+    }
+    for (const i of progressItems) if (i.kind !== "items" && i.status === "Finalizado" && byProj.has(i.project)) {
+      const line = `${i.title}: ${t("Finalizado")}`;
+      if (!byProj.get(i.project).lines.includes(line)) byProj.get(i.project).lines.push(line);
+    }
+    const projects = [...byProj.values()].sort((a, b) => (b.main - a.main) || b.lines.length - a.lines.length);
+    for (const i of progressItems) if (i.kind === "items") projects.push({ kind: "item", id: i.id, title: i.title, status: i.status, lines: i.updates.map((u) => u.text) });
+    const topics = meetings.reduce((n, m) => n + m.topics.length, 0);
+    return { kind, title: kind === "weekly" ? ["Resumo da semana {start} – {end}", { start: s, end: e }] : ["Resumo de {date}", { date: s }],
+      meetings, topics, open, done, projects, late: open.filter((x) => x.late).length };
+  },
+  /** Conclusão sem IA, no formato do modelo: um parágrafo + pontos numerados. */
+  reportConclusion(summary) {
+    const r = summary.report, k = summary.kpis;
+    const intro = t(r.kind === "weekly" ? "CONCLUSION_WEEK" : "CONCLUSION_DAY", { meetings: r.meetings.length, topics: r.topics, inputs: k.new_inputs, done: r.done.length, open: r.open.length, late: r.late });
+    const pts = [];
+    for (const m of r.meetings) if (m.topics.length) pts.push(`${m.title}: ${m.topics.slice(0, 3).map((x) => x.text).join("; ")}${m.topics.length > 3 ? "…" : ""}`);
+    for (const p of r.projects.filter((x) => x.kind === "project").slice(0, 5)) pts.push(`${p.title}: ${p.lines.at(-1)}`);
+    if (r.done.length) pts.push(t("Concluídos: {list}", { list: r.done.map((d) => d.title).join("; ") }));
+    if (r.late) pts.push(t("{n} pendências com prazo vencido — ver item 3.1.", { n: r.late }));
+    return [intro, ...pts.slice(0, 8).map((x, i) => `${i + 1}. ${x}`)].join("\n");
+  },
+  /** Corpo do summary no formato do modelo (usado na tela e no HTML salvo na pasta). */
+  reportHtml(s, conclusion, esc, link = (id, label) => esc(label)) {
+    const r = s.report;
+    const date = (iso) => { const d = new Date((iso || "") + "T12:00:00"); return isNaN(d) ? iso || "" : d.toLocaleDateString(I18N.htmlLang(), { day: "numeric", month: "long" }); };
+    const title = t(r.title[0], r.kind === "weekly" ? { start: date(r.title[1].start), end: date(r.title[1].end) } : { date: date(r.title[1].date) });
+    const hd = (hs) => `<tr>${hs.map((h) => `<th>${esc(t(h))}</th>`).join("")}</tr>`;
+    const empty = (n, txt) => `<tr><td colspan=${n} class="muted">${esc(txt)}</td></tr>`;
+    const meetRows = r.meetings.map((m, i) => {
+      const tp = m.topics.length ? m.topics : [{ text: "—", owner: "", due: "" }], n = tp.length;
+      return tp.map((x, j) => `<tr>${j ? "" : `<td rowspan=${n} class="c">${i + 1}</td><td rowspan=${n}><b>${link("reunioes/" + m.id, m.title)}</b>${m.time ? `<br><span class="muted">${esc(m.time)}</span>` : ""}${r.kind === "weekly" ? `<br><span class="muted">${esc(m.date)}</span>` : ""}</td><td rowspan=${n}>${esc(m.dept || "—")}</td>`}
+        <td>${esc(x.text)}</td><td>${esc(x.owner || "—")}</td><td>${esc(x.due || "")}</td></tr>`).join("");
+    }).join("");
+    const listRows = (l, dateKey) => l.map((x, i) => `<tr${x.late ? ' class="overdue"' : ""}><td class="c">${i + 1}</td><td>${esc(x.title)} <span class="muted">${esc(x.id)}</span></td><td>${esc(x.owner || "—")}</td><td>${esc(x[dateKey] || "—")}${x.late ? " ⚠" : ""}</td></tr>`).join("");
+    const projRows = r.projects.map((p, i) => `<tr><td class="c">${i + 1}</td><td><b>${p.kind === "project" ? link("projetos/" + p.id, `${p.main ? "★ " : ""}${p.title}`) : link("lista/" + p.id, p.title)}</b><br><span class="muted">${esc(p.id)}${p.pct != null ? ` · ${p.pct}%` : ""}${p.kind === "item" ? " · " + esc(t("Lista geral")) : ""}</span></td>
+      <td>${p.lines.map((l, j) => `${p.lines.length > 1 ? `${j + 1}. ` : ""}${esc(l)}`).join("<br>")}</td></tr>`).join("");
+    return `<div class="report"><h1 class="r-title">${esc(title)}</h1>
+<h2>1. ${esc(t("Conclusão"))}</h2><div class="r-conclusion">${esc(conclusion)}</div>
+<h2>2. ${esc(t("Reuniões"))}</h2><table class="r-table">${hd(["Nº", "Reunião", "Depto. principal", "Tópicos", "Responsável / depto.", "Prazo"])}${meetRows || empty(6, t("Nenhuma reunião no período."))}</table>
+<h2>3. ${esc(t("Pendências"))}</h2><h3>3.1 ${esc(t("Pendentes"))}</h3><table class="r-table">${hd(["Nº", "Item", "Responsável / depto.", "Prazo"])}${listRows(r.open, "due") || empty(4, "—")}</table>
+<h3>3.2 ${esc(t(r.kind === "weekly" ? "Concluídos na semana" : "Concluídos hoje"))}</h3><table class="r-table">${hd(["Nº", "Item", "Responsável / depto.", "Concluído em"])}${listRows(r.done, "date") || empty(4, "—")}</table>
+<h2>4. ${esc(t(r.kind === "weekly" ? "Projetos e itens com progresso na semana" : "Projetos e itens com progresso hoje"))}</h2><table class="r-table" id="s-progress">${hd(["Nº", "Projeto / item", "Progresso"])}${projRows || empty(3, t("Nenhum item teve progresso registrado no período."))}</table></div>`;
   },
 
   /** Itens (lista geral, itens do projeto e atividades) que tiveram progresso no período, com o progresso registrado. */
@@ -2548,20 +2658,18 @@ ${(rec.item_actions || []).length ? `<h2>${esc(t("Ações do item"))}</h2><ul>${
 <style>body{font:14px system-ui;margin:32px;color:#1a1a1a;background:#fafafa}h1{margin:0;color:${esc(Core.db.settings.appearance.accent)}}
 h2{color:#1a1a1a;border-left:5px solid ${esc(Core.db.settings.appearance.accent)};padding-left:8px;margin-top:28px}
 table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid #d9d9d9;padding:4px 8px;text-align:left}th{background:#f0f0f0}
+.r-title{font-size:22px}.r-conclusion{white-space:pre-wrap;background:#fff;border:1px solid #e1e1e1;padding:10px 14px;line-height:1.6}.r-table td{vertical-align:top}.c{text-align:center;width:36px}.muted{color:#777;font-size:12px}tr.overdue td{background:#fff4f4}
 .k{display:inline-block;margin:6px 12px 6px 0;padding:8px 12px;background:#fff;border:1px solid #e1e1e1;border-top:3px solid ${esc(Core.db.settings.appearance.accent)};border-radius:6px}</style>
-<h1>${esc(t(s.type))}</h1><p>${esc(t("Período"))}: ${esc(s.period.start)} – ${esc(s.period.end)} · ${esc(t("gerado"))} ${esc(s.generated_at)}</p>
-<h2>1. ${esc(t("Destaques"))}</h2><div style="white-space:pre-wrap">${esc(text)}</div>
-<h2>2. ${esc(t("Indicadores"))}</h2>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${esc(t(n))}</span>`).join("")}
-<h2>3. ${esc(t(s.progress_title || "Itens com progresso hoje"))}</h2>${(s.progress_items || []).map((i) => `<h3>${esc(this.progressLabel(i))}</h3><ul>${i.updates.map((u) => `<li>${esc(u.text)}</li>`).join("")}</ul>`).join("") || `<p>${esc(t("Nenhum item teve progresso registrado no período."))}</p>`}
-<h2>4. ${esc(t("Progressos dos projetos"))}</h2>${(s.project_progress || []).map((p) => `<h3>${p.main ? "★ " : ""}${esc(p.id)} · ${esc(p.name)}${p.pct != null ? ` (${p.pct}%)` : ""}</h3><ul>${p.updates.map((u) => `<li>${esc(u.text)}</li>`).join("")}</ul>`).join("") || `<p>${esc(t("Nenhum progresso registrado em projetos no período."))}</p>`}
-<h2>5. ${esc(t("Novas demandas por origem"))}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(t(src))}</h3><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
-<h2>6. ${esc(t("Itens críticos (alta prioridade)"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
-<h2>7. ${esc(t("Prazos — vencidos e próximos 7 dias"))}</h2><table>${th(["ID", "Título", "Responsável", "Prazo"])}${rows(s.due_items, ["id", "title", "owner", "due_date"])}</table>
-<h2>8. ${esc(t("Projetos"))}</h2><table>${th(["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Próx. reunião"])}${rows(s.projects.map((p) => ({ ...p, pct: p.pct == null ? "—" : p.pct + "%" })), ["id", "name", "status", "pct", "open_actions", "next_meeting"])}</table>
-<h2>9. ${esc(t("Riscos"))}</h2><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
-<h2>10. ${esc(t("Reuniões e decisões"))}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(m.title)}</b> (${esc(m.date)} · ${esc(t(m.status || "Realizada"))})<br>${m.decisions.map(esc).join("<br>") || esc(t("Sem decisões registradas"))}${(m.outcomes || []).filter((r) => r.kind !== "ignore").map((r) => `<br>→ ${esc(r.target)} — ${esc(r.title)}`).join("")}</p>`).join("") || "<p>—</p>"}
-<h2>11. ${esc(t("Infos a reportar"))}</h2><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
-<h2>12. ${esc(t("Alertas"))}</h2><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
+<p class="muted">${esc(t(s.type))} · ${esc(t("Período"))}: ${esc(s.period.start)} – ${esc(s.period.end)} · ${esc(t("gerado"))} ${esc(s.generated_at)}</p>
+${this.reportHtml(s, text, esc)}
+<h2 style="margin-top:40px">${esc(t("Anexo"))}</h2>
+<h3>${esc(t("Indicadores"))}</h3>${kp.map(([n, v]) => `<span class=k><b>${v}</b> ${esc(t(n))}</span>`).join("")}
+<h3>${esc(t("Novas demandas por origem"))}</h3>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h4>${esc(t(src))}</h4><table>${rows(l, ["id", "title", "status"])}</table>`).join("") || "<p>—</p>"}
+<h3>${esc(t("Itens críticos (alta prioridade)"))}</h3><table>${th(["ID", "Título", "Responsável", "Prazo", "Status"])}${rows(s.critical_items, ["id", "title", "owner", "due_date", "status"])}</table>
+<h3>${esc(t("Projetos"))}</h3><table>${th(["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Próx. reunião"])}${rows(s.projects.map((p) => ({ ...p, pct: p.pct == null ? "—" : p.pct + "%" })), ["id", "name", "status", "pct", "open_actions", "next_meeting"])}</table>
+<h3>${esc(t("Riscos"))}</h3><table>${th(["ID", "Risco", "Modo", "Prob.", "Impacto"])}${rows(s.risks, ["id", "title", "mode", "probability", "impact"])}</table>
+<h3>${esc(t("Infos a reportar"))}</h3><table>${th(["ID", "Título", "Responsável", "Status"])}${rows(s.report_items, ["id", "title", "owner", "status"])}</table>
+<h3>${esc(t("Alertas"))}</h3><ul>${s.alerts.map((a) => `<li>${esc(msgOf(a))}</li>`).join("") || "<li>—</li>"}</ul>`;
   },
 
   /** "GOV003 · título — Em andamento" / "PROJ001 · IT002 · título — Em andamento · projeto 50%" */
@@ -3151,6 +3259,19 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       return rec;
     }
     if (col === "inputs" && action === "commit") return { input: rec, created: await this.commitInput(rec, body) };
+    if (col === "inputs" && action === "quick") {
+      // entrada rápida: avalia (IA ou heurística) e já registra com a sugestão; a triagem completa fica para revisar depois
+      const sg = (rec.ai_suggestion = await AI.assessInput(db, rec));
+      let defs = (sg.definitions || []).filter((d) => d !== "acao_projeto" || this.find("projects", sg.project_id || ""));
+      if (!defs.length) defs = ["acao_geral"];
+      const mode = sg.relation_mode === "incluir_existente" && this.find("items", sg.include_in || "") ? "incluir_existente" : "novo";
+      const pick = ["scope", "scope_action", "priority", "urgency", "risk_reason", "impacts", "impact_details", "gap_analysis"];
+      const created = await this.commitInput(rec, { relation_mode: mode, include_in: mode === "incluir_existente" ? sg.include_in : "", definitions: defs,
+        related: (sg.related || []).map((r) => r.id).filter((x) => x !== sg.include_in), project_id: sg.project_id || "", new_project_name: rec.title,
+        assessment: { ...Object.fromEntries(pick.map((k) => [k, sg[k]])), origin: rec.origin || "" } });
+      rec.quick = true;
+      return { input: rec, created };
+    }
     if (col === "projects" && action === "upload") {
       const sub = (body.kind || "schedule") === "schedule" ? "master_schedule" : "documentos";
       const rel = await Store.writeUnique(`${rec.folder}/${sub}`, body.file.name, body.file);
@@ -4729,8 +4850,14 @@ function viewEntradas() {
   return `<h1>${t("Inputs management")}</h1>
   <div class="steps"><span class="step on">${t("1. Entrada da informação")}</span><span class="step">${t("2. Assessment (relação + classificação)")}</span><span class="step">${t("3. Definição")}</span><span class="step">${t("4. Lista geral + módulos")}</span></div>
   <div class="grid" style="grid-template-columns: minmax(320px, 1.1fr) minmax(300px, 1fr)">
-  <div class="card"><h2>${t("Nova entrada")}</h2>${inputForm()}
-    <div class="actions"><button onclick="busy(this, saveInput)">${t("Registrar e avaliar com IA")}</button></div></div>
+  <div class="card quick-input"><h2>⚡ ${t("Nova entrada")}</h2>${LAST_QUICK ? quickResult(LAST_QUICK) : ""}
+    <p class="muted">${t("QUICK_INPUT_HINT")}</p>
+    <textarea id="f-text" style="min-height:120px" placeholder="${esc(t("QUICK_INPUT_PLACEHOLDER"))}"></textarea>
+    <div class="row"><div>${L("Origem")}<select id="f-source">${opts(LIST("sources"), LIST("sources")[0])}</select></div>
+      <div>${L("Responsável")}${personSelect("f-owner", "", "f-area")}</div><div>${L("Prazo")}<input id="f-due" type="date"></div></div>
+    <details class="more"><summary>${t("Mais detalhes (opcional)")}</summary>${inputForm()}</details>
+    <div class="actions"><button id="f-quick" onclick="busy(this, ()=>saveInput(false))">${t("Registrar")}</button>
+      <button class="ghost" id="f-review" onclick="busy(this, ()=>saveInput(true))">${t("Registrar e revisar a classificação")}</button></div></div>
   <div class="card"><h2>${t(FI.all ? "Entradas" : "Entradas pendentes")} (${all.length})</h2>
     <div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(FI.q)}" onchange="FI.q=this.value;FI.page=0;render()">
       <label class="inline-check"><input type="checkbox" ${FI.all ? "checked" : ""} onchange="FI.all=this.checked;FI.page=0;render()"> ${t("Mostrar registradas")}</label></div>
@@ -4740,37 +4867,59 @@ function viewEntradas() {
   </table>
   ${pages > 1 ? `<div class="pager"><span></span><span><button class="small ghost" ${FI.page === 0 ? "disabled" : ""} onclick="FI.page--;render()">←</button> ${FI.page + 1} / ${pages} <button class="small ghost" ${FI.page >= pages - 1 ? "disabled" : ""} onclick="FI.page++;render()">→</button></span></div>` : ""}</div></div>`;
 }
+let LAST_QUICK = null;
+function quickResult(r) {
+  const c = r.created || {};
+  return `<div class="alert lv-baixa quick-ok">✓ ${t("Registrado")}: <a href="#lista/${c.item}">${esc(c.item)}</a> · ${esc(r.title)}
+    ${c.project ? ` · <a href="#projetos/${c.project}/itens">${t("projeto")} ${esc(c.project)}</a>${c.pitems?.length ? ` (${t("{n} itens", { n: c.pitems.length })})` : ""}` : ""}
+    ${(c.risks || []).length ? ` · ${c.risks.map((x) => `<a href="#riscos/${x}">${x}</a>`).join(", ")}` : ""}
+    <a class="btn small ghost" href="#entradas/${r.input}">${t("Revisar")}</a></div>`;
+}
 function inputForm(pre = {}) {
   const meetings = S.db.meetings.slice().reverse();
-  return `<div class="row"><div>${L("Origem")}<select id="f-source">${opts(LIST("sources"), pre.source || LIST("sources")[0])}</select></div>
-    <div>${L("Tipo")}<select id="f-kind">${opts(LIST("input_kinds"), pre.kind)}</select></div></div>
-  ${L("Título / assunto")}<input id="f-title" value="${esc(pre.title)}">
-  ${L("Descrição do input")}<textarea id="f-desc">${esc(pre.description)}</textarea>
+  return `<div class="row"><div>${L("Tipo")}<select id="f-kind">${opts(LIST("input_kinds"), pre.kind)}</select></div>
+    <div>${L("Título (se quiser outro)")}<input id="f-title" value="${esc(pre.title)}"></div></div>
   ${L("Background / contexto")}<textarea id="f-bg" style="min-height:60px">${esc(pre.background)}</textarea>
   <div class="row"><div>${L("De onde a demanda veio (pessoa / fórum)")}<input id="f-origin" value="${esc(pre.origin)}"></div>
     <div>${L("Reunião")}<select id="f-meeting"><option value="">—</option>${meetings.map((m) => `<option value="${m.id}" ${m.id === pre.meeting_id ? "selected" : ""}>${m.id} · ${esc(titleOf(m))}</option>`).join("")}</select></div></div>
   <div class="row"><div>${L("Departamento (área principal)")}${deptSelect("f-area", pre.area_main)}</div>
     <div>${L("Áreas impactadas")}${chipsPicker("f-areas-imp", pre.areas_impacted, depts())}</div>
     <div>${L("Áreas que impactam")}${chipsPicker("f-areas-by", pre.areas_impacting, depts())}</div></div>
-  <div class="row"><div>${L("Responsável")}${personSelect("f-owner", pre.owner, "f-area")}</div><div>${L("Prazo")}<input id="f-due" type="date" value="${esc(pre.due_date)}"></div></div>`;
+`;
+}
+/** Texto livre -> título (1ª linha) + descrição. Lista numerada logo no início: o título é o 1º subitem. */
+function splitEntry(text) {
+  const lines = text.trim().split("\n"), first = lines[0].replace(/^\s*[-•*]\s*/, "").trim();
+  const subs = AI.subitems(text);
+  if (subs.length >= 2 && /^\s*1\s*(?:[.．]|[)、])/.test(first)) return { title: subs[0].slice(0, 80) + (subs[0].length > 80 ? "…" : ""), description: text.trim() };
+  if (first.length > 160) return { title: first.slice(0, 80).trim() + "…", description: text.trim() };
+  return { title: first, description: lines.slice(1).join("\n").trim() };
 }
 function readInputForm() {
-  return { source: $("#f-source").value, source_detail: $("#f-kind").value, title: $("#f-title").value.trim(), description: $("#f-desc").value,
+  const e = splitEntry($("#f-text").value);
+  return { source: $("#f-source").value, source_detail: $("#f-kind").value, title: $("#f-title").value.trim() || e.title, description: e.description,
     background: $("#f-bg").value, origin: $("#f-origin").value, meeting_id: $("#f-meeting").value, area_main: $("#f-area").value,
     areas_impacted: $("#f-areas-imp").value, areas_impacting: $("#f-areas-by").value, owner: $("#f-owner").value, due_date: $("#f-due").value };
 }
-async function saveInput() {
+async function saveInput(review) {
+  if (!$("#f-text").value.trim()) throw new Error(t("Escreva o que chegou."));
   const data = readInputForm();
-  if (!data.title) throw new Error(t("Informe o título."));
   // evita registrar a mesma demanda duas vezes
   const dupItems = Core.findDuplicates(data.title);
   const norm = (x) => AI.norm(x).replace(/\s+/g, " ").trim();
   const dupInputs = S.db.inputs.filter((i) => i.status !== "Registrado" && norm(i.title) === norm(data.title));
   if ((dupItems.length || dupInputs.length) && !confirm(t("DUP_CONFIRM", { ids: [...dupItems, ...dupInputs.map((i) => i.id)].join(", ") }))) return;
   const rec = await api("inputs", "POST", data);
-  await api(`inputs/${rec.id}/suggest`, "POST");
+  if (review) {
+    await api(`inputs/${rec.id}/suggest`, "POST");
+    await refresh();
+    location.hash = "entradas/" + rec.id;
+    return;
+  }
+  const r = await api(`inputs/${rec.id}/quick`, "POST");
+  LAST_QUICK = { input: rec.id, title: data.title, created: r.created };
+  toast(`${t("Registrado em")} ${r.created.item}` + (r.created.project ? ` · ${t("projeto")} ${r.created.project}` : ""));
   await refresh();
-  location.hash = "entradas/" + rec.id;
 }
 
 /* Itens relacionados escolhidos na avaliação (busca em vez de listar a lista geral inteira). */
@@ -4813,6 +4962,7 @@ function openTriage(id) {
   ${!done && dups.length ? `<div class="alert lv-alta">⚠ ${t("Possível duplicidade: já existe {ids} com o mesmo título. A entrada será incluída no item existente, a menos que você mude a relação.", { ids: dups.join(", ") })}</div>` : ""}
   ${sug ? `<div class="ai-box"><b>${t("Sugestão da IA")}</b> (${esc(tv(sug.engine))}): ${esc(sug.msg ? msg(sug) : sug.rationale)}${sug.gap_analysis ? "\n" + t("Gaps:") + " " + esc(sug.gap_analysis) : ""}${sug.relation_explanation ? "\n" + t("Relação:") + " " + esc(t(sug.relation_explanation)) : ""}</div>`
         : `<div class="actions"><button onclick="busy(this, async()=>{await api('inputs/${id}/suggest','POST'); await refresh();})">${t("Pedir sugestão da IA")}</button></div>`}
+  ${!done && sug ? `<div class="actions"><button onclick="busy(this, ()=>commitTriage('${id}'))">✓ ${t("Aceitar a sugestão e registrar")}</button><span class="muted">${t("ou ajuste abaixo antes de confirmar")}</span></div>` : ""}
   <div class="steps"><span class="step on">${t("2. Assessment")}</span></div>
   <h3>${t("2.1 Tem relação com item já levantado?")}</h3>
   <div class="row"><div>${L("Relação")}<select id="t-mode" onchange="if(this.value==='novo'){TRI.include='';$('#t-rel-box').innerHTML=triRelBox();}">
@@ -4826,11 +4976,12 @@ function openTriage(id) {
   <div class="row"><div>${L("Prioridade")}<select id="t-prio">${opts(LEVELS, a.priority || "Média")}</select></div>
     <div>${L("Urgência")}<select id="t-urg">${opts(LEVELS, a.urgency || "Média")}</select></div>
     <div>${L("De onde a demanda veio")}<input id="t-origin" value="${esc(a.origin || inp.origin || tv(inp.source))}"></div></div>
+  <details class="more"><summary>${t("Mais detalhes: riscos, impactos, gaps e sua análise")}</summary>
   ${L("Riscos e urgência — explique o porquê")}<textarea id="t-risk" style="min-height:50px">${esc(a.risk_reason)}</textarea>
   ${L("Impactos")}<div class="checks inline">${S.impact_types.map((x) => `<label><input type="checkbox" class="t-imp" value="${esc(x)}" ${(a.impacts || []).includes(x) ? "checked" : ""}> ${esc(t(x))}</label>`).join("")}</div>
   ${L("Impactos em quais projetos / operações, por quê")}<textarea id="t-impd" style="min-height:50px">${esc(a.impact_details)}</textarea>
   ${L("Gaps (por que não foi previsto antes?)")}<textarea id="t-gap" style="min-height:50px">${esc(a.gap_analysis)}</textarea>
-  ${L("Sua análise de risco (ensina a IA)")}<textarea id="t-teach" style="min-height:50px" placeholder="${esc(t("TEACH_RISK_PLACEHOLDER"))}">${esc(inp.risk_analysis?.analysis)}</textarea>
+  ${L("Sua análise de risco (ensina a IA)")}<textarea id="t-teach" style="min-height:50px" placeholder="${esc(t("TEACH_RISK_PLACEHOLDER"))}">${esc(inp.risk_analysis?.analysis)}</textarea></details>
   <div class="steps" style="margin-top:14px"><span class="step on">${t("3. Definição (pode ser mais de uma)")}</span></div>
   <div class="checks">${Object.entries(S.definitions).map(([k, v]) => `<label><input type="checkbox" class="t-def" value="${k}" ${defs.includes(k) ? "checked" : ""}> ${esc(t(v))}</label>`).join("")}</div>
   <p class="muted">${t("“Ação dentro de um projeto” entra automaticamente na aba Itens adicionais do projeto.")}</p>
@@ -5516,22 +5667,19 @@ function summaryDoc({ summary: s, narrative }) {
   const k = s.kpis;
   const tbl = (rows, cols, heads) => `<table>${th(heads)}${rows.map((r) => `<tr>${cols.map((c) => `<td>${c === "priority" ? prio(r[c]) : c === "pct" ? bar(r[c]) : ["status", "mode", "probability", "impact"].includes(c) ? esc(tv(r[c])) : esc(r[c])}</td>`).join("")}</tr>`).join("") || `<tr><td colspan=${cols.length} class="muted">—</td></tr>`}</table>`;
   const kp = [["Novas demandas", k.new_inputs], ["Itens criados", k.items_created], ["Itens atualizados", k.items_updated], ["Itens com progresso", k.items_progress ?? 0], ["Em aberto", k.open_items], ["Alta prioridade", k.high_priority_open], ["Vencidos", k.overdue], ["Reuniões", k.meetings], ["Riscos abertos", k.open_risks], ["Projetos ativos", k.active_projects]];
-  return `<div class="summary-doc"><h1>${esc(t(s.type))}</h1><p class="muted">${t("Período")} ${esc(s.period.start)}${s.period.end !== s.period.start ? " – " + esc(s.period.end) : ""} · ${t("gerado")} ${fmt(s.generated_at)}</p>
-  <h2>1. ${t("Destaques")}</h2><div class="ai-box">${esc(narrative)}</div>
-  <h2>2. ${t("Indicadores")}</h2><div class="kpis">${kp.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${t(n)}</span></div>`).join("")}</div>
-  <h2>3. ${t(s.progress_title || "Itens com progresso hoje")}</h2><div id="s-progress">${(s.progress_items || []).map((i) => `<div class="prog-box"><b>${i.kind === "items" ? `<a href="#lista/${i.id}">${esc(i.id)}</a> · ${esc(i.title)}` : `<a href="#projetos/${i.project}/${i.kind === "pitems" ? "itens" : "atividades"}">${esc(i.project)} · ${esc(i.id)}</a> · ${esc(i.title)}`}</b>
-    <span class="muted">— ${esc(i.kind === "items" ? t("Lista geral") : t(i.kind === "pitems" ? "Item do projeto {name}" : "Atividade do projeto {name}", { name: i.project_name }))}</span> ${statusPill(i.status)}${i.kind === "activities" ? ` ${bar(i.pct)}` : i.kind === "pitems" && i.pct != null ? ` <span class="muted">${t("projeto {pct}% concluído", { pct: i.pct })}</span>` : ""}
-    <ul>${i.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum item teve progresso registrado no período.")}</p>`}</div>
-  <h2>4. ${t("Progressos dos projetos")}</h2>${(s.project_progress || []).map((p) => `<div class="prog-box"><b>${p.main ? "★ " : ""}<a href="#projetos/${p.id}">${esc(p.id)}</a> · ${esc(p.name)}</b>${p.pct != null ? ` <span class="muted">(${p.pct}%)</span>` : ""}<ul>${p.updates.map((u) => `<li>${esc(u.text)} <span class="muted small">${fmt(u.date).slice(11)}</span></li>`).join("")}</ul></div>`).join("") || `<p class="muted">${t("Nenhum progresso registrado em projetos no período.")}</p>`}
-  <h2>5. ${t("Novas demandas por origem")}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(tv(src))} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || `<p class="muted">${t("Nenhuma nova demanda.")}</p>`}
-  <h2>6. ${t("Itens críticos (alta prioridade)")}</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
-  <h2>7. ${t("Prazos — vencidos e próximos 7 dias")}</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
-  <h2>8. ${t("Projetos")}</h2>${tbl(s.projects, ["id", "name", "status", "pct", "open_actions", "last_monitored", "next_meeting"], ["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Últ. monitoramento", "Próx. reunião"])}
-  <h2>9. ${t("Riscos")}</h2>${tbl(s.risks, ["id", "title", "mode", "probability", "impact"], ["ID", "Risco", "Modo", "Prob.", "Impacto"])}
-  <h2>10. ${t("Reuniões e decisões")}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(lc(m, "title"))}</b> (${esc(m.date)}) ${statusPill(m.status)}</p><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || `<li class="muted">${t("Sem decisões registradas")}</li>`}${(m.outcomes || []).filter((r) => r.kind !== "ignore").map((r) => `<li>→ ${esc(t(ASSIST_KIND_LABEL[r.kind]))}: ${linkTo(r.target)} — ${esc(r.title)}</li>`).join("")}</ul>`).join("") || `<p class="muted">${t("Nenhuma reunião no período.")}</p>`}
-  <h2>11. ${t("Infos a reportar")}</h2>${tbl(s.report_items, ["id", "title", "owner", "status"], ["ID", "Item", "Responsável", "Status"])}
-  <h2>12. ${t("Alertas")}</h2><ul>${s.alerts.map((a) => `<li>${esc(msg(a))}</li>`).join("") || '<li class="muted">—</li>'}</ul>
-  <h2>13. ${t("Linha do tempo")}</h2><ul class="tl">${timeline(s.activity)}</ul></div>`;
+  return `<div class="summary-doc"><p class="muted">${esc(t(s.type))} · ${t("Período")} ${esc(s.period.start)}${s.period.end !== s.period.start ? " – " + esc(s.period.end) : ""} · ${t("gerado")} ${fmt(s.generated_at)}</p>
+  ${s.report ? Core.reportHtml(s, narrative, esc, (h, label) => `<a href="#${esc(h)}">${esc(label)}</a>`) : `<div class="ai-box">${esc(narrative)}</div>`}
+  <details class="more annex"><summary>${t("Anexo")}: ${t("indicadores, demandas, itens críticos, riscos, alertas e linha do tempo")}</summary>
+  <h2>${t("Indicadores")}</h2><div class="kpis">${kp.map(([n, v]) => `<div class="kpi"><b>${v}</b><span>${t(n)}</span></div>`).join("")}</div>
+  <h2>${t("Novas demandas por origem")}</h2>${Object.entries(s.inputs_by_source).map(([src, l]) => `<h3>${esc(tv(src))} (${l.length})</h3>${tbl(l, ["id", "title", "status"], ["ID", "Demanda", "Status"])}`).join("") || `<p class="muted">${t("Nenhuma nova demanda.")}</p>`}
+  <h2>${t("Itens críticos (alta prioridade)")}</h2>${tbl(s.critical_items, ["id", "title", "owner", "due_date", "status"], ["ID", "Item", "Responsável", "Prazo", "Status"])}
+  <h2>${t("Prazos — vencidos e próximos 7 dias")}</h2>${tbl(s.due_items, ["id", "title", "owner", "due_date", "priority"], ["ID", "Item", "Responsável", "Prazo", "Prioridade"])}
+  <h2>${t("Projetos")}</h2>${tbl(s.projects, ["id", "name", "status", "pct", "open_actions", "last_monitored", "next_meeting"], ["ID", "Projeto", "Status", "% concluído", "Itens adicionais abertos", "Últ. monitoramento", "Próx. reunião"])}
+  <h2>${t("Riscos")}</h2>${tbl(s.risks, ["id", "title", "mode", "probability", "impact"], ["ID", "Risco", "Modo", "Prob.", "Impacto"])}
+  <h2>${t("Reuniões e decisões")}</h2>${s.meetings.map((m) => `<p><b>${esc(m.id)} — ${esc(lc(m, "title"))}</b> (${esc(m.date)}) ${statusPill(m.status)}</p><ul>${(m.decisions || []).map((d) => `<li>${esc(d)}</li>`).join("") || `<li class="muted">${t("Sem decisões registradas")}</li>`}${(m.outcomes || []).filter((r) => r.kind !== "ignore").map((r) => `<li>→ ${esc(t(ASSIST_KIND_LABEL[r.kind]))}: ${linkTo(r.target)} — ${esc(r.title)}</li>`).join("")}</ul>`).join("") || `<p class="muted">${t("Nenhuma reunião no período.")}</p>`}
+  <h2>${t("Infos a reportar")}</h2>${tbl(s.report_items, ["id", "title", "owner", "status"], ["ID", "Item", "Responsável", "Status"])}
+  <h2>${t("Alertas")}</h2><ul>${s.alerts.map((a) => `<li>${esc(msg(a))}</li>`).join("") || '<li class="muted">—</li>'}</ul>
+  <h2>${t("Linha do tempo")}</h2><ul class="tl">${timeline(s.activity)}</ul></details></div>`;
 }
 
 // ------------------------------------------------------------------ configurações

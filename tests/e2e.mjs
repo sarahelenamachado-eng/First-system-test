@@ -42,6 +42,7 @@ async function seed(page) {
     await api("items", "POST", { title: "Relatório de Xushui para o HQ", area_main: "GA", priority: "Alta", owner: "Carlos" });
     await api("items", "POST", { title: "Contrato de limpeza", area_main: "Compras", owner: "Wang" });
     const g2 = Core.find("items", "GOV002"); await api("items/GOV002/link", "POST", { collection: "projects", id: p.id }); g2.status = "Em andamento";
+    await api("meetings", "POST", { title: "Reunião GPS", date: todayISO(), time: "10:15", duration: 45, actual_duration: 45, status: "Realizada", attendees: ["Peter 姜大鹏", "Carlos"], decisions: ["Aprovar o plano de cabos"] });
     await Core.save();
     await refresh();
   });
@@ -94,13 +95,16 @@ async function scenario(page, label) {
   await page.click("button:has-text('Gerar summary')");
   await page.waitForSelector("#s-progress");
   const prog = await page.textContent("#s-progress");
-  for (const s of ["GOV001", "Rascunho enviado para revisão da diretora", "IT001", "Cabos lançados até o painel 3", "IT002", "Finalizado", "GOV002"]) assert.ok(prog.includes(s), label + ": summary tem " + s);
-  assert.match(await page.textContent(".summary-doc"), /3\. Itens com progresso hoje/);
+  for (const s of ["GOV001", "Rascunho enviado para revisão da diretora", "Subestação", "Cabos de média tensão: Cabos lançados até o painel 3", "Teste do transformador: Finalizado", "GOV002"]) assert.ok(prog.includes(s), label + ": summary tem " + s);
+  const doc = await page.textContent(".summary-doc .report");
+  const today = await page.evaluate(() => new Date(todayISO() + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "long" }));
+  for (const s of [`Resumo de ${today}`, "1. Conclusão", "2. Reuniões", "Reunião GPS", "10:15 – 11:00", "Logistic 物流", "Aprovar o plano de cabos", "3. Pendências", "3.1 Pendentes", "Relatório de Xushui para o HQ",
+    "3.2 Concluídos hoje", "Contrato de limpeza", "4. Projetos e itens com progresso hoje"]) assert.ok(doc.includes(s), label + ": modelo do summary tem " + s);
   if (shots) await page.screenshot({ path: `${shots}/${label}-3-summary.png`, fullPage: true });
   const sumFile = await page.evaluate(() => S.summaries.at(-1).file);
   const sumHtml = await readFile(page, sumFile);
-  assert.ok(sumHtml.includes("Itens com progresso hoje") && sumHtml.includes("Cabos lançados até o painel 3"), label + ": summary salvo na pasta");
-  return { prog, narrative: await page.textContent(".summary-doc .ai-box") };
+  assert.ok(sumHtml.includes("Projetos e itens com progresso hoje") && sumHtml.includes("Cabos lançados até o painel 3") && sumHtml.includes("Reunião GPS"), label + ": summary salvo na pasta");
+  return { prog, narrative: await page.textContent(".summary-doc .r-conclusion") };
 }
 
 const SUBS_TEXT = "1. 1. 发动机本地化组装前研究，测算成本，对标 Ale。 Preliminary study on localized engine assembly, cost estimation, and benchmarking with Ale. 2. P11 变速箱巴西产。 Local production of the P11 transmission in Brazil. 3. P30 巴西产发动机。 Local production of the P30 engine in Brazil. 4. 仪表台本地化。 Instrument panel localization. 5. 二工厂冲压件、一工厂钣金件。 Stamped parts from Plant 2 and sheet metal components from Plant 1. 6. Márcio 的本地化课题。 Márcio's localization projects.";
@@ -115,41 +119,51 @@ async function scenarioDeptsAndSubitems(page, label) {
   await page.click("#dp-save");
   await page.waitForSelector("#dp-table >> text=Ana Paula");
   if (shots) await page.screenshot({ path: `${shots}/${label}-4-departamentos.png`, fullPage: true });
-  // nova entrada: departamento e responsável são listas; escolher a pessoa preenche o departamento
-  await go(page, "entradas", "#f-owner");
+  // nova entrada rápida: uma caixa de texto + responsável; departamento e o resto ficam em "Mais detalhes"
+  await go(page, "entradas", "#f-text");
   assert.equal(await page.$eval("#f-area", (e) => e.tagName), "SELECT");
   const groups = await page.$$eval("#f-owner optgroup", (g) => g.map((x) => x.label));
   assert.deepEqual(groups.slice(0, 3), ["Logistic 物流", "Production 生产", "Production Control 生产管理"], label + ": pessoas por departamento");
   assert.ok(groups.includes("Purchasing 采购"));
   await page.selectOption("#f-owner", "Peter 姜大鹏");
   assert.equal(await page.inputValue("#f-area"), "Logistic 物流", label + ": departamento preenchido pela pessoa");
+  await page.click("summary:has-text('Mais detalhes (opcional)')");
   await page.click("#f-areas-imp-chips >> text=EHS");
   await page.click("#f-areas-imp-chips >> text=Quality 品质");
   assert.equal(await page.inputValue("#f-areas-imp"), "EHS, Quality 品质");
-  // entrada com subitens numerados (como a INP025) -> projeto com os 6 itens
-  const id = await page.evaluate(async (d) => (await api("inputs", "POST", { title: "Localization and Policies", description: d, source: "Diretora", source_detail: "Pedido pontual", owner: "Peter 姜大鹏", area_main: "Logistic 物流" })).id, SUBS_TEXT);
-  await page.evaluate(async (id) => { await api(`inputs/${id}/suggest`, "POST"); await refresh(); location.hash = "entradas/" + id; }, id);
-  await page.waitForSelector("#t-subs");
-  const subs = (await page.inputValue("#t-subs")).split("\n");
-  assert.equal(subs.length, 6, label + ": 6 subitens");
-  assert.ok(subs[4].endsWith("Plant 1.") && subs[5].startsWith("Márcio"), label + ": subitens separados certo");
-  assert.equal(await page.$eval(".t-def[value='novo_projeto']", (c) => c.checked), true, label + ": sugere novo projeto");
-  if (shots) await page.screenshot({ path: `${shots}/${label}-5-subitens.png`, fullPage: true });
-  await page.click("button:has-text('Confirmar e registrar na lista geral')");
-  await page.waitForSelector("text=6 itens");
+  if (shots) await page.screenshot({ path: `${shots}/${label}-5-entrada-rapida.png`, fullPage: true });
+  // entrada com subitens numerados (como a INP025): "Registrar" já cria o projeto com os 6 itens, sem passar pela triagem
+  await page.fill("#f-text", "Localization and Policies\n" + SUBS_TEXT);
+  await page.click("#f-quick");
+  await page.waitForSelector(".quick-ok >> text=6 itens");
   const proj = await page.evaluate(() => { const p = S.db.projects.find((x) => x.name === "Localization and Policies"); return { id: p.id, items: p.pitems.map((x) => x.title), owner: p.owner }; });
   assert.equal(proj.items.length, 6);
   assert.ok(proj.items[0].startsWith("发动机本地化组装前研究") && proj.items[1].startsWith("P11 变速箱巴西产"), label + ": itens do projeto");
+  assert.ok(proj.items[4].endsWith("Plant 1.") && proj.items[5].startsWith("Márcio"), label + ": subitens separados certo");
+  const inpRec = await page.evaluate(() => S.db.inputs.find((i) => i.title === "Localization and Policies"));
+  assert.equal(inpRec.status, "Registrado");
+  assert.equal(inpRec.area_main, "Logistic 物流");
+  // "Registrar e revisar": triagem mostra os subitens para ajustar e o botão de aceitar a sugestão
+  await page.fill("#f-text", "Ações de 5S\n1. Organizar almoxarifado\n2. Pintar faixas\n3. Auditoria mensal");
+  await page.click("#f-review");
+  await page.waitForSelector("#t-subs");
+  assert.equal(await page.inputValue("#t-subs"), "Organizar almoxarifado\nPintar faixas\nAuditoria mensal");
+  assert.equal(await page.$eval(".t-def[value='novo_projeto']", (c) => c.checked), true, label + ": sugere novo projeto");
+  if (shots) await page.screenshot({ path: `${shots}/${label}-6-triagem.png` });
+  await page.fill("#t-subs", "Organizar almoxarifado\nPintar faixas");
+  await page.click("button:has-text('Aceitar a sugestão e registrar')");
+  await page.waitForSelector("text=2 itens");
+  assert.deepEqual(await page.evaluate(() => S.db.projects.find((p) => p.name === "Ações de 5S").pitems.map((x) => x.title)), ["Organizar almoxarifado", "Pintar faixas"]);
   await go(page, `projetos/${proj.id}/itens`, "#pi-new-t");
   assert.equal(await page.$eval(`#pi-w-IT001`, (e) => e.tagName + ":" + e.value), "SELECT:Peter 姜大鹏", label + ": responsável do item é lista");
-  if (shots) await page.screenshot({ path: `${shots}/${label}-6-projeto.png`, fullPage: true });
+  if (shots) await page.screenshot({ path: `${shots}/${label}-7-projeto.png`, fullPage: true });
   // item já registrado na lista geral com subitens -> botão "Transformar em projeto"
-  await page.evaluate(async () => { await api("items", "POST", { title: "Ações de 5S", description: "1. Organizar almoxarifado\n2. Pintar faixas\n3. Auditoria mensal" }); await refresh(); });
-  const gid = await page.evaluate(() => S.db.items.find((i) => i.title === "Ações de 5S").id);
+  await page.evaluate(async () => { await api("items", "POST", { title: "Programa 5S", description: "1. Organizar almoxarifado\n2. Pintar faixas\n3. Auditoria mensal" }); await refresh(); });
+  const gid = await page.evaluate(() => S.db.items.find((i) => i.title === "Programa 5S").id);
   await go(page, "lista/" + gid, ".subs-box button");
   await page.click(".subs-box button");
   await page.waitForSelector("text=3 itens criados");
-  assert.deepEqual(await page.evaluate(() => S.db.projects.find((p) => p.name === "Ações de 5S").pitems.map((x) => x.title)), ["Organizar almoxarifado", "Pintar faixas", "Auditoria mensal"]);
+  assert.deepEqual(await page.evaluate(() => S.db.projects.find((p) => p.name === "Programa 5S").pitems.map((x) => x.title)), ["Organizar almoxarifado", "Pintar faixas", "Auditoria mensal"]);
 }
 
 // ---------------------------------------------------------------- 1) modo heurístico (sem chave)
@@ -158,8 +172,9 @@ async function scenarioDeptsAndSubitems(page, label) {
   assert.match(await page.textContent("#ai-badge"), /heurística/);
   const r = await scenario(page, "heuristico");
   await scenarioDeptsAndSubitems(page, "heuristico");
-  assert.match(r.narrative, /Itens com progresso hoje: \d+/);
-  assert.match(r.narrative, /PROJ001 · IT001 Cabos de média tensão: Cabos lançados até o painel 3/);
+  assert.match(r.narrative, /^Hoje foram realizadas 1 reuniões e discutidos 1 tópicos/);
+  assert.match(r.narrative, /\n1\. Reunião GPS: Aprovar o plano de cabos/);
+  assert.match(r.narrative, /Subestação: /);
   await page.context().close();
   console.log("ok - modo heurístico (sem chave)");
 }
@@ -171,12 +186,13 @@ async function scenarioDeptsAndSubitems(page, label) {
     const body = JSON.parse(route.request().postData());
     assert.equal(route.request().headers()["x-api-key"], "sk-ant-teste");
     const text = body.messages[0].content;
-    if (/DESTAQUES/.test(text)) prompt = text;
+    if (/CONCLUSÃO/.test(text)) prompt = text;
     const sch = body.output_config.format?.schema;
     // avaliação da IA sem "novo projeto": a regra dos subitens tem que valer mesmo assim
-    const out = sch?.properties?.relation_mode ? JSON.stringify({ related: [], relation_mode: "novo", include_in: "", relation_explanation: "", scope: "Localização", scope_action: "Estudar",
+    const out0 = sch?.properties?.relation_mode ? JSON.stringify({ related: [], relation_mode: "novo", include_in: "", relation_explanation: "", scope: "Localização", scope_action: "Estudar",
         priority: "Alta", urgency: "Média", risk_reason: "", impacts: ["Custo"], impact_details: "", definitions: ["acao_geral"], project_id: "", gap_analysis: "", rationale: "Simulado" })
-      : sch ? "{}" : "- Itens com progresso hoje: IT001 cabos lançados até o painel 3; GOV001 rascunho em revisão.";
+      : sch ? "{}" : "Hoje houve 1 reunião (GPS).\n1. Itens com progresso hoje: IT001 cabos lançados até o painel 3; GOV001 rascunho em revisão.";
+    const out = out0;
     await route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" },
       body: JSON.stringify({ content: [{ type: "text", text: out }], stop_reason: "end_turn" }) });
   });
@@ -185,7 +201,7 @@ async function scenarioDeptsAndSubitems(page, label) {
   await scenarioDeptsAndSubitems(page, "ia");
   assert.match(await page.evaluate(() => S.db.inputs.at(-1).ai_suggestion.engine), /claude/, "avaliação veio da IA simulada");
   assert.match(r.narrative, /Itens com progresso hoje: IT001 cabos lançados/);
-  assert.ok(prompt.includes('comece por um bullet "Itens com progresso hoje:"') && prompt.includes('"progress_items"') && prompt.includes("Cabos lançados até o painel 3"), "prompt da IA leva os itens com progresso");
+  assert.ok(prompt.includes("lista numerada") && prompt.includes('"projetos_e_itens_com_progresso"') && prompt.includes("Cabos lançados até o painel 3") && prompt.includes("Aprovar o plano de cabos"), "prompt da IA leva reuniões e progresso");
   await page.context().close();
   console.log("ok - modo com IA (API simulada)");
 }

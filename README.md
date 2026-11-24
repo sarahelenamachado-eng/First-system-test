@@ -48,6 +48,9 @@ Todos os campos de departamento, responsável e participantes passam a ser lista
 o departamento dela é preenchido.
 
 ### 1. Entradas (Inputs management)
+**Entrada rápida:** cole ou escreva o que chegou numa caixa só (1ª linha = título, o resto = descrição), escolha o responsável
+e clique em **Registrar**: a IA (ou a heurística, sem chave) classifica e o item já vai para a lista geral. O resto dos campos fica em
+"Mais detalhes (opcional)". **Registrar e revisar a classificação** abre a triagem completa, com o botão **Aceitar a sugestão e registrar**.
 Fluxo em 3 etapas para cada entrada vinda da **Diretora, Reunião, Departamento ou HQ**: entrada da informação →
 assessment (relação com itens já levantados + classificação de escopo, prioridade, urgência, impactos e gaps) →
 definição (risco a monitorar/investigar, info a reportar, novo projeto, ação dentro de um projeto, ação geral).
@@ -134,6 +137,9 @@ Gere pelos dados registrados ou com a IA a partir da sua descrição, arraste, e
 Para **ensinar a IA**: escreva regras de como montar os fluxos e salve fluxos bons como exemplo.
 
 ### 7. Summaries diário e semanal
+No formato do modelo: **1. Conclusão** (parágrafo + pontos-chave numerados, escrita pela IA ou montada sem IA),
+**2. Reuniões** (tabela: reunião e horário, departamento principal, tópicos, responsável e prazo), **3. Pendências**
+(3.1 pendentes e 3.2 concluídos no dia) e **4. Projetos e itens com progresso**. O restante fica no **Anexo**.
 Destaques, indicadores, **itens com progresso hoje** (cada item da lista geral, item de projeto ou atividade que andou no dia, com o progresso
 registrado e o status atual), **progressos dos projetos** (tudo o que foi registrado no dia: progresso pelo assistente, pelas atas,
 pelos itens/atividades do projeto ou pela caixa "Progresso do projeto"), progresso dos itens da lista geral, demandas por origem, itens críticos, prazos, projetos (% concluído), riscos,
