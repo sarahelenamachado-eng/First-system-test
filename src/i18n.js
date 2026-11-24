@@ -830,5 +830,20 @@ Object.assign(D, {
     "已完成事项移出总清单，按月份和项目 / 范围保存在这里。每个事项也会以文件形式保存到电脑文件夹：项目文件夹（PROJECTS/…/FINALIZADOS/月份），没有项目的保存在 FINALIZADOS/部门/月份。",
     "Itens finalizados saem da lista geral e ficam aqui, por mês e por projeto / escopo. Cada um também é salvo como arquivo na pasta do computador: na pasta do projeto (PROJECTS/…/FINALIZADOS/mês) ou, sem projeto, em FINALIZADOS/departamento/mês."],
   "Item reaberto": ["Item reopened", "事项已重新打开"], "Reabrir": ["Reopen", "重新打开"], "Arquivo na pasta": ["File in the folder", "文件夹中的文件"],
-  "Item de projeto sem atualização vai para confirmação (dias)": ["Project item without update goes to confirmation (days)", "项目事项未更新多少天后需确认（天）"]
+  "Item de projeto sem atualização vai para confirmação (dias)": ["Project item without update goes to confirmation (days)", "项目事项未更新多少天后需确认（天）"],
+  // ---- departamentos e pessoas; entradas com subitens viram projeto
+  "Departamentos e pessoas": ["Departments and people", "部门和人员"], "Outras pessoas": ["Other people", "其他人员"],
+  "DEPTS_HELP": ["One department per line, followed by \":\" and its people separated by commas. E.g.: Logistic 物流: Alessandro Barbosa, Peter 姜大鹏. These options appear as lists in every department and person field (owner, participants), so you don't need to type them.",
+    "每行一个部门，后接“:”和用逗号分隔的人员。例如：Logistic 物流: Alessandro Barbosa, Peter 姜大鹏。这些选项会以列表形式出现在所有部门和人员字段（负责人、参会人）中，无需每次输入。",
+    "Um departamento por linha, seguido de \":\" e das pessoas separadas por vírgula. Ex.: Logistic 物流: Alessandro Barbosa, Peter 姜大鹏. Essas opções aparecem como lista em todos os campos de departamento e de pessoa (responsável, participantes), sem precisar digitar."],
+  "Salvar departamentos e pessoas": ["Save departments and people", "保存部门和人员"], "Como fica": ["Preview", "预览"], "Pessoas": ["People", "人员"],
+  "Pessoas que aparecem só como participantes de reuniões ficam em “Outras pessoas”. O cargo de cada pessoa é ajustado em Reuniões → Pessoas.":
+    ["People who only appear as meeting participants stay under “Other people”. Each person's role is set in Meetings → People.", "仅作为会议参会人出现的人员归入“其他人员”。每个人的职位在 会议 → 人员 中设置。"],
+  "Informe ao menos um departamento.": ["Enter at least one department.", "请至少输入一个部门。"],
+  "Esta entrada tem {n} subitens: com “Criação de um novo projeto”, ela vira um projeto e cada linha abaixo vira um item dele (ajuste se quiser).":
+    ["This input has {n} sub-items: with “New project”, it becomes a project and each line below becomes one of its items (adjust if you like).", "此输入包含 {n} 个子项：选择“创建新项目”后，它会成为一个项目，下面每一行都会成为该项目的一个事项（可调整）。"],
+  "Este item tem {n} subitens. Transforme em projeto: cada subitem vira um item do projeto.": ["This item has {n} sub-items. Turn it into a project: each sub-item becomes a project item.", "此事项包含 {n} 个子项。可转为项目：每个子项成为项目中的一个事项。"],
+  "Transformar em projeto": ["Turn into a project", "转为项目"], "Adicionar os subitens ao projeto {id}": ["Add the sub-items to project {id}", "将子项添加到项目 {id}"],
+  "Projeto {id}: {n} itens criados": ["Project {id}: {n} items created", "项目 {id}：已创建 {n} 个事项"],
+  "{n} itens criados em {id} a partir dos subitens de {ref}": ["{n} items created in {id} from the sub-items of {ref}", "已根据 {ref} 的子项在 {id} 中创建 {n} 个事项"]
 });

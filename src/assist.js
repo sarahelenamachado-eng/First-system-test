@@ -282,6 +282,7 @@ const reasonText = (r) => (Array.isArray(r) ? t(r[0], r[1]) : r || "");
 const targetLabel = (kind, id) => { const r = kind === "project_progress" ? byId("projects", id) : byId("items", id); return r ? `${id} · ${kind === "project_progress" ? lc(r, "name") : lc(r, "title")}` : id; };
 function targetLists() {
   return `<datalist id="dl-projects">${S.db.projects.filter((p) => !["Concluído", "Cancelado"].includes(p.status)).map((p) => `<option value="${esc(p.id + " · " + lc(p, "name"))}">`).join("")}</datalist>
+    <datalist id="dl-people">${(S.db.settings.people || []).map((x) => `<option value="${esc(x.name)}">${esc(x.dept || "")}</option>`).join("")}</datalist>
     <datalist id="dl-items">${S.db.items.filter((i) => i.status !== "Concluído").map((i) => `<option value="${esc(i.id + " · " + lc(i, "title"))}">`).join("")}</datalist>`;
 }
 /** Tabela editável de propostas: o usuário confirma ou corrige o destino de cada ponto. */
@@ -293,7 +294,7 @@ function proposalsPanel(key, res, onApply) {
     ${res.proposals.map((p, k) => `<tr class="${p.kind === "ignore" ? "done" : ""}"><td style="min-width:230px"><select id="${key}-k-${k}" onchange="propKind('${key}', ${k}, this.value)">${ASSIST_KINDS.map((x) => `<option value="${x}" ${x === p.kind ? "selected" : ""}>${esc(t(ASSIST_KIND_LABEL[x]))}</option>`).join("")}</select>
       <input id="${key}-t-${k}" class="tg-in" list="${p.kind === "project_progress" ? "dl-projects" : "dl-items"}" value="${esc(p.target ? targetLabel(p.kind, p.target) : "")}" placeholder="${esc(t("Buscar ID ou nome…"))}" ${needsTarget(p.kind) ? "" : "hidden"}></td>
       <td style="min-width:240px"><textarea id="${key}-ti-${k}" rows="2">${esc(p.title)}</textarea>${p.text && p.text !== p.title ? `<div class="muted small">${esc(p.text)}</div>` : ""}</td>
-      <td><input id="${key}-o-${k}" value="${esc(p.owner)}" style="width:140px"></td>
+      <td><input id="${key}-o-${k}" value="${esc(p.owner)}" list="dl-people" style="width:140px"></td>
       <td><input type="date" id="${key}-d-${k}" value="${esc(p.kind === "meeting" ? p.date : p.due_date)}">${p.kind === "meeting" ? `<input type="time" id="${key}-h-${k}" value="${esc(p.time)}"> <input type="number" id="${key}-m-${k}" value="${esc(p.duration || 60)}" style="width:70px"> min` : ""}</td>
       <td class="muted small">${esc(reasonText(p.reason))}</td></tr>`).join("")}</table></div>${targetLists()}
     <div class="actions"><button onclick="busy(this, ()=>${onApply})">${t("Aplicar")}</button></div></div>`;

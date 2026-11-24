@@ -156,6 +156,25 @@ critério da organização e siga-os quando aplicáveis.`; },
     Qualidade: ["qualidade", "defeito", "retrabalho", "refugo", "nao conformidade", "padronizacao", "standard", "quality", "auditoria de produto", "reclamacao de cliente"],
   },
 
+  /** Subitens numerados de um texto ("1. ... 2. ..."), em linhas separadas ou no mesmo parágrafo.
+   * Só conta a sequência 1, 2, 3…; números soltos no meio do texto ("Plant 1.") não quebram o item. */
+  subitems(text) {
+    const s = String(text || "");
+    const re = /(?<=^|[\s；;。.,，:：])(\d{1,2})\s*(?:[.．](?!\d)|[)、])\s*/g;
+    const cuts = [];
+    let want = 1, m;
+    while ((m = re.exec(s))) {
+      if (+m[1] !== want) continue;
+      // a lista precisa começar no início do texto, de uma linha ou depois de ":"
+      if (want === 1 && !/(^|\n|[:：])\s*$/.test(s.slice(0, m.index))) continue;
+      cuts.push({ at: m.index, start: m.index + m[0].length });
+      want++;
+    }
+    if (cuts.length < 2) return [];
+    return cuts.map((c, i) => s.slice(c.start, i + 1 < cuts.length ? cuts[i + 1].at : s.length)
+      .replace(/^\s*1\s*(?:[.．](?!\d)|[)、])\s*/, "").replace(/\s+/g, " ").trim()).filter(Boolean);
+  },
+
   heuristicAssess(db, inp, related) {
     const text = this.norm(this.inputText(inp));
     const has = (w) => text.includes(w);
@@ -168,6 +187,8 @@ critério da organização e siga-os quando aplicáveis.`; },
     const project = db.projects.find((p) => this.similarity(this.inputText(inp), `${p.name || ""} ${p.description || ""}`) > 0.3)?.id || "";
     if (project) defs.push("acao_projeto");
     else if (related.length >= (db.settings.links_for_project_alert || 3)) defs.push("novo_projeto");
+    // vários subitens numerados = um projeto, com cada subitem como item do projeto
+    if (this.subitems(inp.description).length >= 2 && !defs.includes("novo_projeto")) { defs.splice(defs.indexOf("acao_projeto") >>> 0, defs.includes("acao_projeto") ? 1 : 0); defs.push("novo_projeto"); }
     if (!defs.length) defs.push("acao_geral");
     const dup = Core.findDuplicates(inp.title || "")[0];
     const mode = dup || (related.length && related[0].score >= 0.55) ? "incluir_existente" : "novo";
@@ -221,13 +242,15 @@ critério da organização e siga-os quando aplicáveis.`; },
       + "2) Classifique escopo (o que é / o que fazer), prioridade, urgência com justificativa do risco, impactos "
       + "(Custo, Eficiência, Operação, Compliance, People) e em quais projetos/operações. "
       + "3) Sugira uma ou mais definições. Use project_id quando for ação dentro de projeto existente. "
-      + "4) Aponte gaps: por que isso não foi previsto antes.";
+      + "4) Aponte gaps: por que isso não foi previsto antes. "
+      + "5) Regra do usuário: se a descrição tiver vários subitens numerados (1., 2., 3.…), a demanda vira um NOVO PROJETO (definitions inclui novo_projeto) e cada subitem vira um item desse projeto.";
     try {
       const out = await this.call(prompt, this.ASSESS_SCHEMA, "medium");
       const valid = new Set(db.items.map((i) => i.id));
       out.related = (out.related || []).filter((r) => valid.has(r.id));
       if (!valid.has(out.include_in)) { out.include_in = ""; out.relation_mode = "novo"; }
       if (!db.projects.some((p) => p.id === out.project_id)) out.project_id = "";
+      if (this.subitems(inp.description).length >= 2 && !out.definitions.includes("novo_projeto")) out.definitions = [...out.definitions.filter((d) => d !== "acao_projeto"), "novo_projeto"];
       out.engine = this.model;
       return out;
     } catch (e) {

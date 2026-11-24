@@ -41,10 +41,18 @@ Carlos e Wang", "HQ pediu o relatório de Xushui"). O assistente propõe onde re
 confirma ou corrige. Cada correção vira exemplo e a IA passa a repetir o seu critério (também funciona offline, por similaridade).
 Em **Ensinar o assistente**: regras de alocação, taxa de acerto das últimas propostas e a opção de deixar a IA aplicar sozinha.
 
+### Departamentos e pessoas
+Em **Configurações → Departamentos e pessoas**: um departamento por linha, seguido de `:` e das pessoas
+(ex.: `Logistic 物流: Alessandro Barbosa, Peter 姜大鹏`). A lista já vem com os departamentos e principais responsáveis.
+Todos os campos de departamento, responsável e participantes passam a ser listas de seleção; ao escolher a pessoa,
+o departamento dela é preenchido.
+
 ### 1. Entradas (Inputs management)
 Fluxo em 3 etapas para cada entrada vinda da **Diretora, Reunião, Departamento ou HQ**: entrada da informação →
 assessment (relação com itens já levantados + classificação de escopo, prioridade, urgência, impactos e gaps) →
 definição (risco a monitorar/investigar, info a reportar, novo projeto, ação dentro de um projeto, ação geral).
+Se a descrição tiver vários subitens numerados (1., 2., 3.…), a entrada vira um **novo projeto** e cada subitem vira um item
+desse projeto (a lista aparece na triagem para ajustar). Um item da lista geral com subitens tem o botão **Transformar em projeto**.
 A IA sugere, você confirma ou corrige, e a decisão fica guardada para a IA aprender.
 
 ### 2. Lista geral de governança

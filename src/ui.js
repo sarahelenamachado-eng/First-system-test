@@ -19,6 +19,39 @@ const pill = (txt, cls = "") => (txt ? `<span class="pill ${esc(cls)}">${esc(txt
 const tv = (v) => (v ? t(v) : "");
 const prio = (p) => pill(tv(p), "p-" + p);
 const opts = (list, sel) => list.map((o) => `<option value="${esc(o)}" ${o === sel ? "selected" : ""}>${esc(t(o))}</option>`).join("");
+// ---- departamentos e pessoas cadastrados em Configurações: listas de seleção em vez de digitar
+const depts = () => S?.db.settings.areas || [];
+const peopleList = () => S?.db.settings.people || [];
+const splitList = (v) => [...new Set(String(v || "").split(/[,;，；、\n]/).map((x) => x.trim()).filter(Boolean))];
+function deptSelect(id, sel = "", empty = "—", attrs = "") {
+  const list = depts(), extra = sel && !list.includes(sel) ? [sel] : [];
+  return `<select id="${id}" class="dept-sel" ${attrs}><option value="">${esc(empty)}</option>${[...list, ...extra].map((d) => `<option value="${esc(d)}" ${d === sel ? "selected" : ""}>${esc(d)}</option>`).join("")}</select>`;
+}
+/** Pessoas agrupadas por departamento; ao escolher, preenche o departamento (deptTarget) se estiver vazio. */
+function personSelect(id, sel = "", deptTarget = "", attrs = "") {
+  const ppl = peopleList(), groups = [...depts().map((d) => [d, ppl.filter((p) => p.dept === d)]), [t("Outras pessoas"), ppl.filter((p) => !depts().includes(p.dept))]].filter(([, l]) => l.length);
+  const known = ppl.some((p) => p.name === sel);
+  const o = (n) => `<option value="${esc(n)}" ${n === sel ? "selected" : ""}>${esc(n)}</option>`;
+  return `<select id="${id}" class="person-sel" ${deptTarget ? `onchange="fillDept(this,'${deptTarget}')"` : ""} ${attrs}><option value="">—</option>${sel && !known ? o(sel) : ""}
+    ${groups.map(([d, l]) => `<optgroup label="${esc(d)}">${l.map((p) => o(p.name)).join("")}</optgroup>`).join("")}</select>`;
+}
+function fillDept(sel, target) {
+  const p = peopleList().find((x) => x.name === sel.value), el = $("#" + target);
+  if (p?.dept && el && !el.value) el.value = p.dept;
+}
+/** Vários valores (ex.: áreas impactadas): clique nas opções ou digite separado por vírgula. */
+function chipsPicker(id, value, options) {
+  const cur = splitList(value);
+  return `<input id="${id}" value="${esc(cur.join(", "))}" oninput="syncChips('${id}')">
+    <div class="att-chips" id="${id}-chips">${options.map((n) => `<button type="button" class="chip ${cur.includes(n) ? "on" : ""}" data-name="${esc(n)}" onclick="toggleChip('${id}', this)">${esc(n)}</button>`).join("")}</div>`;
+}
+function toggleChip(id, btn) {
+  const inp = $("#" + id), n = btn.dataset.name;
+  let cur = splitList(inp.value);
+  cur = cur.includes(n) ? cur.filter((x) => x !== n) : [...cur, n];
+  inp.value = cur.join(", "); syncChips(id);
+}
+function syncChips(id) { const cur = splitList($("#" + id).value); document.querySelectorAll(`#${id}-chips .chip`).forEach((c) => c.classList.toggle("on", cur.includes(c.dataset.name))); }
 /** Texto escrito pelo usuário no idioma da tela (tradução automática), ou o original. */
 const lc = (rec, f) => (S?.db.settings.show_translated !== false ? Core.loc(rec, f) : rec?.[f] || "");
 const msg = (r) => (r.msg ? t(r.msg[0], r.msg[1]) : lc(r, "text"));
@@ -254,11 +287,10 @@ function inputForm(pre = {}) {
   ${L("Background / contexto")}<textarea id="f-bg" style="min-height:60px">${esc(pre.background)}</textarea>
   <div class="row"><div>${L("De onde a demanda veio (pessoa / fórum)")}<input id="f-origin" value="${esc(pre.origin)}"></div>
     <div>${L("Reunião")}<select id="f-meeting"><option value="">—</option>${meetings.map((m) => `<option value="${m.id}" ${m.id === pre.meeting_id ? "selected" : ""}>${m.id} · ${esc(titleOf(m))}</option>`).join("")}</select></div></div>
-  <div class="row"><div>${L("Departamento (área principal)")}<input id="f-area" list="areas" value="${esc(pre.area_main)}"></div>
-    <div>${L("Áreas impactadas")}<input id="f-areas-imp" value="${esc(pre.areas_impacted)}"></div>
-    <div>${L("Áreas que impactam")}<input id="f-areas-by" value="${esc(pre.areas_impacting)}"></div></div>
-  <datalist id="areas">${(S.db.settings.areas || []).map((a) => `<option>${esc(a)}</option>`).join("")}</datalist>
-  <div class="row"><div>${L("Responsável")}<input id="f-owner" value="${esc(pre.owner)}"></div><div>${L("Prazo")}<input id="f-due" type="date" value="${esc(pre.due_date)}"></div></div>`;
+  <div class="row"><div>${L("Departamento (área principal)")}${deptSelect("f-area", pre.area_main)}</div>
+    <div>${L("Áreas impactadas")}${chipsPicker("f-areas-imp", pre.areas_impacted, depts())}</div>
+    <div>${L("Áreas que impactam")}${chipsPicker("f-areas-by", pre.areas_impacting, depts())}</div></div>
+  <div class="row"><div>${L("Responsável")}${personSelect("f-owner", pre.owner, "f-area")}</div><div>${L("Prazo")}<input id="f-due" type="date" value="${esc(pre.due_date)}"></div></div>`;
 }
 function readInputForm() {
   return { source: $("#f-source").value, source_detail: $("#f-kind").value, title: $("#f-title").value.trim(), description: $("#f-desc").value,
@@ -312,6 +344,7 @@ function openTriage(id) {
   TRI = { rel: new Set((a.related || []).map((r) => r.id).filter((x) => byId("items", x))), include: a.relation_mode === "incluir_existente" ? a.include_in || "" : "" };
   if (!done && dups.length && !TRI.include) TRI.include = dups[0];
   const suggestions = (a.related || []).filter((r) => byId("items", r.id));
+  const subs = done ? [] : AI.subitems(inp.description);
   openModal(`<h2>${inp.id} · ${esc(lc(inp, "title"))} ${trButton("inputs", inp.id)}</h2>
   <p class="muted">${[tv(inp.source), tv(inp.source_detail), fmt(inp.created_at), inp.origin ? t("veio de") + " " + inp.origin : ""].filter(Boolean).map(esc).join(" · ")}</p>
   <p>${esc(lc(inp, "description"))}</p>${inp.background ? `<p class="muted"><b>${t("Contexto:")}</b> ${esc(lc(inp, "background"))}</p>` : ""}
@@ -339,6 +372,8 @@ function openTriage(id) {
   <div class="steps" style="margin-top:14px"><span class="step on">${t("3. Definição (pode ser mais de uma)")}</span></div>
   <div class="checks">${Object.entries(S.definitions).map(([k, v]) => `<label><input type="checkbox" class="t-def" value="${k}" ${defs.includes(k) ? "checked" : ""}> ${esc(t(v))}</label>`).join("")}</div>
   <p class="muted">${t("“Ação dentro de um projeto” entra automaticamente na aba Itens adicionais do projeto.")}</p>
+  ${subs.length >= 2 ? `<div class="alert lv-media subs-box">📋 ${t("Esta entrada tem {n} subitens: com “Criação de um novo projeto”, ela vira um projeto e cada linha abaixo vira um item dele (ajuste se quiser).", { n: subs.length })}
+    <textarea id="t-subs" style="min-height:${Math.min(220, 40 + subs.length * 26)}px;margin-top:6px">${esc(subs.join("\n"))}</textarea></div>` : ""}
   <div class="row"><div>${L('Projeto (para "Ação dentro de um projeto")')}<select id="t-proj"><option value="">—</option>${projects.map((p) => `<option value="${p.id}" ${p.id === a.project_id ? "selected" : ""}>${p.id} · ${esc(lc(p, "name"))}</option>`).join("")}</select></div>
     <div>${L('Nome do novo projeto (se "Criação de um novo projeto")')}<input id="t-newproj" value="${esc(inp.title)}"></div></div>
   <div class="actions">${done ? `<span class="pill p-Baixa">${t("Registrado em")} ${inp.item_id}</span> <a class="btn ghost" href="#lista/${inp.item_id}">${t("Abrir item")}</a>` : `<button onclick="busy(this, ()=>commitTriage('${id}'))">${t("Confirmar e registrar na lista geral")}</button>`}
@@ -353,6 +388,7 @@ async function commitTriage(id) {
   const body = {
     relation_mode: mode, include_in: mode === "incluir_existente" ? TRI.include : "", related: [...TRI.rel].filter((x) => x !== TRI.include), definitions,
     project_id: $("#t-proj").value, new_project_name: $("#t-newproj").value,
+    ...($("#t-subs") ? { subitems: $("#t-subs").value.split("\n").map((x) => x.trim()).filter(Boolean) } : {}),
     assessment: { scope: $("#t-scope").value, scope_action: $("#t-scope-act").value, priority: $("#t-prio").value, urgency: $("#t-urg").value,
       origin: $("#t-origin").value, risk_reason: $("#t-risk").value, impacts: vals("t-imp"), impact_details: $("#t-impd").value, gap_analysis: $("#t-gap").value },
   };
@@ -361,7 +397,7 @@ async function commitTriage(id) {
   const c = (await api(`inputs/${id}/commit`, "POST", body)).created;
   const teach = $("#t-teach").value.trim();
   if (teach) await api(`items/${c.item}/teach`, "POST", { analysis: teach, level: body.assessment.urgency, factors: body.assessment.impacts });
-  toast(`${t("Registrado em")} ${c.item}` + (c.project ? ` · ${t("projeto")} ${c.project}` : "") + (c.risks ? ` · ${c.risks.join(", ")}` : "") + (c.action ? ` · ${t("ação")} ${c.action}` : ""));
+  toast(`${t("Registrado em")} ${c.item}` + (c.project ? ` · ${t("projeto")} ${c.project}` + (c.pitems?.length ? ` (${t("{n} itens", { n: c.pitems.length })})` : "") : "") + (c.risks ? ` · ${c.risks.join(", ")}` : "") + (c.action ? ` · ${t("ação")} ${c.action}` : ""));
   closeModal();
   location.hash = "lista";
   await refresh();
@@ -488,28 +524,31 @@ function openItem(id) {
   if (!i) return;
   const dups = Core.findDuplicates(i.title, i.id);
   const acts = i.item_actions || [];
+  const isubs = AI.subitems(i.description);
   openModal(`<h2>${i.id} · ${esc(lc(i, "title"))} ${trButton("items", i.id)}</h2>
   <p>${prio(i.priority)} ${pill(t("Urgência") + " " + (tv(i.urgency) || "—"))} ${(i.impacts || []).map((x) => pill(t(x))).join("")} ${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}
     ${isOverdue(i) ? pill(`⚠ ${t("Prazo vencido em {date}", { date: i.due_date })}`, "p-Alta") : isDueSoon(i) ? pill(t("Vence em {date}", { date: i.due_date }), "p-Média") : ""}</p>
   ${dups.length ? `<div class="alert lv-alta">⚠ ${t("Possível duplicado de {ids}.", { ids: dups.join(", ") })} <button class="small" onclick="busy(this, ()=>mergeItem('${i.id}','${dups[0]}'))">${t("Mesclar este item em {id}", { id: dups[0] })}</button></div>` : ""}
   <p>${esc(lc(i, "description"))}</p>
+  ${isubs.length >= 2 ? `<div class="alert lv-media subs-box">📋 ${t("Este item tem {n} subitens. Transforme em projeto: cada subitem vira um item do projeto.", { n: isubs.length })}
+    <button class="small" onclick="busy(this, ()=>itemToProject('${i.id}'))">${(i.links?.projects || []).length ? t("Adicionar os subitens ao projeto {id}", { id: i.links.projects[0] }) : t("Transformar em projeto")}</button></div>` : ""}
   <div class="row"><div>${L("Escopo")}${esc(lc(i, "scope"))}<br><span class="muted">${esc(lc(i, "scope_action"))}</span></div><div>${L("Origem")}${esc(tv(i.source))} · ${esc(i.origin)}</div><div>${L("Áreas")}${esc(i.area_main)} ${i.areas_impacted ? "→ " + esc(i.areas_impacted) : ""}</div></div>
   ${i.risk_reason ? L("Riscos / urgência") + esc(lc(i, "risk_reason")) : ""}${i.impact_details ? L("Impactos") + esc(lc(i, "impact_details")) : ""}${i.gap_analysis ? L("Gaps") + esc(lc(i, "gap_analysis")) : ""}
   ${L("Vínculos")}<div>${linksHtml(i)}</div>${linkForm("items", i.id)}
-  <div class="row"><div>${L("Status")}<select id="i-status">${opts(STATUS_ITEM, i.status)}</select></div><div>${L("Responsável")}<input id="i-owner" value="${esc(i.owner)}"></div>
+  <div class="row"><div>${L("Status")}<select id="i-status">${opts(STATUS_ITEM, i.status)}</select></div><div>${L("Responsável")}${personSelect("i-owner", i.owner, "i-dept")}</div>
     <div>${L("Prazo")}<input type="date" id="i-due" value="${esc(i.due_date)}"></div><div>${L("Prioridade")}<select id="i-prio">${opts(LEVELS, i.priority)}</select></div>
-    <div>${L("Departamento")}<input id="i-dept" list="i-depts" value="${esc(i.area_main)}" placeholder="${esc(t("Geral (sem departamento)"))}"><datalist id="i-depts">${departments().map((d) => `<option>${esc(d)}</option>`).join("")}</datalist></div></div>
+    <div>${L("Departamento")}${deptSelect("i-dept", i.area_main, t("Geral (sem departamento)"))}</div></div>
   <div class="checks"><label><input type="checkbox" id="i-report" ${i.report ? "checked" : ""}> ${t("Info a ser reportada (entra no summary)")}</label></div>
   <div class="actions"><button onclick="busy(this, ()=>saveItem('${i.id}'))">${t("Salvar")}</button></div>
 
   <h3>${t("Ações do item")}</h3>
   <div style="overflow:auto"><table>${th(["ID", "Ação", "Responsável", "Prazo", "Status", "Progresso", ""])}
-  ${acts.map((a) => `<tr class="${a.due && a.due < S.today && a.status !== "Concluída" ? "overdue" : ""}"><td>${a.id}</td><td><input id="ia-t-${a.id}" value="${esc(a.text)}"></td><td><input id="ia-w-${a.id}" value="${esc(a.owner)}" style="width:110px"></td>
+  ${acts.map((a) => `<tr class="${a.due && a.due < S.today && a.status !== "Concluída" ? "overdue" : ""}"><td>${a.id}</td><td><input id="ia-t-${a.id}" value="${esc(a.text)}"></td><td>${personSelect(`ia-w-${a.id}`, a.owner)}</td>
     <td><input type="date" id="ia-d-${a.id}" value="${esc(a.due)}"></td><td><select id="ia-s-${a.id}">${opts(["Aberta", "Em andamento", "Concluída"], a.status)}</select></td>
     <td><textarea id="ia-p-${a.id}" rows="2" placeholder="${esc(t("Novo progresso…"))}">${esc(a.progress)}</textarea></td>
     <td class="nowrap"><button class="small" onclick="busy(this, ()=>saveItemAction('${i.id}','${a.id}'))">${t("Salvar")}</button><button class="small ghost danger" onclick="busy(this, ()=>subRemove('items','${i.id}','item_actions','${a.id}').then(()=>reopenItem('${i.id}')))">×</button></td></tr>`).join("")
     || `<tr><td colspan=7 class="muted">${t("Nenhuma ação.")}</td></tr>`}</table></div>
-  <div class="row"><div>${L("Nova ação")}<input id="ia-new-t"></div><div>${L("Responsável")}<input id="ia-new-w"></div><div>${L("Prazo")}<input type="date" id="ia-new-d"></div></div>
+  <div class="row"><div>${L("Nova ação")}<input id="ia-new-t"></div><div>${L("Responsável")}${personSelect("ia-new-w", "")}</div><div>${L("Prazo")}<input type="date" id="ia-new-d"></div></div>
   <div class="actions"><button class="small" onclick="busy(this, ()=>addItemAction('${i.id}'))">${t("Adicionar ação")}</button></div>
 
   <h3>${t("Progresso e histórico geral")}</h3>
@@ -547,6 +586,11 @@ async function saveItemAction(id, aid) {
   await api(`items/${id}/sub`, "POST", { list: "item_actions", entry: { id: aid, text: g("t"), owner: g("w"), due: g("d"), status: g("s"), progress: g("p") } });
   if (g("p").trim() && g("p") !== old.progress) await api(`items/${id}/progress`, "POST", { text: `${aid}: ${g("p")}`, action_id: aid });
   toast(t("Item atualizado")); await refresh(); reopenItem(id);
+}
+async function itemToProject(id) {
+  const r = await api(`items/${id}/to_project`, "POST", {});
+  toast(t("Projeto {id}: {n} itens criados", { id: r.project, n: r.pitems.length }));
+  closeModal(); location.hash = `projetos/${r.project}/itens`; await refresh();
 }
 async function mergeItem(from, into) {
   if (!into) throw new Error(t("Informe o ID do item."));
@@ -597,7 +641,7 @@ function viewProjetos(id, tab) {
     <td>${bar(Core.projectPct(p))}</td><td>${bar(Core.activitiesPct(p))}</td><td>${(p.actions || []).filter((a) => a.status !== "Concluída").length}</td>
     <td>${p.next_meeting <= S.today ? pill(p.next_meeting, "p-Alta") : esc(p.next_meeting)}</td><td>${esc(tv(p.status))}</td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nenhum projeto.")}</td></tr>`}
   </table></div>
-  <div class="card"><h2>${t("Novo projeto")}</h2>${L("Nome")}<input id="p-name">${L("Descrição")}<textarea id="p-desc"></textarea>${L("Responsável")}<input id="p-owner">
+  <div class="card"><h2>${t("Novo projeto")}</h2>${L("Nome")}<input id="p-name">${L("Descrição")}<textarea id="p-desc"></textarea>${L("Responsável")}${personSelect("p-owner", "")}
     <div class="checks"><label><input type="checkbox" id="p-main"> ${t("Projeto principal (gera reuniões de acompanhamento automaticamente)")}</label></div>
     <div class="actions"><button onclick="busy(this, async()=>{const r=await api('projects','POST',{name:$('#p-name').value,description:$('#p-desc').value,owner:$('#p-owner').value,main:$('#p-main').checked}); await refresh(); location.hash='projetos/'+r.id;})">${t("Criar projeto e pasta local")}</button></div></div></div>`;
 }
@@ -618,7 +662,7 @@ function projOverview(p) {
   return `<div class="grid">
   <div class="card"><h2>${t("Dados")}</h2>${L("Descrição")}<textarea id="pd-desc">${esc(p.description)}</textarea>${trPreview(p, "description")}
     ${L("Objetivo do projeto")}<textarea id="pd-obj" style="min-height:50px">${esc(p.objective)}</textarea>
-    <div class="row"><div>${L("Responsável")}<input id="pd-owner" value="${esc(p.owner)}"></div><div>${L("Status")}<select id="pd-status">${opts(["Em andamento", "Em risco", "Pausado", "Concluído", "Cancelado"], p.status)}</select></div><div>${L("Próxima reunião")}<input type="date" id="pd-next" value="${esc(p.next_meeting)}"></div></div>
+    <div class="row"><div>${L("Responsável")}${personSelect("pd-owner", p.owner)}</div><div>${L("Status")}<select id="pd-status">${opts(["Em andamento", "Em risco", "Pausado", "Concluído", "Cancelado"], p.status)}</select></div><div>${L("Próxima reunião")}<input type="date" id="pd-next" value="${esc(p.next_meeting)}"></div></div>
     <div class="checks"><label><input type="checkbox" id="pd-main" ${p.main ? "checked" : ""}> ${t("Projeto principal (gera reuniões de acompanhamento automaticamente)")}</label></div>
     ${L("Atualização / monitoramento")}<textarea id="pd-note" style="min-height:50px"></textarea>
     <div class="actions"><button onclick="busy(this, async()=>{await api('projects/${p.id}','PATCH',{description:$('#pd-desc').value,objective:$('#pd-obj').value,owner:$('#pd-owner').value,status:$('#pd-status').value,next_meeting:$('#pd-next').value,main:$('#pd-main').checked,_note:$('#pd-note').value.trim()||undefined}); toast(t('Projeto atualizado')); await refresh();})">${t("Salvar (marca monitoramento)")}</button>
@@ -634,13 +678,13 @@ function projItems(p) {
     <p>${t("Projeto concluído em")} ${bar(pct)} <span class="muted">${t("(itens finalizados ÷ total de itens)")}</span></p>
     <div style="overflow:auto"><table>${th(["ID", "Item", "Objetivo", "Descrição do progresso", "Responsável", "Prazo", "Status", ""])}
     ${(p.pitems || []).map((x) => `<tr class="${x.status === "Finalizado" ? "done" : ""}"><td>${x.id}</td>
-      <td><input id="pi-t-${x.id}" value="${esc(x.title)}"></td><td><textarea id="pi-o-${x.id}" rows="2">${esc(x.objective)}</textarea></td>
-      <td><textarea id="pi-p-${x.id}" rows="2">${esc(x.progress_desc)}</textarea></td><td><input id="pi-w-${x.id}" value="${esc(x.owner)}" style="width:110px"></td>
+      <td><textarea id="pi-t-${x.id}" rows="2" style="min-width:220px">${esc(x.title)}</textarea></td><td><textarea id="pi-o-${x.id}" rows="2">${esc(x.objective)}</textarea></td>
+      <td><textarea id="pi-p-${x.id}" rows="2">${esc(x.progress_desc)}</textarea></td><td>${personSelect(`pi-w-${x.id}`, x.owner)}</td>
       <td><input type="date" id="pi-d-${x.id}" value="${esc(x.due)}"></td><td><select id="pi-s-${x.id}">${opts(PITEM_STATUS, x.status)}</select></td>
       <td class="nowrap"><button class="small" onclick="busy(this, ()=>savePItem('${p.id}','${x.id}'))">${t("Salvar")}</button>
         <button class="small ghost danger" onclick="busy(this, ()=>subRemove('projects','${p.id}','pitems','${x.id}'))">×</button></td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nenhum item. Adicione os itens que compõem o projeto abaixo.")}</td></tr>`}</table></div>
     <h3>${t("Novo item do projeto")}</h3>
-    <div class="row"><div>${L("Item")}<input id="pi-new-t"></div><div>${L("Objetivo")}<input id="pi-new-o"></div><div>${L("Responsável")}<input id="pi-new-w"></div><div>${L("Prazo")}<input type="date" id="pi-new-d"></div></div>
+    <div class="row"><div>${L("Item")}<input id="pi-new-t"></div><div>${L("Objetivo")}<input id="pi-new-o"></div><div>${L("Responsável")}${personSelect("pi-new-w", "")}</div><div>${L("Prazo")}<input type="date" id="pi-new-d"></div></div>
     ${L("Descrição do progresso")}<textarea id="pi-new-p" style="min-height:50px"></textarea>
     <div class="actions"><button onclick="busy(this, ()=>addPItem('${p.id}'))">${t("Adicionar item")}</button></div></div>`;
 }
@@ -676,13 +720,13 @@ function projActivities(p) {
           <div class="progress-bar mini"><span style="width:${+a.progress || 0}%"></span></div></td>
         <td>${pill(t(actStatus(a)), actStatus(a) === "Concluída" ? "p-Baixa" : late ? "p-Alta" : "")}</td>
         <td><textarea id="ac-n-${a.id}" rows="2" placeholder="${esc(t("Novo progresso…"))}">${esc(a.notes)}</textarea></td>
-        <td><input id="ac-w-${a.id}" value="${esc(a.owner)}" style="width:100px"></td>
+        <td>${personSelect(`ac-w-${a.id}`, a.owner)}</td>
         <td><input type="date" id="ac-d-${a.id}" value="${esc(a.finish)}" class="${late ? "late" : ""}"></td>
         <td class="nowrap"><button class="small" onclick="busy(this, ()=>saveActivity('${p.id}','${a.id}'))">${t("Salvar")}</button>
           <button class="small ghost danger" onclick="busy(this, ()=>subRemove('projects','${p.id}','activities','${a.id}'))">×</button></td></tr>`;
     }).join("") || `<tr><td colspan=12 class="muted">${t("Nenhuma atividade. Importe a planilha do projeto.")}</td></tr>`}</table></div>
     <h3>${t("Adicionar atividade manualmente")}</h3>
-    <div class="row"><div>${L("Scope")}<input id="ac-new-s" list="act-scopes"></div><div>${L("Item")}<input id="ac-new-i"></div><div>${L("Subitem")}<input id="ac-new-sub"></div><div>${L("Responsável")}<input id="ac-new-w"></div><div>${L("Prazo")}<input type="date" id="ac-new-d"></div></div>
+    <div class="row"><div>${L("Scope")}<input id="ac-new-s" list="act-scopes"></div><div>${L("Item")}<input id="ac-new-i"></div><div>${L("Subitem")}<input id="ac-new-sub"></div><div>${L("Responsável")}${personSelect("ac-new-w", "")}</div><div>${L("Prazo")}<input type="date" id="ac-new-d"></div></div>
     <datalist id="act-scopes">${scopes.map((s) => `<option>${esc(s)}</option>`).join("")}</datalist>
     <div class="actions"><button class="small" onclick="busy(this, ()=>addActivity('${p.id}'))">${t("Adicionar atividade")}</button></div></div>`;
 }
@@ -736,7 +780,7 @@ function projAdditional(p) {
     <div style="overflow:auto"><table>${th(["ID", "Ação", "Item", "Responsável", "Prazo", "Gap (por que não foi prevista)", "Status"])}
     ${(p.actions || []).map((a) => `<tr><td>${a.id}</td><td>${esc(lc(a, "text"))}</td><td>${a.item_id ? `<a href="#lista/${a.item_id}">${a.item_id}</a>` : ""}</td><td>${esc(a.owner)}</td><td>${esc(a.due)}</td><td>${esc(a.gap_reason)}</td>
       <td><select onchange="api('projects/${p.id}/actions','POST',{id:'${a.id}',status:this.value}).then(refresh)">${opts(["Aberta", "Em andamento", "Concluída"], a.status)}</select></td></tr>`).join("") || `<tr><td colspan=7 class="muted">${t("Sem ações.")}</td></tr>`}</table></div>
-    <div class="row"><div>${L("Nova ação")}<input id="pa-text"></div><div>${L("Responsável")}<input id="pa-owner"></div><div>${L("Prazo")}<input type="date" id="pa-due"></div><div>${L("Gap")}<input id="pa-gap"></div></div>
+    <div class="row"><div>${L("Nova ação")}<input id="pa-text"></div><div>${L("Responsável")}${personSelect("pa-owner", "")}</div><div>${L("Prazo")}<input type="date" id="pa-due"></div><div>${L("Gap")}<input id="pa-gap"></div></div>
     <div class="actions"><button class="small" onclick="busy(this, async()=>{await api('projects/${p.id}/actions','POST',{text:$('#pa-text').value,owner:$('#pa-owner').value,due:$('#pa-due').value,gap_reason:$('#pa-gap').value}); await refresh();})">${t("Adicionar ação")}</button></div>
     <h3>${t("Itens da lista geral vinculados")}</h3>${S.db.items.filter((i) => (p.links.items || []).includes(i.id)).map((i) => `<div><a href="#lista/${i.id}">${i.id}</a> ${esc(lc(i, "title"))} ${prio(i.priority)} <span class="muted">${esc(tv(i.status))}</span></div>`).join("") || '<p class="muted">—</p>'}</div>`;
 }
@@ -789,7 +833,7 @@ function meetingsConfirmView(pend) {
     ${L("Ata")}<textarea id="m-min" style="min-height:120px" placeholder="${esc(t("MINUTES_HINT"))}"></textarea>
     ${L("Anexar ata")}<input type="file" id="m-file" multiple>
     <details class="more"><summary>${t("Mais detalhes")}</summary>
-      <div class="row"><div>${L("Departamentos")}<input id="m-dept"></div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
+      <div class="row"><div>${L("Departamentos")}${chipsPicker("m-dept", "", depts())}</div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
       ${L("Anotações pessoais")}<textarea id="m-notes"></textarea></details>
     <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>`;
 }
@@ -905,7 +949,7 @@ function viewRiscos(id, tab) {
     <td>${(r.impacts || []).map((x) => pill(t(x))).join("")}</td><td>${(r.inputs_log || []).length}</td><td>${esc(r.owner)}</td><td>${esc(tv(r.status))}</td></tr>`).join("") || `<tr><td colspan=9 class="muted">${t("Nenhum risco.")}</td></tr>`}
   </table></div>
   <div class="card"><h2>${t("Novo risco")}</h2><p class="muted">${t("Normalmente nasce pela definição de uma entrada; aqui é o cadastro direto.")}</p>${L("Título")}<input id="r-title">${L("Descrição")}<textarea id="r-desc"></textarea>
-    <div class="row"><div>${L("Modo")}<select id="r-mode">${opts(["Monitorar", "Investigar"])}</select></div><div>${L("Responsável")}<input id="r-owner"></div></div>
+    <div class="row"><div>${L("Modo")}<select id="r-mode">${opts(["Monitorar", "Investigar"])}</select></div><div>${L("Responsável")}${personSelect("r-owner", "")}</div></div>
     ${L("Principais impactos")}<div class="checks inline">${LIST("impact_types").map((x) => `<label><input type="checkbox" class="r-imp" value="${esc(x)}"> ${esc(t(x))}</label>`).join("")}</div>
     <div class="actions"><button onclick="busy(this, async()=>{const r=await api('risks','POST',{title:$('#r-title').value,description:$('#r-desc').value,mode:$('#r-mode').value,owner:$('#r-owner').value,impacts:[...document.querySelectorAll('.r-imp')].filter(c=>c.checked).map(c=>c.value)}); await refresh(); location.hash='riscos/'+r.id;})">${t("Criar risco e pasta")}</button></div></div></div>`;
 }
@@ -920,7 +964,7 @@ function riskDetail(r, tab) {
 function riskOverview(r) {
   return `<div class="grid"><div class="card">
     <div class="row"><div>${L("Modo")}<select id="rd-mode">${opts(["Monitorar", "Investigar"], r.mode)}</select></div><div>${L("Probabilidade")}<select id="rd-prob">${opts(LEVELS, r.probability)}</select></div>
-      <div>${L("Impacto")}<select id="rd-imp">${opts(["Alto", "Médio", "Baixo"], r.impact)}</select></div><div>${L("Status")}<select id="rd-status">${opts(["Aberto", "Em tratamento", "Fechado"], r.status)}</select></div><div>${L("Responsável")}<input id="rd-owner" value="${esc(r.owner)}"></div></div>
+      <div>${L("Impacto")}<select id="rd-imp">${opts(["Alto", "Médio", "Baixo"], r.impact)}</select></div><div>${L("Status")}<select id="rd-status">${opts(["Aberto", "Em tratamento", "Fechado"], r.status)}</select></div><div>${L("Responsável")}${personSelect("rd-owner", r.owner)}</div></div>
     ${L("Principais impactos deste risco")}<div class="checks inline">${LIST("impact_types").map((x) => `<label><input type="checkbox" class="rd-impc" value="${esc(x)}" ${(r.impacts || []).includes(x) ? "checked" : ""}> ${esc(t(x))}</label>`).join("")}</div>
     ${L("Como cada impacto se manifesta")}<textarea id="rd-impnotes" style="min-height:60px">${esc(r.impact_notes)}</textarea>
     ${L("Descrição")}<textarea id="rd-desc">${esc(r.description)}</textarea>${trPreview(r, "description")}${L("Notas / informações")}<textarea id="rd-notes">${esc(r.notes)}</textarea>
@@ -1032,8 +1076,8 @@ function summaryDoc({ summary: s, narrative }) {
 let CFG_TAB = "aparencia";
 function viewConfig(id) {
   CFG_TAB = id || CFG_TAB;
-  const T = [["aparencia", t("Aparência")], ["modulos", t("Módulos e idioma")], ["listas", t("Listas")], ["regras", t("Regras")], ["ia", t("IA (Claude)")], ["pasta", t("Pasta e backup")]];
-  const body = { aparencia: cfgAppearance, modulos: cfgModules, listas: cfgLists, regras: cfgRules, ia: cfgAI, pasta: cfgFolder }[CFG_TAB] || cfgAppearance;
+  const T = [["aparencia", t("Aparência")], ["deptos", t("Departamentos e pessoas")], ["modulos", t("Módulos e idioma")], ["listas", t("Listas")], ["regras", t("Regras")], ["ia", t("IA (Claude)")], ["pasta", t("Pasta e backup")]];
+  const body = { aparencia: cfgAppearance, deptos: cfgDepts, modulos: cfgModules, listas: cfgLists, regras: cfgRules, ia: cfgAI, pasta: cfgFolder }[CFG_TAB] || cfgAppearance;
   return `<h1>${t("Configurações")}</h1>${tabs("config", T, CFG_TAB)}${body(S.db.settings)}`;
 }
 function cfgAppearance(st) {
@@ -1084,12 +1128,44 @@ function cfgModules(st) {
       <button class="ghost" onclick="busy(this, translateAll)">${t("Traduzir tudo o que já existe")}</button>
       <span class="muted">${t("{n} campos sem tradução", { n: Core.pendingTranslations().length })}</span></div></div></div>`;
 }
+/* Departamentos e pessoas: aparecem como opções em todos os campos de departamento e de responsável/participantes. */
+const deptText = (st) => st.areas.map((d) => `${d}: ${(st.people || []).filter((p) => p.dept === d).map((p) => p.name).join(", ")}`).join("\n");
+function cfgDepts(st) {
+  const others = (st.people || []).filter((p) => !st.areas.includes(p.dept));
+  return `<div class="grid"><div class="card"><h2>${t("Departamentos e pessoas")}</h2>
+    <p class="muted">${t("DEPTS_HELP")}</p>
+    <textarea id="dp-text" style="min-height:280px;font-family:inherit">${esc(deptText(st))}</textarea>
+    <div class="actions"><button id="dp-save" onclick="busy(this, saveDepts)">${t("Salvar departamentos e pessoas")}</button></div></div>
+  <div class="card"><h2>${t("Como fica")}</h2><table id="dp-table">${th(["Departamento", "Pessoas"])}
+    ${st.areas.map((d) => `<tr><td><b>${esc(d)}</b></td><td>${(st.people || []).filter((p) => p.dept === d).map((p) => pill(p.name)).join("") || '<span class="muted">—</span>'}</td></tr>`).join("")}
+    ${others.length ? `<tr><td class="muted">${t("Outras pessoas")}</td><td>${others.map((p) => pill(p.name)).join("")}</td></tr>` : ""}</table>
+    <p class="muted">${t("Pessoas que aparecem só como participantes de reuniões ficam em “Outras pessoas”. O cargo de cada pessoa é ajustado em Reuniões → Pessoas.")}</p></div></div>`;
+}
+async function saveDepts() {
+  const st = S.db.settings, areas = [], listed = new Map();
+  for (const line of $("#dp-text").value.split("\n")) {
+    const i = line.search(/[:：]/), dept = (i < 0 ? line : line.slice(0, i)).trim();
+    if (!dept) continue;
+    if (!areas.includes(dept)) areas.push(dept);
+    for (const n of i < 0 ? [] : splitList(line.slice(i + 1))) if (!listed.has(n.toLowerCase())) listed.set(n.toLowerCase(), { name: n, dept });
+  }
+  if (!areas.length) throw new Error(t("Informe ao menos um departamento."));
+  const people = [];
+  for (const p of st.people || []) {
+    const l = listed.get(p.name.toLowerCase());
+    if (l) { people.push({ ...p, name: l.name, dept: l.dept, auto: false }); listed.delete(p.name.toLowerCase()); }
+    else if (!p.dept || !st.areas.includes(p.dept)) people.push(p);   // participantes sem departamento continuam
+  }
+  for (const l of listed.values()) people.push({ name: l.name, role: "Outro", dept: l.dept });
+  await api("settings", "PATCH", { areas, people });
+  toast(t("Salvo")); await refresh();
+}
 function cfgLists(st) {
   const L2 = st.lists;
   const box = (k, label, help) => `<div class="card"><h2>${t(label)}</h2><p class="muted">${t(help)}</p><textarea id="ls-${k}" style="min-height:150px">${esc((k === "areas" ? st.areas : L2[k]).join("\n"))}</textarea></div>`;
   return `<p class="muted">${t("Um valor por linha. Os valores padrão são traduzidos automaticamente; os que você criar aparecem como escritos.")}</p>
   <div class="grid">${box("sources", "Origens das demandas", "Ex.: Diretora, HQ, Departamento…")}${box("input_kinds", "Tipos de entrada", "Ex.: Pedido pontual, Nova solicitação do HQ…")}
-    ${box("impact_types", "Categorias de impacto", "Usadas na classificação, nos riscos e nos fluxos.")}${box("areas", "Áreas", "Sugestões no campo Área principal.")}
+    ${box("impact_types", "Categorias de impacto", "Usadas na classificação, nos riscos e nos fluxos.")}
     ${box("flow_edge_labels", "Rótulos das ligações dos fluxos", "Ex.: causa, impacta, mitiga…")}
     ${box("meeting_levels", "Níveis de reunião", "Ex.: Gerencial, Diretoria, Operacional…")}${box("meeting_types", "Tipos de reunião", "Ex.: Reporte, Decisão, Alinhamento…")}
     ${box("people_roles", "Cargos dos participantes", "Ex.: Diretor, Sr Manager, Gerente…")}</div>
@@ -1097,7 +1173,7 @@ function cfgLists(st) {
 }
 async function saveLists() {
   const v = (k) => $(`#ls-${k}`).value.split("\n").map((x) => x.trim()).filter(Boolean);
-  await api("settings", "PATCH", { areas: v("areas"), lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels"), meeting_levels: v("meeting_levels"), meeting_types: v("meeting_types"), people_roles: v("people_roles") } });
+  await api("settings", "PATCH", { lists: { sources: v("sources"), input_kinds: v("input_kinds"), impact_types: v("impact_types"), flow_edge_labels: v("flow_edge_labels"), meeting_levels: v("meeting_levels"), meeting_types: v("meeting_types"), people_roles: v("people_roles") } });
   toast(t("Salvo")); await refresh();
 }
 function cfgRules(st) {

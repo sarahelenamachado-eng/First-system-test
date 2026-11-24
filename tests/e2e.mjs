@@ -103,11 +103,61 @@ async function scenario(page, label) {
   return { prog, narrative: await page.textContent(".summary-doc .ai-box") };
 }
 
+const SUBS_TEXT = "1. 1. 发动机本地化组装前研究，测算成本，对标 Ale。 Preliminary study on localized engine assembly, cost estimation, and benchmarking with Ale. 2. P11 变速箱巴西产。 Local production of the P11 transmission in Brazil. 3. P30 巴西产发动机。 Local production of the P30 engine in Brazil. 4. 仪表台本地化。 Instrument panel localization. 5. 二工厂冲压件、一工厂钣金件。 Stamped parts from Plant 2 and sheet metal components from Plant 1. 6. Márcio 的本地化课题。 Márcio's localization projects.";
+
+/** Departamentos e pessoas em Configurações viram listas de seleção; entrada com subitens numerados vira projeto com itens. */
+async function scenarioDeptsAndSubitems(page, label) {
+  // lista inicial de departamentos e responsáveis já vem carregada
+  await go(page, "config/deptos", "#dp-text");
+  const txt = await page.inputValue("#dp-text");
+  for (const l of ["Logistic 物流: Alessandro Barbosa, Peter 姜大鹏", "Production 生产: Lira, Fred, Pino 刘明松", "IT: Chicon, Ridge 崔亚岭"]) assert.ok(txt.includes(l), label + ": departamentos " + l);
+  await page.fill("#dp-text", txt + "\nPurchasing 采购: Wang, Ana Paula");
+  await page.click("#dp-save");
+  await page.waitForSelector("#dp-table >> text=Ana Paula");
+  if (shots) await page.screenshot({ path: `${shots}/${label}-4-departamentos.png`, fullPage: true });
+  // nova entrada: departamento e responsável são listas; escolher a pessoa preenche o departamento
+  await go(page, "entradas", "#f-owner");
+  assert.equal(await page.$eval("#f-area", (e) => e.tagName), "SELECT");
+  const groups = await page.$$eval("#f-owner optgroup", (g) => g.map((x) => x.label));
+  assert.deepEqual(groups.slice(0, 3), ["Logistic 物流", "Production 生产", "Production Control 生产管理"], label + ": pessoas por departamento");
+  assert.ok(groups.includes("Purchasing 采购"));
+  await page.selectOption("#f-owner", "Peter 姜大鹏");
+  assert.equal(await page.inputValue("#f-area"), "Logistic 物流", label + ": departamento preenchido pela pessoa");
+  await page.click("#f-areas-imp-chips >> text=EHS");
+  await page.click("#f-areas-imp-chips >> text=Quality 品质");
+  assert.equal(await page.inputValue("#f-areas-imp"), "EHS, Quality 品质");
+  // entrada com subitens numerados (como a INP025) -> projeto com os 6 itens
+  const id = await page.evaluate(async (d) => (await api("inputs", "POST", { title: "Localization and Policies", description: d, source: "Diretora", source_detail: "Pedido pontual", owner: "Peter 姜大鹏", area_main: "Logistic 物流" })).id, SUBS_TEXT);
+  await page.evaluate(async (id) => { await api(`inputs/${id}/suggest`, "POST"); await refresh(); location.hash = "entradas/" + id; }, id);
+  await page.waitForSelector("#t-subs");
+  const subs = (await page.inputValue("#t-subs")).split("\n");
+  assert.equal(subs.length, 6, label + ": 6 subitens");
+  assert.ok(subs[4].endsWith("Plant 1.") && subs[5].startsWith("Márcio"), label + ": subitens separados certo");
+  assert.equal(await page.$eval(".t-def[value='novo_projeto']", (c) => c.checked), true, label + ": sugere novo projeto");
+  if (shots) await page.screenshot({ path: `${shots}/${label}-5-subitens.png`, fullPage: true });
+  await page.click("button:has-text('Confirmar e registrar na lista geral')");
+  await page.waitForSelector("text=6 itens");
+  const proj = await page.evaluate(() => { const p = S.db.projects.find((x) => x.name === "Localization and Policies"); return { id: p.id, items: p.pitems.map((x) => x.title), owner: p.owner }; });
+  assert.equal(proj.items.length, 6);
+  assert.ok(proj.items[0].startsWith("发动机本地化组装前研究") && proj.items[1].startsWith("P11 变速箱巴西产"), label + ": itens do projeto");
+  await go(page, `projetos/${proj.id}/itens`, "#pi-new-t");
+  assert.equal(await page.$eval(`#pi-w-IT001`, (e) => e.tagName + ":" + e.value), "SELECT:Peter 姜大鹏", label + ": responsável do item é lista");
+  if (shots) await page.screenshot({ path: `${shots}/${label}-6-projeto.png`, fullPage: true });
+  // item já registrado na lista geral com subitens -> botão "Transformar em projeto"
+  await page.evaluate(async () => { await api("items", "POST", { title: "Ações de 5S", description: "1. Organizar almoxarifado\n2. Pintar faixas\n3. Auditoria mensal" }); await refresh(); });
+  const gid = await page.evaluate(() => S.db.items.find((i) => i.title === "Ações de 5S").id);
+  await go(page, "lista/" + gid, ".subs-box button");
+  await page.click(".subs-box button");
+  await page.waitForSelector("text=3 itens criados");
+  assert.deepEqual(await page.evaluate(() => S.db.projects.find((p) => p.name === "Ações de 5S").pitems.map((x) => x.title)), ["Organizar almoxarifado", "Pintar faixas", "Auditoria mensal"]);
+}
+
 // ---------------------------------------------------------------- 1) modo heurístico (sem chave)
 {
   const page = await newPage();
   assert.match(await page.textContent("#ai-badge"), /heurística/);
   const r = await scenario(page, "heuristico");
+  await scenarioDeptsAndSubitems(page, "heuristico");
   assert.match(r.narrative, /Itens com progresso hoje: \d+/);
   assert.match(r.narrative, /PROJ001 · IT001 Cabos de média tensão: Cabos lançados até o painel 3/);
   await page.context().close();
@@ -122,12 +172,18 @@ async function scenario(page, label) {
     assert.equal(route.request().headers()["x-api-key"], "sk-ant-teste");
     const text = body.messages[0].content;
     if (/DESTAQUES/.test(text)) prompt = text;
-    const out = body.output_config.format ? "{}" : "- Itens com progresso hoje: IT001 cabos lançados até o painel 3; GOV001 rascunho em revisão.";
+    const sch = body.output_config.format?.schema;
+    // avaliação da IA sem "novo projeto": a regra dos subitens tem que valer mesmo assim
+    const out = sch?.properties?.relation_mode ? JSON.stringify({ related: [], relation_mode: "novo", include_in: "", relation_explanation: "", scope: "Localização", scope_action: "Estudar",
+        priority: "Alta", urgency: "Média", risk_reason: "", impacts: ["Custo"], impact_details: "", definitions: ["acao_geral"], project_id: "", gap_analysis: "", rationale: "Simulado" })
+      : sch ? "{}" : "- Itens com progresso hoje: IT001 cabos lançados até o painel 3; GOV001 rascunho em revisão.";
     await route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" },
       body: JSON.stringify({ content: [{ type: "text", text: out }], stop_reason: "end_turn" }) });
   });
   assert.match(await page.textContent("#ai-badge"), /claude-opus-5-5/);
   const r = await scenario(page, "ia");
+  await scenarioDeptsAndSubitems(page, "ia");
+  assert.match(await page.evaluate(() => S.db.inputs.at(-1).ai_suggestion.engine), /claude/, "avaliação veio da IA simulada");
   assert.match(r.narrative, /Itens com progresso hoje: IT001 cabos lançados/);
   assert.ok(prompt.includes('comece por um bullet "Itens com progresso hoje:"') && prompt.includes('"progress_items"') && prompt.includes("Cabos lançados até o painel 3"), "prompt da IA leva os itens com progresso");
   await page.context().close();

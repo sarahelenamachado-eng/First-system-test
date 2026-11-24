@@ -24,6 +24,33 @@ function syncPeopleList(people, names) {
 
 class ApiError extends Error {}
 
+/* Departamentos e principais responsáveis (lista inicial; editável em Configurações → Departamentos e pessoas). */
+const DEFAULT_DEPARTMENTS = [
+  ["Logistic 物流", ["Alessandro Barbosa", "Peter 姜大鹏"]],
+  ["Production 生产", ["Lira", "Fred", "Pino 刘明松"]],
+  ["Production Control 生产管理", ["André", "Li Chong 李冲"]],
+  ["EHS", ["Alfredo", "Barry 姚鹤康"]],
+  ["EQ 设备", ["Carlos Ferrarez", "Xu 徐卫龙"]],
+  ["Quality 品质", ["Xu 许伟清"]],
+  ["ADM 行政", ["Eduardo"]],
+  ["HR", ["Aruana", "Wen Long 曹文龙"]],
+  ["Legal 法务", ["Priscilla"]],
+  ["IT", ["Chicon", "Ridge 崔亚岭"]],
+];
+const OLD_DEFAULT_AREAS = ["Operação", "Manutenção", "RH", "Financeiro", "Jurídico", "Compras", "SSMA", "TI", "Comercial", "Engenharia"];
+const normName = (x) => String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+/** Junta a lista de departamentos/pessoas na configuração: departamentos novos no fim, pessoas ganham o departamento. */
+function mergeDepartments(st, list, replaceAreas = false) {
+  st.areas = replaceAreas ? list.map(([d]) => d) : [...st.areas, ...list.map(([d]) => d).filter((d) => !st.areas.some((a) => normName(a) === normName(d)))];
+  const people = [...(st.people || [])];
+  for (const [dept, names] of list) for (const name of names) {
+    const k = people.findIndex((p) => normName(p.name) === normName(name));
+    if (k >= 0) people[k] = { ...people[k], dept: people[k].dept || dept, auto: false };
+    else people.push({ name, role: "Outro", dept });
+  }
+  st.people = people;
+}
+
 function emptyDb() {
   const db = Object.fromEntries(COLLECTIONS.map((c) => [c, []]));
   return Object.assign(db, {
@@ -41,7 +68,7 @@ function defaultSettings() {
     links_for_project_alert: 3,
     meeting_lead_days: 3,
     due_soon_days: 3,
-    areas: ["Operação", "Manutenção", "RH", "Financeiro", "Jurídico", "Compras", "SSMA", "TI", "Comercial", "Engenharia"],
+    areas: [...OLD_DEFAULT_AREAS],
     lists: {
       sources: ["Diretora", "Reunião", "Departamento", "HQ", "Outro"],
       input_kinds: ["Pedido pontual", "Direcionamento / estratégia (reclamação, opinião)", "Nova solicitação do HQ", "Decisão conjunta entre departamentos", "Atualização de item existente", "Outro"],
@@ -138,6 +165,12 @@ const Core = {
     db.assist_examples ??= [];
     db.finished ??= [];
     db.extraction_examples ??= [];
+    // lista inicial de departamentos e responsáveis (uma vez só; a lista padrão antiga é substituída)
+    if (!db.settings.migrated_departments) {
+      const old = db.settings.areas.length === OLD_DEFAULT_AREAS.length && db.settings.areas.every((a, i) => a === OLD_DEFAULT_AREAS[i]);
+      mergeDepartments(db.settings, DEFAULT_DEPARTMENTS, old);
+      db.settings.migrated_departments = true;
+    }
     // participantes digitados em texto viram participantes (e pessoas cadastradas) — uma vez só
     if (!db.settings.migrated_people_auto) {
       for (const m of db.meetings) if (!(m.attendees || []).length && m.participants) m.attendees = splitNames(m.participants);
@@ -248,6 +281,8 @@ const Core = {
     if (inp.meeting_id && this.find("meetings", inp.meeting_id)) this.link("items", item.id, "meetings", inp.meeting_id);
 
     const created = { item: item.id };
+    // subitens numerados da entrada viram itens do projeto (o usuário pode ajustar a lista na triagem)
+    const subs = (Array.isArray(body.subitems) ? body.subitems : AI.subitems(inp.description)).map((x) => String(x).trim()).filter(Boolean);
     for (const d of defs) {
       const openRisks = (item.links.risks || []).map((x) => this.find("risks", x)).filter((r) => r && r.status !== "Fechado");
       if ((d === "risco_monitorar" || d === "risco_investigar") && included && openRisks.length) {
@@ -260,6 +295,7 @@ const Core = {
         (created.risks ??= []).push(...openRisks.map((r) => r.id));
       } else if (d === "novo_projeto" && included && item.links.projects?.length) {
         created.project = item.links.projects[0];
+        created.pitems = this.addSubitems(this.find("projects", created.project), subs, inp.id);
       } else if (d === "risco_monitorar" || d === "risco_investigar") {
         const risk = await this.createRecord("risks", {
           title: inp.title, description: inp.description, owner: inp.owner, mode: d === "risco_investigar" ? "Investigar" : "Monitorar",
@@ -271,6 +307,7 @@ const Core = {
         const proj = await this.createRecord("projects", { name: body.new_project_name || inp.title, description: inp.description, owner: inp.owner, origin_item: item.id });
         this.link("items", item.id, "projects", proj.id);
         created.project = proj.id;
+        created.pitems = this.addSubitems(proj, subs, inp.id);
       } else if (d === "acao_projeto") {
         const proj = this.find("projects", body.project_id || "");
         if (!proj) throw new ApiError(t("Selecione o projeto para 'Ação dentro de um projeto'."));
@@ -381,6 +418,22 @@ ${field("Descrição", rec.description)}${field("Descrição do progresso", rec.
 ${field("Criado em", (rec.created_at || "").slice(0, 10))}</table>
 <h2>${esc(t("Progresso e histórico geral"))}</h2><ul>${progress.map(([d, x]) => `<li>${esc((d || "").slice(0, 10))} — ${esc(x)}</li>`).join("") || "<li>—</li>"}</ul>
 ${(rec.item_actions || []).length ? `<h2>${esc(t("Ações do item"))}</h2><ul>${rec.item_actions.map((a) => `<li>${esc(a.id)} · ${esc(a.text)} (${esc(t(a.status || ""))})${a.progress ? " — " + esc(a.progress) : ""}</li>`).join("")}</ul>` : ""}`;
+  },
+
+  /** Cria os itens do projeto a partir dos subitens (sem repetir os que já existem). */
+  addSubitems(p, subs, ref = "") {
+    if (!p || !subs?.length) return [];
+    const have = new Set((p.pitems || []).map((x) => AI.norm(x.title).trim()));
+    const out = [];
+    for (const title of subs) {
+      if (have.has(AI.norm(title).trim())) continue;
+      have.add(AI.norm(title).trim());
+      const e = { id: this.subId(p, "pitems"), title: title.slice(0, 300), objective: "", progress_desc: "", owner: p.owner || "", due: "", status: "Aberto", origin: ref, created_at: nowISO() };
+      p.pitems.push(e);
+      out.push(e.id);
+    }
+    if (out.length) { this.touch(p); this.log("projects.sub", p.id, "{n} itens criados em {id} a partir dos subitens de {ref}", { n: out.length, id: p.id, ref }); }
+    return out;
   },
 
   alerts() {
@@ -1284,6 +1337,18 @@ table{border-collapse:collapse;width:100%;background:#fff}td,th{border:1px solid
       if (!x) throw new ApiError(t("{id} não encontrado", { id: body.pitem }));
       this.confirmPItem(rec, x, body);
       return rec;
+    }
+    if (col === "items" && action === "to_project") {
+      // item da lista geral com vários subitens -> projeto com os subitens como itens
+      const subs = (Array.isArray(body.subitems) ? body.subitems : AI.subitems(rec.description)).map((x) => String(x).trim()).filter(Boolean);
+      let proj = this.find("projects", (rec.links?.projects || [])[0] || "");
+      if (!proj) {
+        proj = await this.createRecord("projects", { name: body.name || rec.title, description: rec.description || "", owner: rec.owner || "", origin_item: rec.id });
+        this.link("items", rec.id, "projects", proj.id);
+      }
+      rec.definitions = [...new Set([...(rec.definitions || []), "novo_projeto"])];
+      this.touch(rec);
+      return { project: proj.id, pitems: this.addSubitems(proj, subs, rec.id) };
     }
     if (col === "items" && action === "merge") return this.mergeItems(rid, (body.into || "").toUpperCase());
     if (col === "items" && action === "progress") {
