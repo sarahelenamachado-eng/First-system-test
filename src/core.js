@@ -733,6 +733,24 @@ ${this.reportHtml(s, text, esc)}
       this.log("meetings.auto", m.id, "Reunião {id} gerada automaticamente para o projeto principal {proj} ({date})", { id: m.id, proj: p.id, date: m.date });
       created = true;
     }
+    // reuniões obrigatórias: enquanto faltar reunião no mês, uma solicitação fica na lista de Solicitações
+    // (uma por vez; ao ser agendada, aparece a próxima), para acompanhar se foi agendada ou não
+    const month = todayISO().slice(0, 7);
+    for (const m of db.mandatory) {
+      const reqs = db.meetings.filter((x) => x.mandatory_id === m.id && x.kind === "Solicitada" && x.status === "Solicitada" && !x.date);
+      if (m.active === false) { for (const x of reqs) { x.status = "Cancelada"; this.touch(x); created = true; } continue; }
+      const st = this.mandatoryStatus(month).find((x) => x.id === m.id);
+      if (!st || reqs.length || st.held + st.scheduled >= st.required) continue;
+      const n = st.held + st.scheduled + 1;
+      const rec = { id: this.nextId("meetings"), title: m.title, title_msg: null, kind: "Solicitada", status: "Solicitada", mandatory_id: m.id, period: month,
+        occurrence: `${n}/${st.required}`, requested_by: "Obrigatória", requested_at: todayISO(), date: "", time: m.preferred_time || "",
+        level: m.level || "Gerencial", mtype: m.mtype || "Reporte", scheduling: "Pré-agendada", duration: m.duration || 60, attendees: m.attendees || [],
+        participants: m.participants || "", agenda: m.notes || "", created_at: nowISO(), updated_at: nowISO(), links: {}, history: [] };
+      delete rec.title_msg;
+      db.meetings.push(rec);
+      this.log("meetings.auto", rec.id, "Reunião obrigatória {title} ({occ}) entrou em Solicitações para ser agendada", { title: m.title, occ: rec.occurrence });
+      created = true;
+    }
     return created;
   },
 
@@ -1216,6 +1234,9 @@ ${this.reportHtml(s, text, esc)}
         const sg = db.meeting_suggestions.find((x) => x.id === id);
         if (!sg) continue;
         const m = db.mandatory.find((x) => x.id === sg.mandatory_id) || {};
+        // se a obrigatória já está em Solicitações esperando data, a sugestão aceita agenda essa mesma solicitação
+        const pend = db.meetings.find((x) => x.mandatory_id === m.id && x.kind === "Solicitada" && x.status === "Solicitada" && !x.date);
+        if (pend) { Object.assign(pend, { date: sg.date, time: sg.time, status: "Agendada", scheduled_at: nowISO() }); this.touch(pend); created.push(pend.id); continue; }
         const rec = await this.createRecord("meetings", { title: sg.title || m.title, date: sg.date, time: sg.time, status: "Agendada", mandatory_id: m.id,
           level: m.level || "Gerencial", mtype: m.mtype || "Reporte", scheduling: "Pré-agendada", participants: m.participants || "", agenda: m.notes || "", duration: m.duration || 60,
           attendees: m.attendees || [] });

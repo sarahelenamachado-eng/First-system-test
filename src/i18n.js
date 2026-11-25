@@ -987,6 +987,11 @@ Object.assign(D, {
   "Já coloquei no DingTalk": ["Already in DingTalk", "已放到钉钉"], "pendente": ["pending", "待处理"], "DingTalk": ["DingTalk", "钉钉"]
 });
 
+Object.assign(D, {
+  "Obrigatória": ["Mandatory", "必开会议"],
+  "Reunião obrigatória {title} ({occ}) entrou em Solicitações para ser agendada": ["Mandatory meeting {title} ({occ}) added to Requests to be scheduled", "必开会议{title}（{occ}）已加入申请列表，待安排"]
+});
+
 /* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
 function biRender(root) {
   if (!root) return;

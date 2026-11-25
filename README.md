@@ -151,6 +151,8 @@ Abre em **Solicitações** (requisitadas em aberto / realizadas e encerradas). A
   **Anexar ata** salva o arquivo em `MEETINGS/<ID>/ATA` e marca a ata como emitida.
 - **Reuniões obrigatórias:** cadastre frequência, dias e horário preferidos, duração e nível. A IA sugere as datas e
   horários do mês que faltam, seguindo as **regras e observações** que você escrever (ex.: "diretora só à tarde").
+  Enquanto faltar reunião no mês, a obrigatória aparece também em **Solicitações** (com a etiqueta *obrigatória 1/4*),
+  uma por vez: ao ser agendada, vai para **Agendadas** e entra a próxima. Assim dá para ver o que ainda não foi marcado.
 - Projetos principais geram sozinhos a **necessidade de reunião de acompanhamento** (cadência configurável).
 - Em **Aguardando confirmação**, marque *Foi realizada* ou *Não foi realizada* (com nova data para projetos).
 - Atas e anotações, com extração de decisões e demandas que vão para as Entradas.

@@ -1204,7 +1204,7 @@ function requestedView() {
     ${list.map((m) => done ? `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}</td><td>${esc(tv(m.requested_by))}</td>
       <td class="nowrap">${esc(m.date || "—")} ${esc(m.time || "")}</td><td class="nowrap">${m.status === "Realizada" ? `${m.actual_duration || m.duration || 60} min` : "—"}</td>
       <td>${m.status === "Realizada" ? (Core.hasMinutes(m) ? pill("✓", "p-Baixa") : pill(t("Pendente"), "p-Alta")) : ""}</td><td>${statusPill(m.status)}</td></tr>`
-      : `<tr class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}</td><td>${esc(tv(m.requested_by))}</td>
+      : `<tr class="${m.date && m.date < S.today ? "overdue" : ""}" data-id="${m.id}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}${mandPill(m)}</td><td>${esc(tv(m.requested_by))}</td>
       <td class="nowrap">${esc(m.requested_at || (m.created_at || "").slice(0, 10))}</td><td class="nowrap">${esc(m.date || "—")} ${esc(m.time || "")}</td><td>${statusPill(m.status)}</td>
       <td><div class="act-cell"><button class="small ghost" onclick="scheduleRequested('${m.id}')">${t("Agendar")}</button>
         <button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
@@ -1233,7 +1233,7 @@ function scheduledView() {
     <p class="muted">${t("SCHEDULED_HELP")}</p>
     ${miss ? `<div class="alert lv-media">⚠ ${t("{n} reuniões ainda não foram colocadas no Teams e no DingTalk.", { n: miss })}</div>` : ""}
     <table class="sched-list">${th(["ID", "Reunião", "Data", "Duração", "Participantes", "Teams", "DingTalk", ""])}
-    ${list.map((m) => `<tr data-id="${m.id}" class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}${m.requested_by ? `<br><small class="muted">${t("Solicitada por")}: ${esc(tv(m.requested_by))}</small>` : ""}</td>
+    ${list.map((m) => `<tr data-id="${m.id}" class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}${mandPill(m)}${m.requested_by ? `<br><small class="muted">${t("Solicitada por")}: ${esc(tv(m.requested_by))}</small>` : ""}</td>
       <td class="nowrap">${esc(m.date || "—")} ${esc(m.time || "")}</td><td class="nowrap">${+m.duration || 60} min</td><td>${(m.attendees || []).map((x) => pill(x)).join("")}</td>
       <td><label class="inline-check"><input type="checkbox" class="sc-teams" ${m.in_teams ? "checked" : ""} onchange="busy(this, ()=>markPlaced('${m.id}', 'in_teams', this.checked))"> ${m.in_teams ? "✓" : ""}</label></td>
       <td><label class="inline-check"><input type="checkbox" class="sc-ding" ${m.in_dingtalk ? "checked" : ""} onchange="busy(this, ()=>markPlaced('${m.id}', 'in_dingtalk', this.checked))"> ${m.in_dingtalk ? "✓" : ""}</label></td>
@@ -1301,6 +1301,7 @@ function meetingsAllView() {
       <td>${esc(tv(m.scheduling))}</td><td>${(m.attendees || []).map((x) => pill(x)).join("")}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=9 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
 }
 let LAST_RQ = null;
+const mandPill = (m) => (m.mandatory_id ? ` ${pill(`${t("obrigatória")}${m.occurrence ? " " + m.occurrence : ""}${m.period ? " · " + m.period : ""}`, "p-Alta")}` : "");
 async function requestMeeting() {
   if (!$("#rq-title").value.trim() && $("#rqt-text").value.trim()) await fillMeeting("rq-");
   const title = $("#rq-title").value.trim();

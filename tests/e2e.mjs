@@ -362,6 +362,31 @@ async function scenarioMeetingText(page, label, ai) {
   await page.evaluate(() => closeModal());
   assert.ok(!(await page.textContent("#view")).includes(r2), label + ": agendada sai da lista de solicitações");
   await go(page, "reunioes/solicitadas", "#rqt-text");
+  // reuniões obrigatórias entram em Solicitações (uma por vez) até completar o mês
+  await page.evaluate(async () => { await api("mandatory", "POST", { title: "Comitê mensal de segurança", frequency: "Mensal", preferred_time: "08:30", duration: 30, level: "Gerencial", attendees: ["Alfredo"] });
+    await api("mandatory", "POST", { title: "Reunião semanal de produção", frequency: "Semanal", preferred_time: "07:30", duration: 30, level: "Operacional", attendees: ["Lira"] }); await refresh(); });
+  await go(page, "reunioes/solicitadas", "#rqt-text");
+  const mreq = await page.evaluate(() => S.db.meetings.filter((x) => x.mandatory_id && x.status === "Solicitada").map((x) => [x.title, x.occurrence, x.time]));
+  assert.equal(mreq.length, 2, label + ": cada obrigatória gera uma solicitação");
+  assert.deepEqual(mreq[0], ["Comitê mensal de segurança", "1/1", "08:30"]);
+  const mid = await page.evaluate(() => S.db.meetings.find((x) => x.title === "Comitê mensal de segurança" && x.status === "Solicitada").id);
+  assert.match(await page.textContent(`#view tr[data-id='${mid}']`), /obrigatória 1\/1/, label + ": marcada como obrigatória na lista");
+  if (shots) await page.screenshot({ path: `${shots}/${label}-18-obrigatorias-solicitacoes.png`, fullPage: true });
+  await page.click(`#view tr[data-id='${mid}'] button:has-text('Agendar')`);
+  await page.fill("#sc-date", tomorrow);
+  await page.click("#modal-body button:has-text('Agendar e gerar convite')");
+  await page.waitForSelector("#inv-box");
+  await page.evaluate(() => closeModal());
+  assert.equal(await page.evaluate(() => S.db.meetings.filter((x) => x.title === "Comitê mensal de segurança" && x.status === "Solicitada").length), 0, label + ": mensal agendada não volta para a lista");
+  const wk = await page.evaluate(() => S.db.meetings.find((x) => x.title === "Reunião semanal de produção" && x.status === "Solicitada").id);
+  await page.click(`#view tr[data-id='${wk}'] button:has-text('Agendar')`);
+  await page.fill("#sc-date", tomorrow);
+  await page.click("#modal-body button:has-text('Agendar e gerar convite')");
+  await page.waitForSelector("#inv-box");
+  await page.evaluate(() => closeModal());
+  const req = await page.evaluate(() => Core.requiredCount(S.db.mandatory.find((m) => m.frequency === "Semanal"), todayISO().slice(0, 7)));
+  const next = await page.evaluate(() => S.db.meetings.filter((x) => x.title === "Reunião semanal de produção" && x.status === "Solicitada").map((x) => x.occurrence));
+  assert.deepEqual(next, req > 1 ? [`2/${req}`] : [], label + ": semanal agendada abre a próxima solicitação");
   // solicitação sem data no texto não ganha a data de hoje
   await page.fill("#rqt-text", "Conversa com o RH sobre treinamentos");
   await page.click("#rqt-fill");
