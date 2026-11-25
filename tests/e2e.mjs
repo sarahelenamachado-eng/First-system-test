@@ -195,6 +195,19 @@ async function scenarioListAndSmall(page, label) {
   await go(page, "lista/finalizados", "#view h2");
   assert.ok((await page.textContent("#view")).includes("Comprar EPIs para a brigada"), label + ": item fechado na aba Itens fechados");
   assert.match(await page.textContent("#view .tabs"), /Itens fechados/);
+  // Editar título e descrição de um item existente (✎ na linha abre a janela do item)
+  await go(page, "lista", ".glist");
+  await page.click("tr[data-id='GOV001'] .g-edit");
+  await page.waitForSelector("#i-title");
+  assert.equal(await page.inputValue("#i-title"), "Relatório de Xushui para o HQ");
+  await page.fill("#i-title", "Relatório mensal de Xushui para o HQ");
+  await page.fill("#i-desc", "Enviar até sexta com os indicadores de segurança");
+  await page.click("#modal-body button:has-text('Salvar')");
+  await page.waitForFunction(() => S.db.items.find((i) => i.id === "GOV001").title === "Relatório mensal de Xushui para o HQ");
+  assert.equal(await page.evaluate(() => Core.find("items", "GOV001").description), "Enviar até sexta com os indicadores de segurança");
+  await page.waitForFunction(() => document.querySelector("#modal h2")?.textContent.includes("Relatório mensal") && !document.querySelector("#modal").classList.contains("hidden"));
+  await page.evaluate(() => { closeModal(); location.hash = "lista"; });
+  await page.waitForSelector(".glist tr[data-id='GOV001'] >> text=Relatório mensal de Xushui para o HQ");
   // Excluir: pede confirmação e apaga de vez (pela linha, pela janela do item e pela aba Itens fechados)
   const del = await page.evaluate(async () => { const a = await api("items", "POST", { title: "Item criado por engano" }); const b = await api("items", "POST", { title: "Outro item por engano" }); await refresh(); return [a.id, b.id]; });
   await go(page, "lista", `tr[data-id='${del[0]}']`);

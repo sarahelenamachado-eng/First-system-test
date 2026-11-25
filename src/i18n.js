@@ -934,6 +934,8 @@ Object.assign(D, {
   "{id} excluído": ["{id} deleted", "{id}已删除"]
 });
 
+Object.assign(D, { "Editar título e descrição": ["Edit title and description", "编辑标题和描述"] });
+
 /* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
 function biRender(root) {
   if (!root) return;

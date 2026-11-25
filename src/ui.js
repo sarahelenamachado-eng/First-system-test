@@ -484,7 +484,7 @@ function itemsTable(all) {
       <button id="qa-add" onclick="busy(this, quickAddItem)">${t("Adicionar")}</button></div></div>
   <div class="card" style="overflow:auto"><table class="glist">${th(["ID", "Item", "Responsável", "Prazo", "Prioridade", "Último progresso", "Status", ""])}
   ${rows.map((i) => { const lp = lastProgress(i), la = lateActions(i); return `<tr class="${isOverdue(i) || la.length ? "overdue" : ""}" data-id="${i.id}"><td><a href="#lista/${i.id}">${i.id}</a></td>
-    <td class="g-title"><a href="#lista/${i.id}">${esc(lc(i, "title"))}</a>${deptOf(i) ? `<br><small class="muted">${esc(deptOf(i))}</small>` : ""}${la.length ? `<br><small class="late-txt">${t("{n} ações vencidas", { n: la.length })}</small>` : ""}</td>
+    <td class="g-title"><a href="#lista/${i.id}">${esc(lc(i, "title"))}</a> <a class="g-edit" href="#lista/${i.id}" title="${esc(t("Editar título e descrição"))}" onclick="setTimeout(()=>$('#i-title')?.focus(), 50)">✎</a>${deptOf(i) ? `<br><small class="muted">${esc(deptOf(i))}</small>` : ""}${la.length ? `<br><small class="late-txt">${t("{n} ações vencidas", { n: la.length })}</small>` : ""}</td>
     <td>${personSelect(`g-o-${i.id}`, i.owner || "", "", `onchange="busy(this, ()=>quickPatch('${i.id}', 'owner', this.value))"`)}</td>
     <td><input type="date" class="${isOverdue(i) ? "late" : ""}" value="${esc(i.due_date)}" onchange="busy(this, ()=>quickPatch('${i.id}', 'due_date', this.value))">${isOverdue(i) ? `<br><small class="late-txt">${t("{n} dias de atraso", { n: daysSince(i.due_date) })}</small>` : ""}</td>
     <td><select class="small-sel" onchange="busy(this, ()=>quickPatch('${i.id}', 'priority', this.value))">${opts(LEVELS, i.priority || "Média")}</select></td>
@@ -614,7 +614,9 @@ function openItem(id) {
   <p>${prio(i.priority)} ${pill(t("Urgência") + " " + (tv(i.urgency) || "—"))} ${(i.impacts || []).map((x) => pill(t(x))).join("")} ${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}
     ${isOverdue(i) ? pill(`⚠ ${t("Prazo vencido em {date}", { date: i.due_date })}`, "p-Alta") : isDueSoon(i) ? pill(t("Vence em {date}", { date: i.due_date }), "p-Média") : ""}</p>
   ${dups.length ? `<div class="alert lv-alta">⚠ ${t("Possível duplicado de {ids}.", { ids: dups.join(", ") })} <button class="small" onclick="busy(this, ()=>mergeItem('${i.id}','${dups[0]}'))">${t("Mesclar este item em {id}", { id: dups[0] })}</button></div>` : ""}
-  <p>${esc(lc(i, "description"))}</p>
+  <div class="card item-edit">${L("Título")}<input id="i-title" value="${esc(i.title)}">
+    ${L("Descrição")}<textarea id="i-desc" style="min-height:70px">${esc(i.description)}</textarea>
+    ${lc(i, "description") !== (i.description || "") ? `<p class="muted small">${esc(lc(i, "description"))}</p>` : ""}</div>
   ${isubs.length >= 2 ? `<div class="alert lv-media subs-box">📋 ${t("Este item tem {n} subitens. Transforme em projeto: cada subitem vira um item do projeto.", { n: isubs.length })}
     <button class="small" onclick="busy(this, ()=>itemToProject('${i.id}'))">${(i.links?.projects || []).length ? t("Adicionar os subitens ao projeto {id}", { id: i.links.projects[0] }) : t("Transformar em projeto")}</button></div>` : ""}
   <div class="row"><div>${L("Escopo")}${esc(lc(i, "scope"))}<br><span class="muted">${esc(lc(i, "scope_action"))}</span></div><div>${L("Origem")}${esc(tv(i.source))} · ${esc(i.origin)}</div><div>${L("Áreas")}${esc(i.area_main)} ${i.areas_impacted ? "→ " + esc(i.areas_impacted) : ""}</div></div>
@@ -651,7 +653,9 @@ function openItem(id) {
  * (senão o detalhe voltaria a abrir depois que o usuário já saiu dele). */
 function reopenItem() {}
 async function saveItem(id) {
-  await api("items/" + id, "PATCH", { status: $("#i-status").value, owner: $("#i-owner").value, due_date: $("#i-due").value, priority: $("#i-prio").value, report: $("#i-report").checked, area_main: $("#i-dept").value.trim() });
+  const title = $("#i-title").value.trim();
+  if (!title) throw new Error(t("Escreva o item."));
+  await api("items/" + id, "PATCH", { title, description: $("#i-desc").value.trim(), status: $("#i-status").value, owner: $("#i-owner").value, due_date: $("#i-due").value, priority: $("#i-prio").value, report: $("#i-report").checked, area_main: $("#i-dept").value.trim() });
   toast(t("Item atualizado")); await refresh(); reopenItem(id);
 }
 async function addProgress(id) {
