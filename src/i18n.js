@@ -936,6 +936,8 @@ Object.assign(D, {
 
 Object.assign(D, { "Editar título e descrição": ["Edit title and description", "编辑标题和描述"] });
 
+Object.assign(D, { "Limpar": ["Clear", "清除"], "Escolha uma ou mais pessoas": ["Choose one or more people", "选择一位或多位人员"] });
+
 /* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
 function biRender(root) {
   if (!root) return;

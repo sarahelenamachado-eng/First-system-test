@@ -65,6 +65,9 @@ A IA sugere, você confirma ou corrige, e a decisão fica guardada para a IA apr
   "＋ Novo progresso…" registra o progresso com Enter. No topo, **＋ Novo item** cria um item escrevendo e apertando Enter.
 - **Fechar / 关闭:** o botão de cada linha fecha o item: ele sai da lista geral e aparece só na aba **Itens fechados**
   (histórico por mês e por projeto / departamento). Origem e definição ficam em "Mais filtros".
+- **Mais de um responsável:** em todo campo "Responsável" (itens, ações, itens de projeto, projetos menores, riscos) a lista
+  abre com caixas de seleção por departamento e uma busca; marque uma ou mais pessoas e clique em OK. Itens antigos
+  com um só responsável continuam iguais.
 - **Editar título e descrição:** o ✎ ao lado do título (ou a janela do item) tem os campos Título e Descrição; clique em
   Salvar. A tradução automática é refeita para o texto novo.
 - **Excluir:** o botão 🗑 da linha (ou "Excluir o item" na janela do item, ou 🗑 na aba Itens fechados) apaga o item de vez,

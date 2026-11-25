@@ -28,15 +28,55 @@ function deptSelect(id, sel = "", empty = "—", attrs = "") {
   return `<select id="${id}" class="dept-sel" ${attrs}><option value="">${esc(empty)}</option>${[...list, ...extra].map((d) => `<option value="${esc(d)}" ${d === sel ? "selected" : ""}>${esc(d)}</option>`).join("")}</select>`;
 }
 /** Pessoas agrupadas por departamento; ao escolher, preenche o departamento (deptTarget) se estiver vazio. */
+/** Responsáveis: escolha uma ou mais pessoas (agrupadas por departamento). O valor fica num campo oculto com o
+ * id pedido, no formato "Nome A, Nome B" (dados antigos com um só nome continuam valendo). O evento change do campo
+ * dispara quando a lista é fechada, se a escolha mudou. */
 function personSelect(id, sel = "", deptTarget = "", attrs = "") {
-  const ppl = peopleList(), groups = [...depts().map((d) => [d, ppl.filter((p) => p.dept === d)]), [t("Outras pessoas"), ppl.filter((p) => !depts().includes(p.dept))]].filter(([, l]) => l.length);
-  const known = ppl.some((p) => p.name === sel);
-  const o = (n) => `<option value="${esc(n)}" ${n === sel ? "selected" : ""}>${esc(n)}</option>`;
-  return `<select id="${id}" class="person-sel" ${deptTarget ? `onchange="fillDept(this,'${deptTarget}')"` : ""} ${attrs}><option value="">—</option>${sel && !known ? o(sel) : ""}
-    ${groups.map(([d, l]) => `<optgroup label="${esc(d)}">${l.map((p) => o(p.name)).join("")}</optgroup>`).join("")}</select>`;
+  const ppl = peopleList(), cur = splitList(sel), names = ppl.map((p) => p.name);
+  const groups = [...depts().map((d) => [d, ppl.filter((p) => p.dept === d).map((p) => p.name)]), [t("Outras pessoas"), ppl.filter((p) => !depts().includes(p.dept)).map((p) => p.name)]];
+  const extra = cur.filter((n) => !names.includes(n));
+  if (extra.length) groups.unshift(["", extra]);
+  const box = (n) => `<label class="pm-o"><input type="checkbox" value="${esc(n)}" ${cur.includes(n) ? "checked" : ""} onchange="pmSync('${id}')"> ${esc(n)}</label>`;
+  return `<span class="pm" id="${id}-pm"><input type="hidden" id="${id}" class="person-sel" value="${esc(cur.join(", "))}" data-dept="${deptTarget}" ${attrs}>
+    <details class="pm-d" ontoggle="pmToggled('${id}', this)"><summary class="pm-sum" title="${esc(t("Escolha uma ou mais pessoas"))}">${cur.length ? esc(cur.join(", ")) : "—"}</summary>
+    <div class="pm-list"><input class="pm-q" placeholder="${esc(t("Buscar…"))}" oninput="pmFilter('${id}', this.value)">
+      ${groups.filter(([, l]) => l.length).map(([d, l]) => `<div class="pm-g">${d ? `<b>${esc(d)}</b>` : ""}${l.map(box).join("")}</div>`).join("")}
+      <div class="pm-foot"><button type="button" class="small ghost" onclick="setPeople('${id}', [])">${t("Limpar")}</button><button type="button" class="small" onclick="this.closest('details').open=false">OK</button></div></div></details></span>`;
 }
+function pmSync(id) {
+  const box = $(`#${id}-pm`), el = $("#" + id);
+  const picked = [...box.querySelectorAll(".pm-o input:checked")].map((c) => c.value);
+  el.value = picked.join(", ");
+  box.querySelector(".pm-sum").textContent = picked.length ? el.value : "—";
+  if (el.dataset.dept) fillDept(el, el.dataset.dept);
+}
+function pmToggled(id, d) {
+  const el = $("#" + id);
+  if (!el) return;
+  if (d.open) {
+    // a lista abre por cima da tela (não fica cortada dentro de tabelas com rolagem)
+    const r = d.querySelector("summary").getBoundingClientRect(), list = d.querySelector(".pm-list");
+    const below = window.innerHeight - r.bottom > 260 || r.top < 260;
+    Object.assign(list.style, { position: "fixed", left: Math.min(r.left, window.innerWidth - 260) + "px", top: below ? r.bottom + 4 + "px" : "auto", bottom: below ? "auto" : window.innerHeight - r.top + 4 + "px" });
+    el.dataset.before = el.value; d.querySelector(".pm-q")?.focus(); return;
+  }
+  if (el.dataset.before !== undefined && el.dataset.before !== el.value) { delete el.dataset.before; el.dispatchEvent(new Event("change")); }
+}
+function pmFilter(id, q) {
+  q = AI.norm(q || "");
+  $(`#${id}-pm`).querySelectorAll(".pm-o").forEach((l) => { l.style.display = !q || AI.norm(l.textContent).includes(q) ? "" : "none"; });
+}
+/** Define os responsáveis de um campo de pessoas (usado também pelos testes). */
+function setPeople(id, names) {
+  const box = $(`#${id}-pm`);
+  box.querySelectorAll(".pm-o input").forEach((c) => { c.checked = names.includes(c.value); });
+  pmSync(id);
+}
+// clicar fora fecha a lista de pessoas aberta
+document.addEventListener("click", (e) => { document.querySelectorAll(".pm-d[open]").forEach((d) => { if (!d.contains(e.target)) d.open = false; }); });
 function fillDept(sel, target) {
-  const p = peopleList().find((x) => x.name === sel.value), el = $("#" + target);
+  const first = splitList(sel.value)[0];
+  const p = peopleList().find((x) => x.name === first), el = $("#" + target);
   if (p?.dept && el && !el.value) el.value = p.dept;
 }
 /** Vários valores (ex.: áreas impactadas): clique nas opções ou digite separado por vírgula. */
@@ -500,7 +540,7 @@ function itemsTable(all) {
 /* Edição direto na linha da lista geral. */
 async function quickPatch(id, field, value) {
   const it = byId("items", id), body = { [field]: value, _silent: true };
-  if (field === "owner" && !deptOf(it)) { const p = peopleList().find((x) => x.name === value); if (p?.dept) body.area_main = p.dept; }
+  if (field === "owner" && !deptOf(it)) { const p = peopleList().find((x) => x.name === splitList(value)[0]); if (p?.dept) body.area_main = p.dept; }
   await api("items/" + id, "PATCH", body);
   toast(t("Item atualizado")); await refresh();
 }
@@ -526,7 +566,7 @@ async function quickAddItem() {
   if (!title) throw new Error(t("Escreva o item."));
   const dup = Core.findDuplicates(title);
   if (dup.length && !confirm(t("DUP_CONFIRM", { ids: dup.join(", ") }))) return;
-  const owner = $("#qa-owner").value, p = peopleList().find((x) => x.name === owner);
+  const owner = $("#qa-owner").value, p = peopleList().find((x) => x.name === splitList(owner)[0]);
   const it = await api("items", "POST", { title, owner, due_date: $("#qa-due").value, area_main: (DEP_SEL && DEP_SEL !== "" ? DEP_SEL : "") || p?.dept || "",
     source: "Outro", source_detail: "Pedido pontual", emitted_at: S.today, priority: "Média", urgency: "Média", item_actions: [], sub_seq: 0 });
   toast(t("Registrado em {id}", { id: it.id })); await refresh();

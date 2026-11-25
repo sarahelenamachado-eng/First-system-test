@@ -30,6 +30,13 @@ async function newPage(aiMock) {
   return page;
 }
 const go = async (page, hash, sel) => { await page.evaluate((h) => { location.hash = h; }, hash); if (sel) await page.waitForSelector(sel); };
+/** Escolhe pessoas no campo de responsáveis (lista com caixas de seleção), como a usuária faria. */
+async function pickPeople(page, id, names) {
+  await page.click(`#${id}-pm summary`);
+  for (const n of names) await page.check(`#${id}-pm .pm-o input[value="${n}"]`);
+  if (shots && id.startsWith("g-o-")) await page.screenshot({ path: `${shots}/responsaveis-${id}.png` });
+  await page.click(`#${id}-pm .pm-foot button:has-text('OK')`);
+}
 const readFile = (page, rel) => page.evaluate(async (rel) => { const f = await Store.read(rel); return f ? f.text() : null; }, rel);
 
 /** Base de exemplo: projeto com 3 itens (2 parados há 6 dias) e 2 itens na lista geral. */
@@ -124,10 +131,10 @@ async function scenarioDeptsAndSubitems(page, label) {
   // nova entrada rápida: uma caixa de texto + responsável; departamento e o resto ficam em "Mais detalhes"
   await go(page, "entradas", "#f-text");
   assert.equal(await page.$eval("#f-area", (e) => e.tagName), "SELECT");
-  const groups = await page.$$eval("#f-owner optgroup", (g) => g.map((x) => x.label));
+  const groups = await page.$$eval("#f-owner-pm .pm-g > b", (g) => g.map((x) => x.textContent));
   assert.deepEqual(groups.slice(0, 3), ["Logistic 物流", "Production 生产", "Production Control 生产管理"], label + ": pessoas por departamento");
   assert.ok(groups.includes("Purchasing 采购"));
-  await page.selectOption("#f-owner", "Peter 姜大鹏");
+  await pickPeople(page, "f-owner", ["Peter 姜大鹏"]);
   assert.equal(await page.inputValue("#f-area"), "Logistic 物流", label + ": departamento preenchido pela pessoa");
   await page.click("summary:has-text('Mais detalhes (opcional)')");
   await page.click("#f-areas-imp-chips >> text=EHS");
@@ -157,7 +164,10 @@ async function scenarioDeptsAndSubitems(page, label) {
   await page.waitForFunction(() => S.db.projects.some((p) => p.name === "Ações de 5S"));
   assert.deepEqual(await page.evaluate(() => S.db.projects.find((p) => p.name === "Ações de 5S").pitems.map((x) => x.title)), ["Organizar almoxarifado", "Pintar faixas"]);
   await go(page, `projetos/${proj.id}/itens`, "#pi-new-t");
-  assert.equal(await page.$eval(`#pi-w-IT001`, (e) => e.tagName + ":" + e.value), "SELECT:Peter 姜大鹏", label + ": responsável do item é lista");
+  assert.equal(await page.inputValue(`#pi-w-IT001`), "Peter 姜大鹏", label + ": responsável do item vem da lista de pessoas");
+  // mais de um responsável num item de projeto
+  await pickPeople(page, "pi-w-IT001", ["Alessandro Barbosa"]);
+  assert.equal(await page.inputValue(`#pi-w-IT001`), "Alessandro Barbosa, Peter 姜大鹏", label + ": dois responsáveis no item do projeto");
   if (shots) await page.screenshot({ path: `${shots}/${label}-7-projeto.png`, fullPage: true });
   // item já registrado na lista geral com subitens -> botão "Transformar em projeto"
   await page.evaluate(async () => { await api("items", "POST", { title: "Programa 5S", description: "1. Organizar almoxarifado\n2. Pintar faixas\n3. Auditoria mensal" }); await refresh(); });
@@ -175,11 +185,15 @@ async function scenarioListAndSmall(page, label) {
   await go(page, "lista", "#qa-title");
   // novo item direto na lista: escreve e aperta Enter
   await page.fill("#qa-title", "Comprar EPIs para a brigada");
-  await page.selectOption("#qa-owner", "Alfredo");
+  await pickPeople(page, "qa-owner", ["Alfredo"]);
   await page.press("#qa-title", "Enter");
   await page.waitForSelector(".glist >> text=Comprar EPIs para a brigada");
   const gid = await page.evaluate(() => S.db.items.find((i) => i.title === "Comprar EPIs para a brigada").id);
   assert.equal(await page.evaluate((id) => Core.find("items", id).area_main, gid), "EHS", label + ": departamento vem da pessoa");
+  // mais de um responsável direto na linha: a mudança é salva quando a lista de pessoas fecha
+  await pickPeople(page, `g-o-${gid}`, ["Barry 姚鹤康"]);
+  await page.waitForFunction((id) => S.db.items.find((i) => i.id === id).owner === "Alfredo, Barry 姚鹤康", gid);
+  assert.equal(await page.textContent(`tr[data-id='${gid}'] .pm-sum`), "Alfredo, Barry 姚鹤康");
   // edição na linha: prioridade e progresso
   await page.selectOption(`tr[data-id='${gid}'] td:nth-child(5) select`, "Alta");
   await page.waitForFunction((id) => S.db.items.find((i) => i.id === id).priority === "Alta", gid);
@@ -203,7 +217,7 @@ async function scenarioListAndSmall(page, label) {
   await page.fill("#i-title", "Relatório mensal de Xushui para o HQ");
   await page.fill("#i-desc", "Enviar até sexta com os indicadores de segurança");
   await page.click("#modal-body button:has-text('Salvar')");
-  await page.waitForFunction(() => S.db.items.find((i) => i.id === "GOV001").title === "Relatório mensal de Xushui para o HQ");
+  await page.waitForFunction(() => S.db.items.find((i) => i.id === "GOV001").title === "Relatório mensal de Xushui para o HQ", null, { polling: 200 }); // a checagem por intervalo evita depender de quadros de animação com a janela aberta
   assert.equal(await page.evaluate(() => Core.find("items", "GOV001").description), "Enviar até sexta com os indicadores de segurança");
   await page.waitForFunction(() => document.querySelector("#modal h2")?.textContent.includes("Relatório mensal") && !document.querySelector("#modal").classList.contains("hidden"));
   await page.evaluate(() => { closeModal(); location.hash = "lista"; });
@@ -228,13 +242,14 @@ async function scenarioListAndSmall(page, label) {
   // projetos menores e temporários: aba própria, fora da lista de projetos
   await go(page, "temporarios", "#tp-name");
   await page.fill("#tp-name", "Mutirão de 5S no almoxarifado");
-  await page.selectOption("#tp-owner", "Lira");
+  await pickPeople(page, "tp-owner", ["Lira", "Fred"]);
   await page.selectOption("#tp-purpose", "Controle de risco temporário");
   await page.fill("#tp-end", await page.evaluate(() => addDays(todayISO(), 20)));
   await page.fill("#tp-items", "Separar materiais\nPintar faixas");
   await page.click("#tp-add");
   await page.waitForSelector("#view table >> text=Mutirão de 5S no almoxarifado");
   const sp = await page.evaluate(() => S.db.projects.find((p) => p.name === "Mutirão de 5S no almoxarifado"));
+  assert.equal(sp.owner, "Lira, Fred", label + ": projeto menor com dois responsáveis");
   assert.equal(sp.small, true); assert.equal(sp.purpose, "Controle de risco temporário"); assert.equal(sp.dept, "Production 生产");
   assert.deepEqual(sp.pitems.map((x) => x.title), ["Separar materiais", "Pintar faixas"]);
   assert.ok((await page.textContent("#view table")).includes("Controle de risco temporário"));

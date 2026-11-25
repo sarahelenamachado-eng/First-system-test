@@ -298,3 +298,20 @@ button .bi-zh, .btn .bi-zh { color: inherit; opacity: .85; }
 .glist .g-edit { text-decoration: none; opacity: .6; margin-left: 2px; }
 .glist .g-edit:hover { opacity: 1; }
 .item-edit { margin: 8px 0; padding: 10px 12px; }
+
+/* Responsáveis: escolha de uma ou mais pessoas */
+.pm { position: relative; display: block; min-width: 140px; }
+.pm-d > summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 7px 26px 7px 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+.pm-d > summary::-webkit-details-marker { display: none; }
+.pm-d > summary::after { content: "▾"; position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.pm-list { position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; min-width: 240px; max-height: 320px; overflow: auto; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15); padding: 8px; }
+.pm-q { width: 100%; margin-bottom: 6px; }
+.pm-g { margin-bottom: 6px; }
+.pm-g > b { display: block; font-size: .8rem; color: var(--muted); margin: 4px 0 2px; }
+.pm-o { display: flex !important; gap: 6px; align-items: center; font-weight: normal; padding: 2px 0; cursor: pointer; white-space: nowrap; }
+.pm-o input { width: auto; margin: 0; }
+.pm-foot { display: flex; justify-content: space-between; gap: 6px; position: sticky; bottom: -8px; background: var(--panel); padding-top: 6px; }
+.glist .pm-d > summary { font-size: 13px; padding: 4px 22px 4px 6px; max-width: 170px; }
+.quick-add .pm { display: inline-block; min-width: 180px; }
