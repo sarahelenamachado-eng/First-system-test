@@ -122,6 +122,11 @@ lista de Projetos; a caixa "Projeto menor / temporário" na visão geral move um
 ### 4. Reuniões
 Abre em **Solicitações** (requisitadas em aberto / realizadas e encerradas). Abas: Solicitações · Dashboard · **Calendário** (clique num dia para inserir; sugestões da IA tracejadas) · **Obrigatórias** ·
 **Solicitadas** · Confirmar e registrar ata · **Tempo em reuniões** · **Controle de atas** · Todas.
+- **Escrever corrido primeiro:** em *Confirmar e registrar ata* (caixa **Registrar reunião**) e em *Solicitar reunião*, escreva
+  a reunião do jeito que foi ("Reunião de segurança ontem às 9h30, 40 min, com Alfredo e Barry…") e clique em
+  **Preencher os campos**: a IA (ou, sem chave, regras simples) sugere título, data, horário, duração, participantes do
+  cadastro, departamentos, projeto, nível e tipo. Os campos abrem numa versão editável para você só ajustar e salvar.
+  Todos são opcionais; **Salvar direto** / **Registrar solicitação** preenchem sozinhos e salvam. O texto vira a ata.
 - **Cadastro simples:** título, data, hora, **duração planejada**, nível, depto. responsável pela ata e participantes.
 - **Participantes:** digite os nomes separados por vírgula (ou clique nos já conhecidos). Nomes novos entram sozinhos no
   cadastro de pessoas; depois é só ajustar o cargo (Diretor, Sr Manager…) em Tempo em reuniões.

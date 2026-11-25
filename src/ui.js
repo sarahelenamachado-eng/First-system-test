@@ -116,12 +116,19 @@ function toast(text) {
 }
 async function busy(btn, fn) {
   // campos (select/input) só ficam travados; botões mostram "Processando…"
-  const isBtn = btn.tagName === "BUTTON", old = isBtn ? btn.innerHTML : "";
+  const isBtn = btn.tagName === "BUTTON", old = isBtn ? btn.innerHTML : "", inModal = !!btn.closest?.("#modal");
+  if (inModal) MODAL_ACTION = true;
   btn.disabled = true; if (isBtn) btn.textContent = t("Processando…");
-  try { await fn(); } catch (e) { toast(t("Erro: ") + t(e.message)); } finally { btn.disabled = false; if (isBtn) btn.innerHTML = old; }
+  try { await fn(); } catch (e) { toast(t("Erro: ") + t(e.message)); } finally { btn.disabled = false; if (isBtn) btn.innerHTML = old; if (inModal) MODAL_ACTION = false; }
 }
-function openModal(html) { $("#modal-body").innerHTML = html; $("#modal").classList.remove("hidden"); }
-function closeModal() { $("#modal").classList.add("hidden"); }
+let MODAL_ITEM = "", MODAL_ACTION = false, NEXT_MODAL_ITEM = "";
+function modalDirty() {
+  if ($("#modal").classList.contains("hidden")) return false;
+  return [...document.querySelectorAll("#modal-body input, #modal-body textarea, #modal-body select")].some((e) =>
+    e.tagName === "SELECT" ? [...e.options].some((o) => o.selected !== o.defaultSelected) : ["checkbox", "radio"].includes(e.type) ? e.checked !== e.defaultChecked : e.type !== "file" && e.value !== e.defaultValue);
+}
+function openModal(html) { MODAL_ITEM = NEXT_MODAL_ITEM; NEXT_MODAL_ITEM = ""; $("#modal-body").innerHTML = html; $("#modal").classList.remove("hidden"); }
+function closeModal() { $("#modal").classList.add("hidden"); MODAL_ITEM = ""; }
 async function uploadFiles(path, input, extra = {}) {
   if (!input.files.length) throw new Error(t("Escolha um arquivo."));
   for (const f of input.files) await api(path, "POST", { file: f, ...extra });
@@ -270,7 +277,9 @@ function render() {
     fluxos: viewFluxos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
   $("#view").innerHTML = V(id, tab);
   if (V === viewEntradas && id) openTriage(id);
-  if (V === viewLista && id && !["departamentos", "finalizados"].includes(id)) openItem(id);
+  // a janela do item é redesenhada com os dados novos, a não ser que a tela seja atualizada por outro motivo
+  // enquanto há texto digitado e ainda não salvo nela (aí as edições são mantidas)
+  if (V === viewLista && id && !["departamentos", "finalizados"].includes(id) && !(MODAL_ITEM === id && !MODAL_ACTION && modalDirty())) openItem(id);
   if (V === viewFluxos && id) FlowEd.mount();
   if (V === viewRiscos && id && (tab || "geral") === "docs") loadRiskFiles(id);
 }
@@ -524,7 +533,7 @@ function itemsTable(all) {
       <button id="qa-add" onclick="busy(this, quickAddItem)">${t("Adicionar")}</button></div></div>
   <div class="card" style="overflow:auto"><table class="glist">${th(["ID", "Item", "Responsável", "Prazo", "Prioridade", "Último progresso", "Status", ""])}
   ${rows.map((i) => { const lp = lastProgress(i), la = lateActions(i); return `<tr class="${isOverdue(i) || la.length ? "overdue" : ""}" data-id="${i.id}"><td><a href="#lista/${i.id}">${i.id}</a></td>
-    <td class="g-title"><a href="#lista/${i.id}">${esc(lc(i, "title"))}</a> <a class="g-edit" href="#lista/${i.id}" title="${esc(t("Editar título e descrição"))}" onclick="setTimeout(()=>$('#i-title')?.focus(), 50)">✎</a>${deptOf(i) ? `<br><small class="muted">${esc(deptOf(i))}</small>` : ""}${la.length ? `<br><small class="late-txt">${t("{n} ações vencidas", { n: la.length })}</small>` : ""}</td>
+    <td class="g-title"><a href="#lista/${i.id}">${esc(lc(i, "title"))}</a> <a class="g-edit" href="#lista/${i.id}" title="${esc(t("Editar título e descrição"))}" onclick="FOCUS_TITLE=true">✎</a>${deptOf(i) ? `<br><small class="muted">${esc(deptOf(i))}</small>` : ""}${la.length ? `<br><small class="late-txt">${t("{n} ações vencidas", { n: la.length })}</small>` : ""}</td>
     <td>${personSelect(`g-o-${i.id}`, i.owner || "", "", `onchange="busy(this, ()=>quickPatch('${i.id}', 'owner', this.value))"`)}</td>
     <td><input type="date" class="${isOverdue(i) ? "late" : ""}" value="${esc(i.due_date)}" onchange="busy(this, ()=>quickPatch('${i.id}', 'due_date', this.value))">${isOverdue(i) ? `<br><small class="late-txt">${t("{n} dias de atraso", { n: daysSince(i.due_date) })}</small>` : ""}</td>
     <td><select class="small-sel" onchange="busy(this, ()=>quickPatch('${i.id}', 'priority', this.value))">${opts(LEVELS, i.priority || "Média")}</select></td>
@@ -650,6 +659,7 @@ function openItem(id) {
   const dups = Core.findDuplicates(i.title, i.id);
   const acts = i.item_actions || [];
   const isubs = AI.subitems(i.description);
+  NEXT_MODAL_ITEM = i.id;
   openModal(`<h2>${i.id} · ${esc(lc(i, "title"))} ${trButton("items", i.id)}</h2>
   <p>${prio(i.priority)} ${pill(t("Urgência") + " " + (tv(i.urgency) || "—"))} ${(i.impacts || []).map((x) => pill(t(x))).join("")} ${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}
     ${isOverdue(i) ? pill(`⚠ ${t("Prazo vencido em {date}", { date: i.due_date })}`, "p-Alta") : isDueSoon(i) ? pill(t("Vence em {date}", { date: i.due_date }), "p-Média") : ""}</p>
@@ -688,7 +698,9 @@ function openItem(id) {
   <details class="merge"><summary>${t("Mesclar com outro item (duplicado)")}</summary>
     <div class="toolbar" style="margin-top:8px"><input id="i-merge" placeholder="GOV003"><button class="small ghost" onclick="busy(this, ()=>mergeItem('${i.id}', $('#i-merge').value.trim().toUpperCase()))">${t("Mesclar este item no informado")}</button></div>
     <p class="muted">${t("Vínculos, entradas, ações e histórico deste item passam para o item informado, e este é removido.")}</p></details>`);
+  if (FOCUS_TITLE) { FOCUS_TITLE = false; $("#i-title").focus(); }
 }
+let FOCUS_TITLE = false; // ✎ na lista: abre o item com o cursor no título
 /* Após salvar, o próprio render() reabre o item quando o endereço é lista/ID — não reabrir de novo aqui
  * (senão o detalhe voltaria a abrir depois que o usuário já saiu dele). */
 function reopenItem() {}
@@ -1010,23 +1022,45 @@ function viewReunioes(id) {
 function meetingsConfirmView(pend) {
   const pre = window._newMeetingProject || ""; window._newMeetingProject = "";
   const projSel = (idp) => `<select id="${idp}"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}" ${p.id === pre ? "selected" : ""}>${p.id} · ${esc(lc(p, "name"))}</option>`).join("")}</select>`;
-  return `<div class="card" style="margin-bottom:14px"><h2>${t("Aguardando confirmação")} (${pend.length})</h2>
+  return `<div class="card quick-input" id="mt-card"><h2>⚡ ${t("Registrar reunião")}</h2>
+    <p class="muted how-line">${t("MEETING_HOW")}</p>
+    <textarea id="mt-text" style="min-height:150px" placeholder="${esc(t("MEETING_PLACEHOLDER"))}"></textarea>
+    <div class="actions"><button id="mt-fill" onclick="busy(this, ()=>fillMeeting('m-'))">✨ ${t("Preencher os campos")}</button>
+      <button class="ghost" id="mt-save-direct" onclick="busy(this, saveMeeting)">${t("Salvar direto")}</button></div>
+    <details class="more" id="m-review"><summary>${t("Campos da reunião (opcionais)")}</summary>
+      <div id="m-filled"></div>
+      <div class="row"><div>${L("Título")}<input id="m-title"></div><div>${L("Data")}<input type="date" id="m-date" value="${S.today}"></div><div>${L("Horário")}<input type="time" id="m-time"></div></div>
+      ${meetingFields().replace(/mq-/g, "m-")}
+      <div class="row"><div>${L("Departamentos")}${chipsPicker("m-dept", "", depts())}</div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
+      ${L("Anexar ata")}<input type="file" id="m-file" multiple>
+      ${L("Anotações pessoais")}<textarea id="m-notes"></textarea>
+      <div class="actions"><button id="m-save" onclick="busy(this, saveMeeting)">✓ ${t("Salvar e extrair demandas com IA")}</button></div></details></div>
+  <div class="card" style="margin-bottom:14px"><h2>${t("Aguardando confirmação")} (${pend.length})</h2>
     <p class="muted">${t("Reuniões solicitadas e as geradas automaticamente pelos projetos principais. Confirme se a reunião foi feita ou não.")}</p>
     <table>${th(["ID", "Reunião", "Data", "Nível", "Projeto", "Solicitada por", "Status", ""])}
     ${pend.map((m) => `<tr class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}${m.auto ? ` ${pill(t("automática"))}` : ""}${m.mandatory_id ? ` ${pill(t("obrigatória"), "p-Alta")}` : ""}</td><td>${esc(m.date)} ${esc(m.time || "")}</td>
       <td>${esc(tv(m.level))}</td><td>${m.project_id ? `<a href="#projetos/${m.project_id}">${m.project_id}</a>` : ""}</td><td>${esc(tv(m.requested_by))}</td><td>${statusPill(m.status)}</td>
       <td class="nowrap"><button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
-        <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nada a confirmar.")}</td></tr>`}</table></div>
-  <div class="grid">
-  <div class="card"><h2>${t("Nova ata / anotação")}</h2>
-    <div class="row"><div>${L("Título")}<input id="m-title"></div><div>${L("Data")}<input type="date" id="m-date" value="${S.today}"></div><div>${L("Horário")}<input type="time" id="m-time"></div></div>
-    ${meetingFields().replace(/mq-/g, "m-")}
-    ${L("Ata")}<textarea id="m-min" style="min-height:120px" placeholder="${esc(t("MINUTES_HINT"))}"></textarea>
-    ${L("Anexar ata")}<input type="file" id="m-file" multiple>
-    <details class="more"><summary>${t("Mais detalhes")}</summary>
-      <div class="row"><div>${L("Departamentos")}${chipsPicker("m-dept", "", depts())}</div><div>${L("Projeto (acompanhamento)")}${projSel("m-proj")}</div></div>
-      ${L("Anotações pessoais")}<textarea id="m-notes"></textarea></details>
-    <div class="actions"><button onclick="busy(this, saveMeeting)">${t("Salvar e extrair demandas com IA")}</button></div></div></div>`;
+        <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button></td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nada a confirmar.")}</td></tr>`}</table></div>`;
+}
+/** Texto corrido -> campos sugeridos (IA ou heurística), que ficam abertos para a usuária só ajustar. */
+async function fillMeeting(prefix) {
+  const src = prefix === "m-" ? "#mt-text" : "#rqt-text";
+  const text = $(src).value.trim();
+  if (!text) throw new Error(t("Escreva a reunião."));
+  const f = await api("meeting_parse", "POST", { text });
+  applyMeetingFields(prefix, f);
+  const box = $(`#${prefix}review`); if (box) box.open = true;
+  const info = $(`#${prefix}filled`);
+  if (info) info.innerHTML = `<div class="alert lv-baixa">✨ ${t(f.engine === "heuristica" ? "Campos sugeridos a partir do texto (sem IA). Ajuste o que precisar e salve." : "Campos sugeridos pela IA. Ajuste o que precisar e salve.")}</div>`;
+  return f;
+}
+function applyMeetingFields(prefix, f) {
+  const set = (k, v) => { const el = $(`#${prefix}${k}`); if (el && v !== undefined && v !== null && v !== "") el.value = v; };
+  set("title", f.title); if (prefix !== "rq-" || f.date_found) set("date", f.date); set("time", f.time); set("dur", f.duration); set("level", f.level); set("type", f.mtype); set("sched", f.scheduling);
+  set("rdept", f.resp_dept); set("proj", f.project_id); set("agenda", f.agenda);
+  if (f.attendees?.length && $(`#${prefix}attn`)) { $(`#${prefix}attn`).value = f.attendees.join(", "); syncAttChips(prefix); }
+  if (f.departments?.length && $(`#${prefix}dept`)) { $(`#${prefix}dept`).value = f.departments.join(", "); syncChips(`${prefix}dept`); }
 }
 let RQ_FILTER = "abertas";
 const RQ_OPEN = ["Solicitada", "Agendada", "Pendente"];
@@ -1037,7 +1071,10 @@ function requestedView() {
   const list = (RQ_FILTER === "realizadas" ? doneL.sort((a, b) => (b.date || "").localeCompare(a.date || "")) : openL.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999")));
   const done = RQ_FILTER === "realizadas";
   return `<div class="grid" style="grid-template-columns: minmax(320px,1fr) minmax(320px,1.6fr)">
-  <div class="card"><h2>${t("Solicitar reunião")}</h2>
+  <div class="card quick-input"><h2>${t("Solicitar reunião")}</h2>
+    <textarea id="rqt-text" style="min-height:90px" placeholder="${esc(t("MEETING_REQ_PLACEHOLDER"))}"></textarea>
+    <div class="actions"><button id="rqt-fill" onclick="busy(this, ()=>fillMeeting('rq-'))">✨ ${t("Preencher os campos")}</button></div>
+    <details class="more" id="rq-review"><summary>${t("Campos da reunião (opcionais)")}</summary><div id="rq-filled"></div>
     ${L("Título / pauta")}<input id="rq-title">
     <div class="row"><div>${L("Solicitada por")}<input id="rq-by" list="rq-sources"></div><div>${L("Data desejada")}<input type="date" id="rq-date"></div><div>${L("Horário")}<input type="time" id="rq-time"></div></div>
     <div class="toolbar"><button class="small ghost" onclick="busy(this, ()=>suggestSlot('rq-'))">✨ ${t("Sugerir horário (IA)")}</button><div id="rq-slots" class="slots"></div></div>
@@ -1046,7 +1083,8 @@ function requestedView() {
     <details class="more"><summary>${t("Pauta e projeto")}</summary>
       ${L("Projeto")}${projSel}
       ${L("Pauta / objetivo")}<textarea id="rq-agenda" style="min-height:60px"></textarea></details>
-    <div class="actions"><button onclick="busy(this, requestMeeting)">${t("Registrar solicitação")}</button></div>
+    </details>
+    <div class="actions"><button id="rq-save" onclick="busy(this, requestMeeting)">${t("Registrar solicitação")}</button></div>
     <details class="more"><summary>⚙ ${t("Regras para a IA sugerir horários (valem para todas as reuniões)")}</summary>${meetingRulesBox()}</details></div>
   <div class="card" style="overflow:auto"><h2>${t("Reuniões solicitadas")}</h2>
     <div class="toolbar"><button class="small ${done ? "ghost" : ""}" onclick="RQ_FILTER='abertas';render()">${t("Requisitadas (em aberto)")} (${openL.length})</button><button class="small ${done ? "" : "ghost"}" onclick="RQ_FILTER='realizadas';render()">${t("Realizadas / encerradas")} (${doneL.length})</button></div>
@@ -1080,8 +1118,10 @@ function meetingsAllView() {
       <td>${esc(tv(m.scheduling))}</td><td>${(m.attendees || []).map((x) => pill(x)).join("")}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=9 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
 }
 async function requestMeeting() {
+  if (!$("#rq-title").value.trim() && $("#rqt-text").value.trim()) await fillMeeting("rq-");
   const title = $("#rq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
+  if (!$("#rq-agenda").value.trim() && $("#rqt-text").value.trim()) $("#rq-agenda").value = $("#rqt-text").value.trim();
   await api("meetings", "POST", { title, date: $("#rq-date").value, time: $("#rq-time").value, requested_by: $("#rq-by").value,
     project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: $("#rq-date").value && $("#rq-time").value ? "Agendada" : "Solicitada", kind: "Solicitada",
     ...readMeetingFields("rq-") });
@@ -1097,11 +1137,14 @@ async function meetingNotDone(id) {
   await refresh();
 }
 async function saveMeeting() {
+  const text = $("#mt-text").value.trim();
+  if (!text && !$("#m-title").value.trim() && !$("#m-file").files.length) throw new Error(t("Escreva a reunião."));
+  if (text && !$("#m-title").value.trim()) await fillMeeting("m-"); // salvar direto: usa os campos sugeridos
   const r = await api("meetings", "POST", { title: $("#m-title").value || t("Reunião"), date: $("#m-date").value, time: $("#m-time").value,
-    departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: $("#m-min").value, notes: $("#m-notes").value, status: "Realizada",
+    departments: $("#m-dept").value, project_id: $("#m-proj").value, minutes: text, notes: $("#m-notes").value, status: "Realizada",
     ...readMeetingFields("m-"), actual_duration: Math.max(5, +$("#m-dur").value || 60) });
   for (const f of $("#m-file").files) await api(`meetings/${r.id}/upload`, "POST", { file: f, kind: "ata" });
-  if ($("#m-min").value.trim()) await api(`meetings/${r.id}/extract`, "POST");
+  if (text) await api(`meetings/${r.id}/extract`, "POST");
   await refresh(); location.hash = "reunioes/" + r.id;
 }
 function meetingDetail(m) {

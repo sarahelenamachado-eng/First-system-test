@@ -280,6 +280,45 @@ async function scenarioListAndSmall(page, label) {
   assert.match(await page.textContent(`#view tr:has-text('${sp.id}')`), /2/, label + ": contagem de riscos e problemas abertos");
 }
 
+/** Reunião escrita de forma corrida: a IA (ou a heurística) preenche os campos e a usuária só ajusta antes de salvar. */
+async function scenarioMeetingText(page, label, ai) {
+  const today = await page.evaluate(() => todayISO()), yesterday = await page.evaluate(() => addDays(todayISO(), -1)), tomorrow = await page.evaluate(() => addDays(todayISO(), 1));
+  await go(page, "reunioes/confirmar", "#mt-text");
+  assert.equal(await page.$eval("#m-review", (d) => d.open), false, label + ": campos começam fechados (opcionais)");
+  const text = "Reunião de segurança ontem às 9h30, 40 min, com Alfredo e Barry. Decidimos trocar os extintores do almoxarifado.\nAção: Alfredo compra os extintores até sexta.";
+  await page.fill("#mt-text", text);
+  await page.click("#mt-fill");
+  await page.waitForFunction(() => document.querySelector("#m-review").open && document.querySelector("#m-filled .alert"), null, { polling: 100 });
+  assert.equal(await page.inputValue("#m-date"), yesterday, label + ": data (ontem)");
+  assert.equal(await page.inputValue("#m-time"), "09:30", label + ": horário");
+  assert.equal(await page.inputValue("#m-dur"), "40", label + ": duração");
+  assert.equal(await page.inputValue("#m-attn"), "Alfredo, Barry 姚鹤康", label + ": participantes do cadastro");
+  assert.equal(await page.inputValue("#m-dept"), "EHS", label + ": departamento dos participantes");
+  assert.equal(await page.inputValue("#m-title"), ai ? "Segurança: troca de extintores" : "Reunião de segurança ontem às 9h30, 40 min, com Alfredo e Barry", label + ": título sugerido");
+  if (shots) await page.screenshot({ path: `${shots}/${label}-14-reuniao-texto.png`, fullPage: true });
+  // versão editável: ajusta o título e salva
+  await page.fill("#m-title", "Reunião de segurança");
+  await page.click("#m-save");
+  await page.waitForFunction(() => S.db.meetings.some((m) => m.title === "Reunião de segurança"), null, { polling: 100 });
+  const m = await page.evaluate(() => S.db.meetings.find((x) => x.title === "Reunião de segurança"));
+  assert.equal(m.minutes, text); assert.equal(m.date, yesterday); assert.equal(m.time, "09:30"); assert.equal(m.status, "Realizada");
+  assert.deepEqual(m.attendees, ["Alfredo", "Barry 姚鹤康"]); assert.equal(m.departments, "EHS");
+  // solicitação: só o texto e "Registrar solicitação" (os campos são preenchidos sozinhos)
+  await go(page, "reunioes/solicitadas", "#rqt-text");
+  await page.fill("#rqt-text", "Alinhamento com Lira sobre o mutirão de 5S, amanhã às 14h, 30 min");
+  await page.click("#rq-save");
+  await page.waitForFunction(() => S.db.meetings.some((x) => x.kind === "Solicitada" && (x.agenda || "").includes("mutirão de 5S")), null, { polling: 100 });
+  const rq = await page.evaluate(() => S.db.meetings.find((x) => x.kind === "Solicitada" && (x.agenda || "").includes("mutirão de 5S")));
+  assert.equal(rq.date, tomorrow); assert.equal(rq.time, "14:00"); assert.equal(rq.duration, 30); assert.equal(rq.status, "Agendada");
+  assert.deepEqual(rq.attendees, ["Lira"], label + ": participante da solicitação");
+  // solicitação sem data no texto não ganha a data de hoje
+  await page.fill("#rqt-text", "Conversa com o RH sobre treinamentos");
+  await page.click("#rqt-fill");
+  await page.waitForFunction(() => document.querySelector("#rq-review").open, null, { polling: 100 });
+  assert.equal(await page.inputValue("#rq-date"), "", label + ": sem data citada, a data fica vazia");
+  assert.ok(today);
+}
+
 /** Interface em inglês e chinês: cada texto com o inglês em cima e o chinês embaixo. */
 async function scenarioBilingual(page, label) {
   await page.evaluate(() => setLang("bi"));
@@ -309,6 +348,7 @@ async function scenarioBilingual(page, label) {
   const r = await scenario(page, "heuristico");
   await scenarioDeptsAndSubitems(page, "heuristico");
   await scenarioListAndSmall(page, "heuristico");
+  await scenarioMeetingText(page, "heuristico", false);
   await scenarioBilingual(page, "heuristico");
   assert.match(r.narrative, /^Hoje foram realizadas 1 reuniões e discutidos 1 tópicos/);
   assert.match(r.narrative, /\n1\. Reunião GPS: Aprovar o plano de cabos/);
@@ -327,7 +367,10 @@ async function scenarioBilingual(page, label) {
     if (/CONCLUSÃO/.test(text)) prompt = text;
     const sch = body.output_config.format?.schema;
     // avaliação da IA sem "novo projeto": a regra dos subitens tem que valer mesmo assim
-    const out0 = sch?.properties?.relation_mode ? JSON.stringify({ related: [], relation_mode: "novo", include_in: "", relation_explanation: "", scope: "Localização", scope_action: "Estudar",
+    const out0 = sch?.properties?.attendees && sch?.properties?.mtype ? JSON.stringify(/troca/.test(text) || /extintores/.test(text)
+        ? { title: "Segurança: troca de extintores", date: "", time: "", duration: 0, attendees: ["Alfredo", "Barry 姚鹤康"], departments: ["EHS"], project_id: "", level: "Gerencial", mtype: "Decisão", scheduling: "Pré-agendada", agenda: "Trocar extintores" }
+        : { title: "", date: "", time: "", duration: 0, attendees: [], departments: [], project_id: "", level: "", mtype: "", scheduling: "", agenda: "" })
+      : sch?.properties?.relation_mode ? JSON.stringify({ related: [], relation_mode: "novo", include_in: "", relation_explanation: "", scope: "Localização", scope_action: "Estudar",
         priority: "Alta", urgency: "Média", risk_reason: "", impacts: ["Custo"], impact_details: "", definitions: ["acao_geral"], project_id: "", gap_analysis: "", rationale: "Simulado" })
       : sch ? "{}" : "Hoje houve 1 reunião (GPS).\n1. Itens com progresso hoje: IT001 cabos lançados até o painel 3; GOV001 rascunho em revisão.";
     const out = out0;
@@ -338,6 +381,7 @@ async function scenarioBilingual(page, label) {
   const r = await scenario(page, "ia");
   await scenarioDeptsAndSubitems(page, "ia");
   await scenarioListAndSmall(page, "ia");
+  await scenarioMeetingText(page, "ia", true);
   await scenarioBilingual(page, "ia");
   assert.match(await page.evaluate(() => S.db.inputs.at(-1).ai_suggestion.engine), /claude/, "avaliação veio da IA simulada");
   assert.match(r.narrative, /Itens com progresso hoje: IT001 cabos lançados/);

@@ -1171,6 +1171,10 @@ ${this.reportHtml(s, text, esc)}
       AI.IMPACT_TYPES = db.settings.lists.impact_types;
       return db.settings;
     }
+    if (head === "meeting_parse" && method === "POST") {
+      // reunião escrita de forma corrida -> campos sugeridos (IA ou heurística) para a usuária só ajustar
+      return AI.parseMeeting(db, body.text || "", todayISO());
+    }
     if (head === "meeting_suggest" && method === "POST") {
       const month = body.month || todayISO().slice(0, 7);
       const res = await AI.suggestMeetings(db, month);

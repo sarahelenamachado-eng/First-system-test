@@ -938,6 +938,17 @@ Object.assign(D, { "Editar título e descrição": ["Edit title and description"
 
 Object.assign(D, { "Limpar": ["Clear", "清除"], "Escolha uma ou mais pessoas": ["Choose one or more people", "选择一位或多位人员"] });
 
+Object.assign(D, {
+  "Registrar reunião": ["Record a meeting", "记录会议"],
+  MEETING_HOW: ["1. Write the meeting as it went  ·  2. Click Fill in the fields  ·  3. Adjust what you need and save", "1. 按实际情况写下会议内容  ·  2. 点击“填写字段”  ·  3. 调整后保存", "1. Escreva a reunião do jeito que foi  ·  2. Clique em Preencher os campos  ·  3. Ajuste o que precisar e salve"],
+  MEETING_PLACEHOLDER: ["E.g.: GPS meeting today at 10:15, 45 min, with Peter and Carlos. We approved the cable plan. Action: Carlos sends the quote by Friday.", "例如：今天10:15 GPS会议，45分钟，Peter和Carlos参加。批准了电缆方案。行动：Carlos周五前发报价。", "Ex.: Reunião GPS hoje às 10:15, 45 min, com Peter e Carlos. Aprovamos o plano de cabos. Ação: Carlos manda a cotação até sexta."],
+  MEETING_REQ_PLACEHOLDER: ["E.g.: Alignment with EHS and Production about the 5S drive, Thursday 14h, 30 min", "例如：周四14点与EHS和生产对齐5S活动，30分钟", "Ex.: Alinhamento com EHS e Produção sobre o mutirão de 5S, quinta às 14h, 30 min"],
+  "Preencher os campos": ["Fill in the fields", "填写字段"], "Salvar direto": ["Save directly", "直接保存"],
+  "Campos da reunião (opcionais)": ["Meeting fields (optional)", "会议字段（可选）"], "Escreva a reunião.": ["Write the meeting.", "请写下会议内容。"],
+  "Campos sugeridos a partir do texto (sem IA). Ajuste o que precisar e salve.": ["Fields suggested from the text (no AI). Adjust what you need and save.", "已根据文本建议字段（未使用AI）。请调整后保存。"],
+  "Campos sugeridos pela IA. Ajuste o que precisar e salve.": ["Fields suggested by the AI. Adjust what you need and save.", "AI已建议字段。请调整后保存。"]
+});
+
 /* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
 function biRender(root) {
   if (!root) return;

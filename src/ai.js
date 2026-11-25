@@ -158,6 +158,96 @@ critério da organização e siga-os quando aplicáveis.`; },
 
   /** Subitens numerados de um texto ("1. ... 2. ..."), em linhas separadas ou no mesmo parágrafo.
    * Só conta a sequência 1, 2, 3…; números soltos no meio do texto ("Plant 1.") não quebram o item. */
+  // ------------------------------------------------------------ reunião escrita de forma corrida -> campos
+  /** Lê o texto corrido de uma reunião e sugere os campos (título, data, horário, duração, participantes,
+   * departamentos, projeto, nível, tipo, pauta). Sem chave usa regras simples; com chave pede ao Claude. */
+  heuristicMeeting(db, text, today) {
+    const raw = String(text || "").trim(), n = this.norm(raw), out = { engine: "heuristica" };
+    const lines = raw.split("\n").map((x) => x.trim()).filter(Boolean);
+    const first = (lines[0] || "").replace(/^(reuni[aã]o|meeting|会议)\s*[:\-–]\s*/i, "");
+    out.title = (first.split(/[.;。]\s/)[0] || first).replace(/[.;。:]+$/, "").slice(0, 90).trim();
+    // data
+    const y = today.slice(0, 4);
+    let m;
+    if (/\b(ontem|yesterday)\b|昨天/.test(n)) out.date = addDays(today, -1);
+    else if (/\b(amanha|tomorrow)\b|明天/.test(n)) out.date = addDays(today, 1);
+    else if ((m = raw.match(/\b(\d{4})-(\d{2})-(\d{2})\b/))) out.date = m[0];
+    else if ((m = raw.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/))) out.date = `${m[3] ? (m[3].length === 2 ? "20" + m[3] : m[3]) : y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    else if ((m = raw.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/))) out.date = `${y}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+    else out.date = today;
+    out.date_found = out.date !== today || /\b(hoje|today)\b|今天/.test(n);
+    // horário: 10:15, 10h30, 10h, às 14
+    if ((m = raw.match(/\b([01]?\d|2[0-3])[:h]([0-5]\d)\b/i)) || (m = raw.match(/\b(?:[àa]s|at)\s+([01]?\d|2[0-3])\s*h?\b/i)) || (m = raw.match(/\b([01]?\d|2[0-3])\s*h\b(?!\s*de\s+reuni)/i)))
+      out.time = `${m[1].padStart(2, "0")}:${(m[2] || "00").padStart(2, "0")}`;
+    // duração
+    if ((m = raw.match(/(\d{1,3})\s*(?:min|minutos|minutes|分钟)\b/i))) out.duration = +m[1];
+    else if ((m = raw.match(/(?:durou|dura[çc][aã]o|lasted|duration)[^\d]{0,12}(\d{1,2})\s*h(?:oras?|ours?)?\s*(\d{1,2})?/i))) out.duration = +m[1] * 60 + (+m[2] || 0);
+    // participantes: pessoas do cadastro citadas no texto + linha "Participantes: ..."
+    const people = db.settings.people || [];
+    const att = people.filter((p) => { const parts = [p.name, p.name.split(/\s+/)[0]].map((x) => this.norm(x)).filter((x) => x.length >= 3); return parts.some((x) => new RegExp(`(^|[^\\p{L}])${x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^\\p{L}])`, "u").test(n)); }).map((p) => p.name);
+    const pl = raw.match(/(?:participantes|presentes|attendees|participants|参会人员|参会人)\s*[:：]\s*([^\n]+)/i);
+    if (pl) for (const x of pl[1].split(/[,;，；、]| e | and /).map((v) => v.trim()).filter(Boolean)) { const k = people.find((p) => this.norm(p.name) === this.norm(x) || this.norm(p.name).split(/\s+/)[0] === this.norm(x)); const nm = k ? k.name : x; if (!att.includes(nm)) att.push(nm); }
+    out.attendees = att;
+    // departamentos citados ou dos participantes
+    const areas = db.settings.areas || [];
+    const deps = areas.filter((a) => a.split(/\s+/).some((w) => w.length >= 2 && new RegExp(`(^|[^\\p{L}])${this.norm(w).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^\\p{L}])`, "u").test(n)));
+    for (const nm of att) { const d = people.find((p) => p.name === nm)?.dept; if (d && !deps.includes(d)) deps.push(d); }
+    out.departments = deps;
+    out.resp_dept = deps[0] || "";
+    // projeto citado (nome ou código)
+    const proj = db.projects.find((p) => n.includes(this.norm(p.id)) || (p.name && n.includes(this.norm(p.name))));
+    out.project_id = proj?.id || "";
+    // nível, tipo e agendamento por palavras-chave
+    out.level = /diretoria|director|board|董事|总监/.test(n) ? "Diretoria" : /companhia|company|全员|公司/.test(n) ? "Companhia" : /operacional|operation|生产会/.test(n) ? "Operacional" : /tecnica|technical|技术/.test(n) ? "Técnica" : "Gerencial";
+    out.mtype = proj ? "Acompanhamento de projeto" : /decid|decis|decision|决定/.test(n) ? "Decisão" : /alinh|align|对齐/.test(n) ? "Alinhamento" : "Reporte";
+    out.scheduling = /urgent/.test(n) || /紧急/.test(raw) ? "Urgente" : "Pré-agendada";
+    out.agenda = "";
+    return out;
+  },
+  MEETING_SCHEMA: {
+    type: "object", additionalProperties: false,
+    required: ["title", "date", "time", "duration", "attendees", "departments", "project_id", "level", "mtype", "scheduling", "agenda"],
+    properties: {
+      title: { type: "string" }, date: { type: "string", description: "AAAA-MM-DD" }, time: { type: "string", description: "HH:MM ou vazio" },
+      duration: { type: "integer", description: "minutos; 0 se não citado" }, attendees: { type: "array", items: { type: "string" } },
+      departments: { type: "array", items: { type: "string" } }, project_id: { type: "string" }, level: { type: "string" }, mtype: { type: "string" },
+      scheduling: { type: "string" }, agenda: { type: "string" },
+    },
+  },
+  async parseMeeting(db, text, today) {
+    const h = this.heuristicMeeting(db, text, today);
+    if (!this.enabled()) return h;
+    const L = db.settings.lists || {};
+    const prompt = `Hoje é ${today}. Abaixo está uma reunião escrita de forma corrida pela usuária. Sugira os campos do registro da reunião.\n`
+      + "Regras: título curto (até 8 palavras) no idioma do texto; date AAAA-MM-DD (hoje se não citado); time HH:MM ou vazio; duration em minutos (0 se não citado); "
+      + "attendees: use EXATAMENTE os nomes do cadastro quando a pessoa for citada (inclusive só pelo primeiro nome); departments da lista de departamentos; "
+      + "project_id só se um projeto existente for citado; level, mtype e scheduling devem ser valores das listas; agenda: o objetivo em uma frase.\n\n"
+      + "Cadastro de pessoas: " + JSON.stringify((db.settings.people || []).map((p) => ({ nome: p.name, departamento: p.dept })))
+      + "\nDepartamentos: " + JSON.stringify(db.settings.areas || [])
+      + "\nProjetos: " + JSON.stringify(db.projects.map((p) => ({ id: p.id, nome: p.name })))
+      + "\nNíveis: " + JSON.stringify(L.meeting_levels || []) + "\nTipos: " + JSON.stringify(L.meeting_types || []) + '\nAgendamento: ["Pré-agendada","Urgente"]'
+      + "\n\nTexto da reunião:\n" + text;
+    try {
+      const o = await this.call(prompt, this.MEETING_SCHEMA, "low", 4000);
+      const ok = (v, list) => (list.includes(v) ? v : "");
+      const out = { ...h, engine: this.model };
+      if (o.title) out.title = o.title.slice(0, 120);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(o.date)) { out.date = o.date; out.date_found = h.date_found || o.date !== today; }
+      if (/^\d{2}:\d{2}$/.test(o.time)) out.time = o.time;
+      if (o.duration > 0) out.duration = o.duration;
+      if (o.attendees?.length) out.attendees = [...new Set(o.attendees.map((x) => String(x).trim()).filter(Boolean))];
+      const deps = (o.departments || []).filter((d) => (db.settings.areas || []).includes(d));
+      if (deps.length) { out.departments = deps; out.resp_dept = deps[0]; }
+      if (db.projects.some((p) => p.id === o.project_id)) out.project_id = o.project_id;
+      out.level = ok(o.level, L.meeting_levels || []) || h.level;
+      out.mtype = ok(o.mtype, L.meeting_types || []) || h.mtype;
+      out.scheduling = ok(o.scheduling, ["Pré-agendada", "Urgente"]) || h.scheduling;
+      if (o.agenda) out.agenda = o.agenda;
+      return out;
+    } catch (e) {
+      return { ...h, msg: `${t("Claude falhou:")} ${e.message}` };
+    }
+  },
   subitems(text) {
     const s = String(text || "");
     const re = /(?<=^|[\s；;。.,，:：])(\d{1,2})\s*(?:[.．](?!\d)|[)、])\s*/g;
