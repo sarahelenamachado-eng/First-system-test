@@ -3,36 +3,63 @@
  * A chave de cada texto é o próprio texto em português. Valores guardados nos dados (status,
  * prioridade, origem, impactos…) também são chaves em português e só são traduzidos na tela.
  * Parâmetros {x} são substituídos; parâmetros que são listas têm cada item traduzido. */
+/* Modo bilíngue (bi): cada texto aparece em inglês e, na linha de baixo, em chinês.
+ * t() devolve um par marcado [en|zh]; depois de desenhar a tela, biRender() troca o par por
+ * "inglês <br> 中文" (em atributos e opções de lista: "English / 中文"). */
+const BI_S = "\uE000", BI_M = "\uE001", BI_E = "\uE002";
+const BI_RE = /\uE000([^\uE000-\uE002]*)\uE001([^\uE000-\uE002]*)\uE002/g;
+/** Escolhe um idioma de um texto com pares (which = "en" | "zh"), ou junta os dois com sep. */
+function biPick(s, which, sep = " / ") {
+  if (typeof s !== "string" || !s.includes(BI_S)) return s;
+  let prev;
+  do { prev = s; s = s.replace(BI_RE, (_, en, zh) => (which === "en" ? en : which === "zh" ? zh : en === zh ? en : en + sep + zh)); } while (s !== prev && s.includes(BI_S));
+  return s.replace(/[\uE000-\uE002]/g, ""); // pedaço de par cortado (ex.: texto encurtado): descarta as marcas
+}
+const biFlat = (s, sep = " / ") => biPick(String(s ?? ""), "both", sep);
+const biPair = (en, zh) => (en === zh || !zh ? en : !en ? zh : BI_S + en + BI_M + zh + BI_E);
+
 const I18N = {
-  lang: "pt",
-  LANGS: { pt: "Português", en: "English", zh: "中文" },
+  lang: "bi",
+  LANGS: { bi: "English + 中文", en: "English", zh: "中文", pt: "Português" },
 
   async init() {
     let l = null;
     try { l = await KV.get("lang"); } catch { /* sem IndexedDB */ }
-    if (!l) { const nav = (navigator.language || "pt").toLowerCase(); l = nav.startsWith("zh") ? "zh" : nav.startsWith("en") ? "en" : "pt"; }
-    this.lang = this.LANGS[l] ? l : "pt";
+    // a plataforma passa a abrir em inglês + chinês (uma vez; depois vale a escolha do usuário)
+    let moved = true;
+    try { moved = await KV.get("lang_bi_default"); } catch { /* sem IndexedDB */ }
+    if (!moved) { l = "bi"; try { await KV.set("lang_bi_default", true); await KV.set("lang", "bi"); } catch { /* sem IndexedDB */ } }
+    this.lang = this.LANGS[l] ? l : "bi";
   },
   async set(l) {
-    this.lang = this.LANGS[l] ? l : "pt";
+    this.lang = this.LANGS[l] ? l : "bi";
     try { await KV.set("lang", this.lang); } catch { /* sem IndexedDB */ }
   },
-  htmlLang() { return { pt: "pt-BR", en: "en", zh: "zh-CN" }[this.lang]; },
+  htmlLang() { return { pt: "pt-BR", en: "en", zh: "zh-CN", bi: "en" }[this.lang]; },
   /** Nome do idioma para instruir a IA. */
-  aiLanguage() { return { pt: "português do Brasil", en: "inglês (English)", zh: "chinês simplificado (简体中文)" }[this.lang]; },
+  aiLanguage() {
+    return { pt: "português do Brasil", en: "inglês (English)", zh: "chinês simplificado (简体中文)",
+      bi: "inglês e chinês simplificado: cada frase ou ponto em inglês e, na linha de baixo, a mesma frase em chinês (简体中文)" }[this.lang];
+  },
 
-  /** Preenche {params} num modelo já traduzido. */
-  fill(tpl, params = {}, tr = (x) => x) {
+  /** Preenche {params} num modelo já traduzido (pick escolhe o idioma de parâmetros bilíngues). */
+  fill(tpl, params = {}, tr = (x) => x, pick = null) {
     return String(tpl).replace(/\{(\w+)\}/g, (m, k) => {
       const v = params[k];
       if (v === undefined || v === null) return "";
-      return Array.isArray(v) ? v.map(tr).join(", ") : String(v);
+      const out = Array.isArray(v) ? v.map(tr).join(", ") : String(v);
+      return pick ? biPick(out, pick) : out;
     });
   },
-  t(key, params) {
+  /** Texto num idioma específico (pt | en | zh). */
+  tl(key, params, lang) {
     const e = D[key];
-    const tpl = e ? (this.lang === "pt" ? e[2] ?? key : this.lang === "en" ? e[0] : e[1]) : key;
-    return params ? this.fill(tpl, params, (x) => I18N.t(x)) : tpl;
+    const tpl = e ? (lang === "pt" ? e[2] ?? key : lang === "en" ? e[0] : e[1]) : key;
+    return params ? this.fill(tpl, params, (x) => I18N.tl(x, null, lang), lang === "pt" ? null : lang) : tpl;
+  },
+  t(key, params) {
+    if (this.lang !== "bi") return this.tl(key, params, this.lang);
+    return biPair(this.tl(key, params, "en"), this.tl(key, params, "zh"));
   },
 };
 const t = (key, params) => I18N.t(key, params);
@@ -807,5 +834,216 @@ Object.assign(D, {
   "Nenhuma reunião solicitada realizada ainda.": ["No requested meeting held yet.", "尚无已召开的申请会议。"], "Nenhuma reunião solicitada em aberto.": ["No open requested meetings.", "没有未完成的申请会议。"],
   "Progressos dos projetos": ["Project progress", "项目进展"], "Progresso dos itens da lista geral": ["General list item progress", "总清单事项进展"],
   "Nenhum progresso registrado em projetos no período.": ["No project progress recorded in the period.", "本期没有项目进展记录。"],
-  "Progresso registrado em {n} projetos: {list}.": ["Progress recorded in {n} projects: {list}.", "{n} 个项目记录了进展：{list}。"]
+  "Progresso registrado em {n} projetos: {list}.": ["Progress recorded in {n} projects: {list}.", "{n} 个项目记录了进展：{list}。"],
+  // ---- itens com progresso, itens de projeto a confirmar, finalizados
+  "Itens com progresso hoje": ["Items with progress today", "今日有进展的事项"], "Itens com progresso na semana": ["Items with progress this week", "本周有进展的事项"],
+  "Itens com progresso no dia": ["Items with progress on the day", "当日有进展的事项"], "Itens com progresso": ["Items with progress", "有进展的事项"],
+  "Nenhum item teve progresso registrado no período.": ["No item had progress recorded in the period.", "本期没有事项记录进展。"],
+  "Item do projeto {name}": ["Item of project {name}", "项目 {name} 的事项"], "Atividade do projeto {name}": ["Activity of project {name}", "项目 {name} 的活动"],
+  "projeto {pct}% concluído": ["project {pct}% complete", "项目完成 {pct}%"],
+  "Finalizado — salvo em {file}": ["Finished — saved in {file}", "已完成 — 保存在 {file}"], "Finalizado em {date}": ["Finished on {date}", "完成于 {date}"],
+  "Projeto / escopo": ["Project / scope", "项目 / 范围"], "Criado em": ["Created on", "创建于"], "Finalizado em": ["Finished on", "完成日期"],
+  "{id} finalizado: saiu da lista geral e foi salvo em {file}": ["{id} finished: removed from the general list and saved in {file}", "{id} 已完成：已移出总清单并保存在 {file}"],
+  "{id} reaberto: voltou para a lista": ["{id} reopened: back on the list", "{id} 已重新打开：回到清单"],
+  "Item {sub} de {id} confirmado na lista geral ({status})": ["Item {sub} of {id} confirmed in the general list ({status})", "{id} 的事项 {sub} 已在总清单中确认（{status}）"],
+  "Ver finalizados (histórico)": ["See finished (history)", "查看已完成（历史）"], "finalizados ficam no histórico": ["finished items stay in the history", "已完成事项保存在历史中"],
+  "Finalizados (histórico)": ["Finished (history)", "已完成（历史）"], "Itens de projeto para confirmar": ["Project items to confirm", "待确认的项目事项"],
+  "Estes itens de projeto estão há {n} dias ou mais sem atualização. Confirme como estão: registre o progresso, mude o status ou marque como finalizado.":
+    ["These project items have had no update for {n} days or more. Confirm how they are: record progress, change the status or mark them as finished.", "这些项目事项已 {n} 天或更久没有更新。请确认情况：记录进展、修改状态或标记为已完成。"],
+  "{n} dias": ["{n} days", "{n} 天"], "Sem atualização": ["No update", "未更新"], "Novo progresso": ["New progress", "新进展"],
+  "Item finalizado e salvo no histórico": ["Item finished and saved in the history", "事项已完成并保存到历史"], "Item confirmado": ["Item confirmed", "事项已确认"],
+  "Nenhum item finalizado ainda. Ao marcar um item como finalizado ele sai da lista geral e aparece aqui.": ["No finished items yet. When an item is marked as finished it leaves the general list and shows up here.", "暂无已完成事项。事项标记为已完成后会移出总清单并显示在这里。"],
+  "FINISHED_HELP": ["Finished items leave the general list and stay here, by month and by project / scope. Each one is also saved as a file in the computer folder: in the project folder (PROJECTS/…/FINALIZADOS/month) or, without a project, in FINALIZADOS/department/month.",
+    "已完成事项移出总清单，按月份和项目 / 范围保存在这里。每个事项也会以文件形式保存到电脑文件夹：项目文件夹（PROJECTS/…/FINALIZADOS/月份），没有项目的保存在 FINALIZADOS/部门/月份。",
+    "Itens finalizados saem da lista geral e ficam aqui, por mês e por projeto / escopo. Cada um também é salvo como arquivo na pasta do computador: na pasta do projeto (PROJECTS/…/FINALIZADOS/mês) ou, sem projeto, em FINALIZADOS/departamento/mês."],
+  "Item reaberto": ["Item reopened", "事项已重新打开"], "Reabrir": ["Reopen", "重新打开"], "Arquivo na pasta": ["File in the folder", "文件夹中的文件"],
+  "Item de projeto sem atualização vai para confirmação (dias)": ["Project item without update goes to confirmation (days)", "项目事项未更新多少天后需确认（天）"],
+  // ---- departamentos e pessoas; entradas com subitens viram projeto
+  "Departamentos e pessoas": ["Departments and people", "部门和人员"], "Outras pessoas": ["Other people", "其他人员"],
+  "DEPTS_HELP": ["One department per line, followed by \":\" and its people separated by commas. E.g.: Logistic 物流: Alessandro Barbosa, Peter 姜大鹏. These options appear as lists in every department and person field (owner, participants), so you don't need to type them.",
+    "每行一个部门，后接“:”和用逗号分隔的人员。例如：Logistic 物流: Alessandro Barbosa, Peter 姜大鹏。这些选项会以列表形式出现在所有部门和人员字段（负责人、参会人）中，无需每次输入。",
+    "Um departamento por linha, seguido de \":\" e das pessoas separadas por vírgula. Ex.: Logistic 物流: Alessandro Barbosa, Peter 姜大鹏. Essas opções aparecem como lista em todos os campos de departamento e de pessoa (responsável, participantes), sem precisar digitar."],
+  "Salvar departamentos e pessoas": ["Save departments and people", "保存部门和人员"], "Como fica": ["Preview", "预览"], "Pessoas": ["People", "人员"],
+  "Pessoas que aparecem só como participantes de reuniões ficam em “Outras pessoas”. O cargo de cada pessoa é ajustado em Reuniões → Pessoas.":
+    ["People who only appear as meeting participants stay under “Other people”. Each person's role is set in Meetings → People.", "仅作为会议参会人出现的人员归入“其他人员”。每个人的职位在 会议 → 人员 中设置。"],
+  "Informe ao menos um departamento.": ["Enter at least one department.", "请至少输入一个部门。"],
+  "Esta entrada tem {n} subitens: com “Criação de um novo projeto”, ela vira um projeto e cada linha abaixo vira um item dele (ajuste se quiser).":
+    ["This input has {n} sub-items: with “New project”, it becomes a project and each line below becomes one of its items (adjust if you like).", "此输入包含 {n} 个子项：选择“创建新项目”后，它会成为一个项目，下面每一行都会成为该项目的一个事项（可调整）。"],
+  "Este item tem {n} subitens. Transforme em projeto: cada subitem vira um item do projeto.": ["This item has {n} sub-items. Turn it into a project: each sub-item becomes a project item.", "此事项包含 {n} 个子项。可转为项目：每个子项成为项目中的一个事项。"],
+  "Transformar em projeto": ["Turn into a project", "转为项目"], "Adicionar os subitens ao projeto {id}": ["Add the sub-items to project {id}", "将子项添加到项目 {id}"],
+  "Projeto {id}: {n} itens criados": ["Project {id}: {n} items created", "项目 {id}：已创建 {n} 个事项"],
+  "{n} itens criados em {id} a partir dos subitens de {ref}": ["{n} items created in {id} from the sub-items of {ref}", "已根据 {ref} 的子项在 {id} 中创建 {n} 个事项"],
+  // ---- summary no formato do modelo; entrada rápida
+  "Resumo de {date}": ["Summary — {date}", "{date}总结"], "Resumo da semana {start} – {end}": ["Weekly summary {start} – {end}", "{start} – {end} 周总结"],
+  "CONCLUSION_DAY": ["Today {meetings} meetings were held and {topics} topics were discussed; {inputs} new demands came in, {done} items were completed and {open} items are pending ({late} overdue).",
+    "今日共召开 {meetings} 场会议，讨论 {topics} 项议题；新增需求 {inputs} 项，完成事项 {done} 项，待办事项 {open} 项（其中逾期 {late} 项）。",
+    "Hoje foram realizadas {meetings} reuniões e discutidos {topics} tópicos; chegaram {inputs} novas demandas, {done} itens foram concluídos e há {open} pendências ({late} vencidas)."],
+  "CONCLUSION_WEEK": ["This week {meetings} meetings were held and {topics} topics were discussed; {inputs} new demands came in, {done} items were completed and {open} items are pending ({late} overdue).",
+    "本周共召开 {meetings} 场会议，讨论 {topics} 项议题；新增需求 {inputs} 项，完成事项 {done} 项，待办事项 {open} 项（其中逾期 {late} 项）。",
+    "Na semana foram realizadas {meetings} reuniões e discutidos {topics} tópicos; chegaram {inputs} novas demandas, {done} itens foram concluídos e há {open} pendências ({late} vencidas)."],
+  "Concluídos: {list}": ["Completed: {list}", "已完成：{list}"], "{n} pendências com prazo vencido — ver item 3.1.": ["{n} pending items overdue — see 3.1.", "{n} 项待办已逾期 — 见 3.1。"],
+  "Conclusão": ["Conclusion", "结论"], "Depto. principal": ["Main dept.", "主要部门"], "Tópicos": ["Topics", "课题"], "Responsável / depto.": ["Owner / dept.", "负责人/部门"],
+  "Pendências": ["Required items", "要求事项"], "Pendentes": ["To-do", "待办事项"], "Concluídos hoje": ["Completed today", "今日已完成事项"], "Concluídos na semana": ["Completed this week", "本周已完成事项"],
+  "Concluído em": ["Completed on", "完成时间"], "Projetos e itens com progresso hoje": ["Projects and items with progress today", "项目及今日有进展的事项"],
+  "Projetos e itens com progresso na semana": ["Projects and items with progress this week", "项目及本周有进展的事项"], "Projeto / item": ["Project / item", "项目 / 事项"],
+  "Anexo": ["Appendix", "附件"], "indicadores, demandas, itens críticos, riscos, alertas e linha do tempo": ["indicators, demands, critical items, risks, alerts and timeline", "指标、需求、关键事项、风险、提醒和时间线"],
+  "QUICK_INPUT_HINT": ["Paste or write what came in. The first line is the title; the rest is the description (numbered lists become a project). Click Register: the AI classifies it and it goes straight to the general list.",
+    "粘贴或输入收到的内容。第一行是标题，其余是描述（编号列表会变成项目）。点击“登记”：AI 自动分类并直接进入总清单。",
+    "Cole ou escreva o que chegou. A primeira linha é o título; o resto é a descrição (listas numeradas viram projeto). Clique em Registrar: a IA classifica e já vai para a lista geral."],
+  "QUICK_INPUT_PLACEHOLDER": ["E.g.: HQ asked for the Xushui report by Friday", "例如：总部要求周五前提交徐水报告", "Ex.: HQ pediu o relatório de Xushui até sexta"],
+  "Mais detalhes (opcional)": ["More details (optional)", "更多信息（可选）"], "Registrar": ["Register", "登记"], "Registrar e revisar a classificação": ["Register and review the classification", "登记并复核分类"],
+  "Título (se quiser outro)": ["Title (if you want a different one)", "标题（如需修改）"], "Revisar": ["Review", "复核"], "Escreva o que chegou.": ["Write what came in.", "请输入收到的内容。"],
+  "Aceitar a sugestão e registrar": ["Accept the suggestion and register", "接受建议并登记"], "ou ajuste abaixo antes de confirmar": ["or adjust below before confirming", "或在下方调整后再确认"],
+  "Mais detalhes: riscos, impactos, gaps e sua análise": ["More details: risks, impacts, gaps and your analysis", "更多信息：风险、影响、差距和您的分析"]
 });
+
+Object.assign(D, {
+  "Mais filtros": ["More filters", "更多筛选"], "Itens fechados": ["Closed items", "已关闭事项"], "Novo item": ["New item", "新事项"],
+  "O que precisa ser feito?": ["What needs to be done?", "需要做什么？"], "Fechar": ["Close", "关闭"],
+  "Fechar o item: sai da lista geral e vai para Itens fechados": ["Close the item: it leaves the general list and goes to Closed items", "关闭事项：从总清单移除并进入“已关闭事项”"],
+  "itens fechados ficam na aba Itens fechados": ["closed items stay in the Closed items tab", "已关闭的事项在“已关闭事项”标签中"],
+  "{id} fechado: saiu da lista geral e está em Itens fechados": ["{id} closed: removed from the general list and moved to Closed items", "{id}已关闭：已从总清单移到“已关闭事项”"],
+  "Escreva o item.": ["Write the item.", "请输入事项。"], "Riscos e problemas": ["Risks and issues", "风险与问题"], "Arquivos": ["Files", "文件"],
+  "Projetos menores": ["Small projects", "小型项目"], "Projetos menores e temporários": ["Small and temporary projects", "小型及临时项目"],
+  "Projeto menor / temporário": ["Small / temporary project", "小型/临时项目"],
+  "Ex.: Mutirão de 5S no almoxarifado": ["E.g.: 5S drive in the warehouse", "例如：仓库5S整理活动"],
+  "Criar projeto menor": ["Create small project", "创建小型项目"], "Nenhum projeto menor ainda.": ["No small projects yet.", "暂无小型项目。"],
+  "Projeto {id} criado": ["Project {id} created", "项目{id}已创建"],
+  ISSUES_HELP: ["Record risks and issues that came up in this project. A risk can also be sent to the risk register.", "记录本项目中出现的风险与问题。风险也可以转入风险登记表。", "Registre os riscos e problemas que surgiram neste projeto. Um risco também pode ser enviado ao módulo Riscos."],
+  "Nenhum risco ou problema registrado.": ["No risks or issues recorded.", "暂无风险或问题记录。"],
+  "Descreva o risco ou problema.": ["Describe the risk or issue.", "请描述风险或问题。"], "Registrado em {id}": ["Recorded in {id}", "已记录到{id}"],
+  "Data de término": ["End date", "结束日期"], "Itens (um por linha, opcional)": ["Items (one per line, optional)", "事项（每行一个，可选）"],
+  "O que aconteceu / o que pode acontecer": ["What happened / what could happen", "发生了什么/可能发生什么"],
+  "Gravidade": ["Severity", "严重程度"], "Ação / tratamento": ["Action / treatment", "措施/处理"], "Término": ["End", "结束"],
+  "Problema": ["Issue", "问题"], "Resolvido": ["Resolved", "已解决"], "Motivo": ["Purpose", "目的"],
+  "Melhoria de operação": ["Operational improvement", "运营改善"], "Controle de risco temporário": ["Temporary risk control", "临时风险控制"],
+  "Demanda temporária": ["Temporary demand", "临时需求"], "Outro": ["Other", "其他"], "Enviar ao registro de riscos": ["Send to risk register", "转入风险登记表"]
+});
+
+Object.assign(D, {
+  INPUT_HOW: ["1. Write what came in  ·  2. Click Register  ·  3. Done: it goes to the general list (numbered lists become a project)", "1. 写下收到的内容  ·  2. 点击“登记”  ·  3. 完成：进入总清单（编号列表会变成项目）", "1. Escreva o que chegou  ·  2. Clique em Registrar  ·  3. Pronto: vai para a lista geral (listas numeradas viram projeto)"],
+  SMALL_HELP: ["To follow temporary demands: improving a department's operation, controlling a temporary risk, and so on. Each one has its own items and a Risks and issues tab.", "用于跟进临时需求：部门运营改善、临时风险控制等。每个项目有自己的事项和“风险与问题”标签。", "Para acompanhar demandas temporárias: melhoria de operação de um departamento, controle de um risco temporário etc. Cada um tem seus itens e a aba Riscos e problemas."],
+  "Registradas hoje": ["Registered today", "今日已登记"], "Virou": ["Became", "转为"]
+});
+
+Object.assign(D, {
+  "Excluir o item": ["Delete the item", "删除事项"],
+  DELETE_ITEM_CONFIRM: ["Delete {id} · {title}? It will be removed for good (it will not go to Closed items). To keep the history, use Close instead.",
+    "删除{id} · {title}？删除后将永久移除（不会进入“已关闭事项”）。如需保留记录，请使用“关闭”。",
+    "Excluir {id} · {title}? Ele será apagado de vez (não vai para Itens fechados). Para guardar o histórico, use Fechar."],
+  "{id} excluído": ["{id} deleted", "{id}已删除"]
+});
+
+Object.assign(D, { "Editar título e descrição": ["Edit title and description", "编辑标题和描述"] });
+
+Object.assign(D, { "Limpar": ["Clear", "清除"], "Escolha uma ou mais pessoas": ["Choose one or more people", "选择一位或多位人员"] });
+
+Object.assign(D, {
+  "Registrar reunião": ["Record a meeting", "记录会议"],
+  MEETING_HOW: ["1. Write the meeting as it went  ·  2. Click Fill in the fields  ·  3. Adjust what you need and save", "1. 按实际情况写下会议内容  ·  2. 点击“填写字段”  ·  3. 调整后保存", "1. Escreva a reunião do jeito que foi  ·  2. Clique em Preencher os campos  ·  3. Ajuste o que precisar e salve"],
+  MEETING_PLACEHOLDER: ["E.g.: GPS meeting today at 10:15, 45 min, with Peter and Carlos. We approved the cable plan. Action: Carlos sends the quote by Friday.", "例如：今天10:15 GPS会议，45分钟，Peter和Carlos参加。批准了电缆方案。行动：Carlos周五前发报价。", "Ex.: Reunião GPS hoje às 10:15, 45 min, com Peter e Carlos. Aprovamos o plano de cabos. Ação: Carlos manda a cotação até sexta."],
+  MEETING_REQ_PLACEHOLDER: ["E.g.: Alignment with EHS and Production about the 5S drive, Thursday 14h, 30 min", "例如：周四14点与EHS和生产对齐5S活动，30分钟", "Ex.: Alinhamento com EHS e Produção sobre o mutirão de 5S, quinta às 14h, 30 min"],
+  "Preencher os campos": ["Fill in the fields", "填写字段"], "Salvar direto": ["Save directly", "直接保存"],
+  "Campos da reunião (opcionais)": ["Meeting fields (optional)", "会议字段（可选）"], "Escreva a reunião.": ["Write the meeting.", "请写下会议内容。"],
+  "Campos sugeridos a partir do texto (sem IA). Ajuste o que precisar e salve.": ["Fields suggested from the text (no AI). Adjust what you need and save.", "已根据文本建议字段（未使用AI）。请调整后保存。"],
+  "Campos sugeridos pela IA. Ajuste o que precisar e salve.": ["Fields suggested by the AI. Adjust what you need and save.", "AI已建议字段。请调整后保存。"]
+});
+
+Object.assign(D, {
+  "Excluir projeto": ["Delete project", "删除项目"],
+  DELETE_PROJECT_CONFIRM: ["Delete {id} · {name}?\n\nThe project's {n} items and {iss} risks/issues are deleted with it.\nThe {items} general-list items and {risks} risks linked to it stay, just without the link. Meetings stay too.\nThe project folder on your computer is kept.",
+    "删除{id} · {name}？\n\n项目的{n}个事项和{iss}个风险/问题将一并删除。\n与其关联的{items}个总清单事项和{risks}个风险会保留，只是取消关联。会议也会保留。\n电脑上的项目文件夹会保留。",
+    "Excluir {id} · {name}?\n\nOs {n} itens e os {iss} riscos/problemas do projeto são apagados junto.\nOs {items} itens da lista geral e os {risks} riscos ligados a ele continuam, só sem o vínculo. As reuniões também continuam.\nA pasta do projeto no computador é mantida."]
+});
+
+Object.assign(D, {
+  "Ações do administrador": ["Admin actions", "管理员事项"], "Abertos": ["Open", "未结"], "Ações para mim": ["Actions for me", "交给我的行动"],
+  "Sugestões": ["Suggestions", "建议"], "Preocupações": ["Concerns", "关注点"], "Fechados": ["Closed", "已关闭"], "Fechado": ["Closed", "已关闭"],
+  "Ação para mim": ["Action for me", "交给我的行动"], "Sugestão": ["Suggestion", "建议"], "Preocupação": ["Concern", "关注点"],
+  ADMIN_HELP: ["Your own control: points directed to you, your suggestions and your concerns. Write it as it is and click Register; the type and fields are suggested from the text.",
+    "您自己的跟踪：直接交给您的事项、您的建议和关注点。直接写下内容并点击“登记”，系统会根据文字建议类型和字段。",
+    "Seu controle pessoal: pontos direcionados diretamente a você, suas sugestões e suas preocupações. Escreva do seu jeito e clique em Registrar; o tipo e os campos são sugeridos a partir do texto."],
+  "Novo ponto": ["New point", "新事项"],
+  ADMIN_PLACEHOLDER: ["E.g.: The director asked me to review the safety budget by Friday / Suggestion: weekly 15-min meeting with EHS / I'm worried about the delay in the substation",
+    "例如：总监让我周五前审核安全预算 / 建议：每周与EHS开15分钟会 / 我担心变电站的延误",
+    "Ex.: A diretora me pediu para revisar o orçamento de segurança até sexta / Sugestão: reunião semanal de 15 min com EHS / Estou preocupada com o atraso da subestação"],
+  "Campos (opcionais)": ["Fields (optional)", "字段（可选）"], "Quem pediu / de onde veio": ["Requested by / came from", "由谁提出/来源"], "Quem pediu": ["Requested by", "提出人"],
+  "Ponto": ["Point", "事项"], "Nenhum ponto fechado.": ["No closed points.", "暂无已关闭事项。"], "Nenhum ponto em aberto.": ["No open points.", "暂无未结事项。"],
+  "Escreva o ponto.": ["Write the point.", "请写下事项。"], "{id} fechado": ["{id} closed", "{id}已关闭"], "Editar": ["Edit", "编辑"], "Texto original": ["Original text", "原文"],
+  "{id} registrado: {title}": ["{id} recorded: {title}", "{id}已登记：{title}"], "{id} removido": ["{id} removed", "{id}已删除"]
+});
+
+Object.assign(D, {
+  "Agendadas": ["Scheduled", "已安排"], "Reuniões agendadas": ["Scheduled meetings", "已安排的会议"],
+  SCHEDULED_HELP: ["Every scheduled meeting must be in Teams and DingTalk. Open the invite, put it in both and tick the boxes.", "每个已安排的会议都必须放到 Teams 和钉钉。打开邀请，放到两边后勾选。", "Toda reunião agendada deve estar no Teams e no DingTalk. Abra o convite, coloque nos dois e marque as caixas."],
+  "{n} reuniões ainda não foram colocadas no Teams e no DingTalk.": ["{n} meetings are not yet in Teams and DingTalk.", "{n}个会议尚未放到 Teams 和钉钉。"],
+  "Convite Teams / DingTalk": ["Teams / DingTalk invite", "Teams / 钉钉邀请"], "Remarcar": ["Reschedule", "改期"], "Nenhuma reunião agendada.": ["No scheduled meetings.", "暂无已安排的会议。"],
+  "Agendar e gerar convite": ["Schedule and create invite", "安排并生成邀请"], "Informe a data e o horário.": ["Enter the date and time.", "请填写日期和时间。"],
+  "Reunião agendada: foi para a aba Agendadas": ["Meeting scheduled: moved to the Scheduled tab", "会议已安排：已移到“已安排”标签"], "Convite": ["Invite", "邀请"],
+  INVITE_HELP: ["Put the meeting in Teams and in DingTalk, then tick the boxes. The .ics file can also be imported into Outlook/Teams and DingTalk calendars.", "请把会议放到 Teams 和钉钉，然后勾选。.ics 文件也可以导入 Outlook/Teams 和钉钉日历。", "Coloque a reunião no Teams e no DingTalk e marque as caixas. O arquivo .ics também pode ser importado no calendário do Outlook/Teams e do DingTalk."],
+  "Abrir no Teams (já preenchido)": ["Open in Teams (pre-filled)", "在 Teams 中打开（已填写）"], "Baixar convite (.ics)": ["Download invite (.ics)", "下载邀请（.ics）"],
+  "Já coloquei no Teams": ["Already in Teams", "已放到 Teams"], "Copiar convite para o DingTalk": ["Copy invite for DingTalk", "复制钉钉邀请"],
+  DINGTALK_HELP: ["In DingTalk: Calendar → New event, paste the text and add the attendees.", "在钉钉：日历 → 新建日程，粘贴文字并添加参会人。", "No DingTalk: Agenda → Novo evento, cole o texto e adicione os participantes."],
+  "Já coloquei no DingTalk": ["Already in DingTalk", "已放到钉钉"], "pendente": ["pending", "待处理"], "DingTalk": ["DingTalk", "钉钉"]
+});
+
+Object.assign(D, {
+  "Obrigatória": ["Mandatory", "必开会议"],
+  "Reunião obrigatória {title} ({occ}) entrou em Solicitações para ser agendada": ["Mandatory meeting {title} ({occ}) added to Requests to be scheduled", "必开会议{title}（{occ}）已加入申请列表，待安排"]
+});
+
+/* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
+function biRender(root) {
+  if (!root) return;
+  const attrs = (el) => { for (const a of [...(el.attributes || [])]) if (a.value.includes(BI_S)) el.setAttribute(a.name, biFlat(a.value)); };
+  if (root.nodeType === 3) return biText(root);
+  if (root.nodeType !== 1) return;
+  attrs(root);
+  root.querySelectorAll("*").forEach(attrs);
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [];
+  while (w.nextNode()) if (w.currentNode.nodeValue.includes(BI_S)) list.push(w.currentNode);
+  list.forEach(biText);
+  root.querySelectorAll("textarea, input").forEach((el) => { if (String(el.value).includes(BI_S)) el.value = biFlat(el.value); });
+}
+function biText(node) {
+  const v = node.nodeValue, p = node.parentNode;
+  if (!v.includes(BI_S) || !p) return;
+  if (["OPTION", "TEXTAREA", "TITLE", "SCRIPT", "STYLE"].includes(p.nodeName)) { node.nodeValue = biFlat(v); return; }
+  const pair = (en, zh) => {
+    const z = document.createElement("span"); z.className = "bi-zh"; z.textContent = zh.trim();
+    const w = document.createElement("span"); w.className = "bi-pair"; w.append(en.trim(), document.createElement("br"), z);
+    return w;
+  };
+  // texto simples em volta dos pares (ícones, números, " · ") fica fora, numa linha só
+  if (!v.replace(BI_RE, "").match(/[\uE000-\uE002]/)) {
+    const frag = document.createDocumentFragment();
+    let last = 0;
+    for (const m of v.matchAll(BI_RE)) {
+      if (m.index > last) frag.append(v.slice(last, m.index));
+      frag.append(m[1] === m[2] ? m[1] : pair(m[1], m[2]));
+      last = m.index + m[0].length;
+    }
+    if (last < v.length) frag.append(v.slice(last));
+    p.replaceChild(frag, node);
+    return;
+  }
+  const en = biPick(v, "en"), zh = biPick(v, "zh");
+  if (en === zh) { node.nodeValue = en; return; }
+  const z = document.createElement("span"); z.className = "bi-zh"; z.textContent = zh.trim();
+  const w = document.createElement("span"); w.className = "bi-pair"; w.append(en.trim(), document.createElement("br"), z);
+  p.replaceChild(w, node);
+}
+if (typeof document !== "undefined" && typeof MutationObserver !== "undefined") {
+  new MutationObserver((muts) => {
+    for (const m of muts) {
+      if (m.type === "attributes") { const val = m.target.getAttribute(m.attributeName); if (val && val.includes(BI_S)) m.target.setAttribute(m.attributeName, biFlat(val)); }
+      else if (m.type === "characterData") biText(m.target);
+      else m.addedNodes.forEach((n) => biRender(n));
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+  // caixas do navegador (confirmar / avisar) não mostram HTML: as duas línguas em linhas separadas
+  const _confirm = window.confirm.bind(window), _alert = window.alert.bind(window), _prompt = window.prompt.bind(window);
+  window.confirm = (m) => _confirm(biFlat(m, "\n"));
+  window.alert = (m) => _alert(biFlat(m, "\n"));
+  window.prompt = (m, d) => _prompt(biFlat(m, "\n"), d);
+}

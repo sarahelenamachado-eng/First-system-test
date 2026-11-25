@@ -16,8 +16,9 @@ Plataforma local (navegador + pasta no computador) que implementa a lógica de g
 Sem chave da IA a plataforma funciona normalmente com sugestões heurísticas (palavras‑chave, similaridade
 com o histórico e decisões anteriores). O selo no canto superior direito mostra se a IA está ativa.
 
-**Idiomas:** português, inglês e chinês simplificado — escolha no seletor no canto superior direito.
-A interface, os alertas, o histórico, os summaries e as respostas da IA seguem o idioma escolhido.
+**Idiomas:** a plataforma abre em **English + 中文**: cada texto aparece em inglês e, na linha de baixo, em chinês
+(nas listas de opção e nas caixas do navegador: "English / 中文"). No seletor do canto superior direito dá para trocar
+para só inglês, só chinês ou português. A interface, os alertas, o histórico, os summaries e as respostas da IA seguem o idioma escolhido.
 O que você digita (títulos, descrições, atas) fica como foi escrito.
 
 **Tradução automática do conteúdo (com a IA ligada):** o que você escreve (entradas, itens, projetos, riscos,
@@ -41,13 +42,43 @@ Carlos e Wang", "HQ pediu o relatório de Xushui"). O assistente propõe onde re
 confirma ou corrige. Cada correção vira exemplo e a IA passa a repetir o seu critério (também funciona offline, por similaridade).
 Em **Ensinar o assistente**: regras de alocação, taxa de acerto das últimas propostas e a opção de deixar a IA aplicar sozinha.
 
+### Departamentos e pessoas
+Em **Configurações → Departamentos e pessoas**: um departamento por linha, seguido de `:` e das pessoas
+(ex.: `Logistic 物流: Alessandro Barbosa, Peter 姜大鹏`). A lista já vem com os departamentos e principais responsáveis.
+Todos os campos de departamento, responsável e participantes passam a ser listas de seleção; ao escolher a pessoa,
+o departamento dela é preenchido.
+
 ### 1. Entradas (Inputs management)
+**Entrada rápida:** 1. escreva o que chegou numa caixa só (1ª linha = título, o resto = descrição); 2. clique em **Registrar**
+(ou Ctrl+Enter); 3. pronto. Responsável, prazo e origem ficam logo abaixo da caixa; o quadro **Registradas hoje** mostra em
+que item ou projeto cada entrada virou. A IA (ou a heurística, sem chave) classifica e o item já vai para a lista geral. O resto dos campos fica em
+"Mais detalhes (opcional)". **Registrar e revisar a classificação** abre a triagem completa, com o botão **Aceitar a sugestão e registrar**.
 Fluxo em 3 etapas para cada entrada vinda da **Diretora, Reunião, Departamento ou HQ**: entrada da informação →
 assessment (relação com itens já levantados + classificação de escopo, prioridade, urgência, impactos e gaps) →
 definição (risco a monitorar/investigar, info a reportar, novo projeto, ação dentro de um projeto, ação geral).
+Se a descrição tiver vários subitens numerados (1., 2., 3.…), a entrada vira um **novo projeto** e cada subitem vira um item
+desse projeto (a lista aparece na triagem para ajustar). Um item da lista geral com subitens tem o botão **Transformar em projeto**.
 A IA sugere, você confirma ou corrige, e a decisão fica guardada para a IA aprender.
 
 ### 2. Lista geral de governança
+- **Editar direto na linha:** responsável, prazo, prioridade e status são listas na própria linha; o campo
+  "＋ Novo progresso…" registra o progresso com Enter. No topo, **＋ Novo item** cria um item escrevendo e apertando Enter.
+- **Fechar / 关闭:** o botão de cada linha fecha o item: ele sai da lista geral e aparece só na aba **Itens fechados**
+  (histórico por mês e por projeto / departamento). Origem e definição ficam em "Mais filtros".
+- **Mais de um responsável:** em todo campo "Responsável" (itens, ações, itens de projeto, projetos menores, riscos) a lista
+  abre com caixas de seleção por departamento e uma busca; marque uma ou mais pessoas e clique em OK. Itens antigos
+  com um só responsável continuam iguais.
+- **Editar título e descrição:** o ✎ ao lado do título (ou a janela do item) tem os campos Título e Descrição; clique em
+  Salvar. A tradução automática é refeita para o texto novo.
+- **Excluir:** o botão 🗑 da linha (ou "Excluir o item" na janela do item, ou 🗑 na aba Itens fechados) apaga o item de vez,
+  depois de pedir confirmação. Diferente de Fechar, o item excluído não fica em Itens fechados.
+- **Itens de projeto para confirmar:** um item de projeto (aba *Itens do projeto*) que fica **5 dias sem atualização** aparece
+  no topo da lista geral. Ali você registra o progresso, muda o status ou marca como finalizado. O número de dias fica em
+  Configurações → Regras.
+- **Finalizados saem da lista:** ao marcar um item como finalizado (Concluído na lista geral, Finalizado nos itens do projeto),
+  ele sai da lista e vai para a aba **Finalizados (histórico)**, separado por mês e por projeto / escopo (departamento).
+  Também é salvo como arquivo na pasta: `PROJECTS/<projeto>/FINALIZADOS/<AAAA-MM>/` ou, sem projeto,
+  `FINALIZADOS/<departamento>/<AAAA-MM>/`. Se voltar a ter andamento (ou clicar em **Reabrir**), volta para a lista.
 Filtros (status, prioridade, origem, definição, prazo), busca, paginação (concluídos ocultos por padrão), coluna
 "Último progresso" e download em planilha (CSV). Em cada item: **Ações do item** (responsável, prazo, status e
 progresso) e **Progresso e histórico geral**.
@@ -58,7 +89,7 @@ progresso) e **Progresso e histórico geral**.
   incluir no item existente. Duplicados já criados podem ser juntados com **Mesclar**.
 
 ### Dashboards (Projetos, Reuniões e Riscos)
-Cada módulo abre com um dashboard: frase-resumo, indicadores e gráficos, e o botão **Analisar com IA**, que
+Reuniões e Riscos abrem com um dashboard; Projetos abre na **lista de projetos** e o dashboard fica na segunda aba. O dashboard tem frase-resumo, indicadores e gráficos, e o botão **Analisar com IA**, que
 interpreta os números e sugere a ação.
 - **Projetos:** "do total de XX itens, XX completos", itens em andamento e atrasados, atividades, últimos progressos; "de XX projetos ativos, XX têm itens atrasados e XX representam risco em relação ao atraso";
   situação (no prazo / atrasados / risco de atraso), atrasos por tipo, distribuição da conclusão e projetos que exigem atenção.
@@ -79,10 +110,30 @@ Abas de cada projeto:
 - **Impactos e riscos** — o que acontece *se o projeto for realizado* e *se não for*.
 - **Arquivos / master schedule** — arquivos na pasta local do projeto, com organização pela IA.
 - **Fluxo** — mapa visual do projeto.
+- **Excluir projeto** — botão 🗑 na lista (Projetos e Projetos menores) e "Excluir projeto" na visão geral. A confirmação
+  diz o que acontece: itens e riscos/problemas do projeto são apagados junto; itens da lista geral, riscos e reuniões ligados
+  continuam, só sem o vínculo; a pasta do projeto no computador é mantida.
+- **Riscos e problemas** — riscos e problemas que surgiram no projeto: tipo, descrição, gravidade, responsável,
+  ação / tratamento e status (Aberto, Em tratamento, Resolvido). Um risco pode ir para o módulo Riscos com **→ Riscos**.
+
+### Projetos menores e temporários
+Aba própria no menu para demandas temporárias: melhoria de operação de um departamento, controle de um risco
+temporário, demanda temporária ou outro (campo **Motivo**). Cada um tem responsável, departamento, data de término,
+itens (um por linha ao criar) e as abas Visão geral, Itens, **Riscos e problemas** e Arquivos. Eles não aparecem na
+lista de Projetos; a caixa "Projeto menor / temporário" na visão geral move um projeto entre as duas abas.
 
 ### 4. Reuniões
 Abre em **Solicitações** (requisitadas em aberto / realizadas e encerradas). Abas: Solicitações · Dashboard · **Calendário** (clique num dia para inserir; sugestões da IA tracejadas) · **Obrigatórias** ·
 **Solicitadas** · Confirmar e registrar ata · **Tempo em reuniões** · **Controle de atas** · Todas.
+- **Fluxo de agendamento:** a solicitação fica em *Solicitações* até ser agendada. Ao clicar em **Agendar** (data e horário) ou
+  registrar uma solicitação já com data e horário, ela sai da lista e vai para a aba **📅 Agendadas**, e abre o **convite**:
+  link do Teams já preenchido, arquivo **.ics** (importável no Outlook/Teams e no DingTalk) e o texto pronto para colar no
+  DingTalk. As caixas "Já coloquei no Teams / no DingTalk" ficam na aba Agendadas, que avisa quantas ainda faltam.
+- **Escrever corrido primeiro:** em *Confirmar e registrar ata* (caixa **Registrar reunião**) e em *Solicitar reunião*, escreva
+  a reunião do jeito que foi ("Reunião de segurança ontem às 9h30, 40 min, com Alfredo e Barry…") e clique em
+  **Preencher os campos**: a IA (ou, sem chave, regras simples) sugere título, data, horário, duração, participantes do
+  cadastro, departamentos, projeto, nível e tipo. Os campos abrem numa versão editável para você só ajustar e salvar.
+  Todos são opcionais; **Salvar direto** / **Registrar solicitação** preenchem sozinhos e salvam. O texto vira a ata.
 - **Cadastro simples:** título, data, hora, **duração planejada**, nível, depto. responsável pela ata e participantes.
 - **Participantes:** digite os nomes separados por vírgula (ou clique nos já conhecidos). Nomes novos entram sozinhos no
   cadastro de pessoas; depois é só ajustar o cargo (Diretor, Sr Manager…) em Tempo em reuniões.
@@ -100,6 +151,8 @@ Abre em **Solicitações** (requisitadas em aberto / realizadas e encerradas). A
   **Anexar ata** salva o arquivo em `MEETINGS/<ID>/ATA` e marca a ata como emitida.
 - **Reuniões obrigatórias:** cadastre frequência, dias e horário preferidos, duração e nível. A IA sugere as datas e
   horários do mês que faltam, seguindo as **regras e observações** que você escrever (ex.: "diretora só à tarde").
+  Enquanto faltar reunião no mês, a obrigatória aparece também em **Solicitações** (com a etiqueta *obrigatória 1/4*),
+  uma por vez: ao ser agendada, vai para **Agendadas** e entra a próxima. Assim dá para ver o que ainda não foi marcado.
 - Projetos principais geram sozinhos a **necessidade de reunião de acompanhamento** (cadência configurável).
 - Em **Aguardando confirmação**, marque *Foi realizada* ou *Não foi realizada* (com nova data para projetos).
 - Atas e anotações, com extração de decisões e demandas que vão para as Entradas.
@@ -119,9 +172,20 @@ Gere pelos dados registrados ou com a IA a partir da sua descrição, arraste, e
 Para **ensinar a IA**: escreva regras de como montar os fluxos e salve fluxos bons como exemplo.
 
 ### 7. Summaries diário e semanal
-Destaques, indicadores, **progressos dos projetos** (tudo o que foi registrado no dia: progresso pelo assistente, pelas atas,
+No formato do modelo: **1. Conclusão** (parágrafo + pontos-chave numerados, escrita pela IA ou montada sem IA),
+**2. Reuniões** (tabela: reunião e horário, departamento principal, tópicos, responsável e prazo), **3. Pendências**
+(3.1 pendentes e 3.2 concluídos no dia) e **4. Projetos e itens com progresso**. O restante fica no **Anexo**.
+Destaques, indicadores, **itens com progresso hoje** (cada item da lista geral, item de projeto ou atividade que andou no dia, com o progresso
+registrado e o status atual), **progressos dos projetos** (tudo o que foi registrado no dia: progresso pelo assistente, pelas atas,
 pelos itens/atividades do projeto ou pela caixa "Progresso do projeto"), progresso dos itens da lista geral, demandas por origem, itens críticos, prazos, projetos (% concluído), riscos,
 reuniões e decisões, infos a reportar, alertas e linha do tempo. Também salvos em HTML na pasta `SUMMARIES`.
+
+### Ações do administrador
+Última aba do menu, para o seu controle pessoal: **ações direcionadas diretamente a você**, **suas sugestões** e **suas
+preocupações**. Escreva o ponto do seu jeito e clique em **Registrar**: a IA (ou, sem chave, regras simples) sugere o tipo, um
+título, quem pediu, o prazo ("até sexta" vira a próxima sexta), a prioridade e o departamento. **Preencher os campos** mostra
+a sugestão para ajustar antes de salvar. Abas: Abertos, Ações para mim, Sugestões, Preocupações e Fechados. Em cada linha dá
+para mudar tipo, prazo, prioridade e status, **✓ Fechar**, **✎ Editar** (com registro de progresso) e **🗑 Excluir**.
 
 ### 8. Configurações
 Aparência (nome, cor, tamanho do texto, densidade, faixa vermelha, logo), módulos visíveis, idioma, listas
@@ -131,6 +195,11 @@ IA e aprendizado, pasta de trabalho e backup/restauração.
 ### Alertas automáticos
 Projeto sem atualização há X dias, reunião a confirmar, item ligado a 3+ itens sem projeto, tema recorrente,
 prazos vencidos, riscos parados e entradas aguardando classificação.
+
+## Testes
+
+`node tests/e2e.mjs [pasta para screenshots]` abre a plataforma no Chromium (Playwright) com uma pasta simulada e testa os dois modos:
+sem chave (heurístico) e com a chave do Claude (resposta da API simulada).
 
 ## Estrutura
 

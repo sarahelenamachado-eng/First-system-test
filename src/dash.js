@@ -158,7 +158,7 @@ function calendarView() {
 function meetingFields(pre = {}) {
   return `<div class="row"><div>${L("Duração planejada (min)")}<input type="number" min="5" step="5" id="mq-dur" value="${esc(pre.duration || 60)}"></div>
     <div>${L("Nível")}<select id="mq-level">${opts(LIST("meeting_levels"), pre.level || "Gerencial")}</select></div>
-    <div>${L("Depto. responsável pela ata")}<input id="mq-rdept" list="mq-rdepts" value="${esc(pre.resp_dept)}"><datalist id="mq-rdepts">${(S.db.settings.areas || []).map((a) => `<option>${esc(a)}</option>`).join("")}</datalist></div></div>
+    <div>${L("Depto. responsável pela ata")}${deptSelect("mq-rdept", pre.resp_dept || "")}</div></div>
   ${L("Participantes")}${attendeesPicker(pre.attendees || [], "mq-")}
   <details class="more"><summary>${t("Mais detalhes")}</summary><div class="row">
     <div>${L("Tipo")}<select id="mq-type">${opts(LIST("meeting_types"), pre.mtype || "Reporte")}</select></div>
@@ -168,9 +168,11 @@ function meetingFields(pre = {}) {
 function attendeesPicker(selected, prefix) {
   const people = S.db.settings.people || [], count = {};
   for (const m of S.db.meetings) for (const n of m.attendees || []) count[n] = (count[n] || 0) + 1;
-  const known = people.slice().sort((a, b) => (count[b.name] || 0) - (count[a.name] || 0)).slice(0, 24);
+  const order = (p) => { const i = depts().indexOf(p.dept); return i < 0 ? 999 : i; };
+  const known = [...people.filter((p) => order(p) < 999).sort((a, b) => order(a) - order(b)),
+    ...people.filter((p) => order(p) === 999).sort((a, b) => (count[b.name] || 0) - (count[a.name] || 0)).slice(0, 12)];
   return `<input id="${prefix}attn" class="att-input" value="${esc(selected.join(", "))}" placeholder="${esc(t("Nomes separados por vírgula"))}" oninput="syncAttChips('${prefix}')">
-    ${known.length ? `<div class="att-chips" id="${prefix}chips">${known.map((p) => `<button type="button" class="chip ${selected.includes(p.name) ? "on" : ""}" data-name="${esc(p.name)}" title="${esc(t(p.role || "Outro"))}" onclick="toggleAtt('${prefix}', this)">${esc(p.name)}</button>`).join("")}</div>` : ""}`;
+    ${known.length ? `<div class="att-chips" id="${prefix}chips">${known.map((p) => `<button type="button" class="chip ${selected.includes(p.name) ? "on" : ""}" data-name="${esc(p.name)}" title="${esc([p.dept, t(p.role || "Outro")].filter(Boolean).join(" · "))}" onclick="toggleAtt('${prefix}', this)">${esc(p.name)}</button>`).join("")}</div>` : ""}`;
 }
 function toggleAtt(prefix, btn) {
   const inp = $(`#${prefix}attn`), n = btn.dataset.name;
@@ -351,12 +353,11 @@ function atasView() {
       <table>${th(["Data", "Reunião", "Nível", "Depto. responsável", "Ata", "Arquivo", ""])}
       ${list.map((m) => { const ok = Core.hasMinutes(m), days = daysSince(m.date);
         return `<tr class="${ok ? "" : days > 2 ? "overdue" : ""}"><td>${esc(m.date)}</td><td><a href="#reunioes/${m.id}">${esc(titleOf(m))}</a></td><td>${esc(tv(m.level))}</td>
-        <td><input class="dept-in" value="${esc(m.resp_dept)}" list="at-depts" placeholder="—" onchange="api('meetings/${m.id}','PATCH',{resp_dept:this.value.trim(),_silent:true}).then(refresh)"></td>
+        <td>${deptSelect(`at-d-${m.id}`, m.resp_dept || "", "—", `onchange="api('meetings/${m.id}','PATCH',{resp_dept:this.value,_silent:true}).then(refresh)"`)}</td>
         <td>${ok ? pill("✓ " + t("Emitida"), "p-Baixa") : pill(t("Pendente") + (days > 0 ? ` · ${t("{n} dias", { n: days })}` : ""), "p-Alta")}</td>
         <td class="files">${(m.minutes_files || []).map((f) => fileLink(f, f.split("/").pop())).join("<br>") || (m.minutes ? `<span class="muted">${t("ata digitada")}</span>` : "")}</td>
         <td><div class="act-cell"><label class="btn small ghost file-btn">${t("Anexar ata")}<input type="file" hidden onchange="attachMinutes('${m.id}', this)"></label>
-          ${ok ? "" : `<button class="small ghost" onclick="busy(this, ()=>markMinutes('${m.id}'))">${t("Marcar emitida")}</button>`}</div></td></tr>`; }).join("") || `<tr><td colspan=7 class="muted">${t("Nenhuma reunião de nível companhia/gerencial realizada no período.")}</td></tr>`}</table>
-      <datalist id="at-depts">${(S.db.settings.areas || []).map((a) => `<option>${esc(a)}</option>`).join("")}</datalist></div>`;
+          ${ok ? "" : `<button class="small ghost" onclick="busy(this, ()=>markMinutes('${m.id}'))">${t("Marcar emitida")}</button>`}</div></td></tr>`; }).join("") || `<tr><td colspan=7 class="muted">${t("Nenhuma reunião de nível companhia/gerencial realizada no período.")}</td></tr>`}</table></div>`;
 }
 async function attachMinutes(id, input) {
   if (!input.files.length) return;
@@ -389,10 +390,9 @@ function peopleCard(inner = false) {
     <p class="muted">${t("PEOPLE_AUTO_HINT")}</p>
     <table>${th(["Nome", "Cargo", "Departamento", ""])}${people.map((p, k) => `<tr><td>${esc(p.name)}</td>
       <td><select class="small-sel" onchange="busy(this, ()=>setPerson(${k}, {role: this.value}))">${opts(LIST("people_roles"), p.role || "Outro")}</select></td>
-      <td><input class="dept-in" value="${esc(p.dept)}" list="pp-depts" onchange="busy(this, ()=>setPerson(${k}, {dept: this.value.trim()}))"></td>
+      <td>${deptSelect(`pp-d-${k}`, p.dept || "", "—", `onchange="busy(this, ()=>setPerson(${k}, {dept: this.value}))"`)}</td>
       <td><button class="small ghost danger" onclick="busy(this, ()=>removePerson(${k}))">×</button></td></tr>`).join("") || `<tr><td colspan=4 class="muted">${t("Nenhuma pessoa cadastrada.")}</td></tr>`}</table>
-    <div class="row"><div>${L("Nome")}<input id="pp-name"></div><div>${L("Cargo")}<select id="pp-role">${opts(LIST("people_roles"), "Gerente")}</select></div><div>${L("Departamento")}<input id="pp-dept" list="pp-depts"></div></div>
-    <datalist id="pp-depts">${(S.db.settings.areas || []).map((a) => `<option>${esc(a)}</option>`).join("")}</datalist>
+    <div class="row"><div>${L("Nome")}<input id="pp-name"></div><div>${L("Cargo")}<select id="pp-role">${opts(LIST("people_roles"), "Gerente")}</select></div><div>${L("Departamento")}${deptSelect("pp-dept", "")}</div></div>
     <div class="actions"><button class="small" onclick="busy(this, addPerson)">${t("Adicionar pessoa")}</button></div></div>`;
 }
 async function addPerson() {
