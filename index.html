@@ -324,6 +324,12 @@ button .bi-zh, .btn .bi-zh { color: inherit; opacity: .85; }
 .glist .pm-d > summary { font-size: 13px; padding: 4px 22px 4px 6px; max-width: 170px; }
 .quick-add .pm { display: inline-block; min-width: 180px; }
 .p-del { padding: 3px 7px; }
+.adlist td { vertical-align: top; }
+.adlist select, .adlist input { font-size: 13px; padding: 4px 6px; }
+.adlist td:nth-child(2) select { min-width: 140px; }
+.adlist td:nth-child(6) select { min-width: 90px; }
+.adlist input[type=date] { width: 135px; }
+.adlist .g-title { min-width: 240px; }
 </style>
 </head>
 <body data-density="normal">
@@ -350,6 +356,7 @@ button .bi-zh, .btn .bi-zh { color: inherit; opacity: .85; }
     <a href="#fluxos" data-t="Fluxos">Fluxos</a>
     <a href="#summaries" data-t="Summaries">Summaries</a>
     <a href="#config" data-t="Config.">Config.</a>
+    <a href="#admin" data-t="Ações do administrador">Ações do administrador</a>
   </nav>
 </header>
 <main id="view"><p class="muted">Carregando…</p></main>
@@ -1435,6 +1442,23 @@ Object.assign(D, {
     "Excluir {id} · {name}?\n\nOs {n} itens e os {iss} riscos/problemas do projeto são apagados junto.\nOs {items} itens da lista geral e os {risks} riscos ligados a ele continuam, só sem o vínculo. As reuniões também continuam.\nA pasta do projeto no computador é mantida."]
 });
 
+Object.assign(D, {
+  "Ações do administrador": ["Admin actions", "管理员事项"], "Abertos": ["Open", "未结"], "Ações para mim": ["Actions for me", "交给我的行动"],
+  "Sugestões": ["Suggestions", "建议"], "Preocupações": ["Concerns", "关注点"], "Fechados": ["Closed", "已关闭"], "Fechado": ["Closed", "已关闭"],
+  "Ação para mim": ["Action for me", "交给我的行动"], "Sugestão": ["Suggestion", "建议"], "Preocupação": ["Concern", "关注点"],
+  ADMIN_HELP: ["Your own control: points directed to you, your suggestions and your concerns. Write it as it is and click Register; the type and fields are suggested from the text.",
+    "您自己的跟踪：直接交给您的事项、您的建议和关注点。直接写下内容并点击“登记”，系统会根据文字建议类型和字段。",
+    "Seu controle pessoal: pontos direcionados diretamente a você, suas sugestões e suas preocupações. Escreva do seu jeito e clique em Registrar; o tipo e os campos são sugeridos a partir do texto."],
+  "Novo ponto": ["New point", "新事项"],
+  ADMIN_PLACEHOLDER: ["E.g.: The director asked me to review the safety budget by Friday / Suggestion: weekly 15-min meeting with EHS / I'm worried about the delay in the substation",
+    "例如：总监让我周五前审核安全预算 / 建议：每周与EHS开15分钟会 / 我担心变电站的延误",
+    "Ex.: A diretora me pediu para revisar o orçamento de segurança até sexta / Sugestão: reunião semanal de 15 min com EHS / Estou preocupada com o atraso da subestação"],
+  "Campos (opcionais)": ["Fields (optional)", "字段（可选）"], "Quem pediu / de onde veio": ["Requested by / came from", "由谁提出/来源"], "Quem pediu": ["Requested by", "提出人"],
+  "Ponto": ["Point", "事项"], "Nenhum ponto fechado.": ["No closed points.", "暂无已关闭事项。"], "Nenhum ponto em aberto.": ["No open points.", "暂无未结事项。"],
+  "Escreva o ponto.": ["Write the point.", "请写下事项。"], "{id} fechado": ["{id} closed", "{id}已关闭"], "Editar": ["Edit", "编辑"], "Texto original": ["Original text", "原文"],
+  "{id} registrado: {title}": ["{id} recorded: {title}", "{id}已登记：{title}"], "{id} removido": ["{id} removed", "{id}已删除"]
+});
+
 /* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
 function biRender(root) {
   if (!root) return;
@@ -1853,6 +1877,63 @@ critério da organização e siga-os quando aplicáveis.`; },
       out.mtype = ok(o.mtype, L.meeting_types || []) || h.mtype;
       out.scheduling = ok(o.scheduling, ["Pré-agendada", "Urgente"]) || h.scheduling;
       if (o.agenda) out.agenda = o.agenda;
+      return out;
+    } catch (e) {
+      return { ...h, msg: `${t("Claude falhou:")} ${e.message}` };
+    }
+  },
+  // ------------------------------------------------------------ Ações do administrador
+  ADMIN_TYPES: ["Ação para mim", "Sugestão", "Preocupação"],
+  /** Prazo citado no texto: data, "hoje", "amanhã" ou dia da semana (próxima ocorrência). */
+  dueFrom(raw, today) {
+    const n = this.norm(raw), y = today.slice(0, 4);
+    let m;
+    if ((m = raw.match(/\b(\d{4})-(\d{2})-(\d{2})\b/))) return m[0];
+    if ((m = raw.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/))) return `${m[3] ? (m[3].length === 2 ? "20" + m[3] : m[3]) : y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    if ((m = raw.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/))) return `${y}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+    if (/\b(amanha|tomorrow)\b|明天/.test(n)) return addDays(today, 1);
+    if (/\b(hoje|today)\b|今天/.test(n)) return today;
+    const days = [[/domingo|sunday|周日|星期日/, 0], [/segunda|monday|周一|星期一/, 1], [/terca|tuesday|周二|星期二/, 2], [/quarta|wednesday|周三|星期三/, 3],
+      [/quinta|thursday|周四|星期四/, 4], [/sexta|friday|周五|星期五/, 5], [/sabado|saturday|周六|星期六/, 6]];
+    for (const [re, d] of days) if (re.test(n) || re.test(raw)) { const cur = new Date(today + "T12:00:00").getDay(); return addDays(today, ((d - cur + 7) % 7) || 7); }
+    return "";
+  },
+  heuristicAdmin(db, text, today) {
+    const raw = String(text || "").trim(), n = this.norm(raw);
+    const type = /sugest|sugiro|sugerir|proponho|proposta|poderiamos|seria bom|que tal|suggest|propos|idea|建议|提议/.test(n) || /建议|提议/.test(raw) ? "Sugestão"
+      : /preocup|receio|medo|risco|tenho duvida|nao sei se|worr|concern|afraid|risk|担心|风险|顾虑/.test(n) || /担心|风险|顾虑/.test(raw) ? "Preocupação" : "Ação para mim";
+    const first = raw.split("\n")[0].replace(/^(sugest[aã]o|preocupa[cç][aã]o|a[cç][aã]o)\s*[:\-–]\s*/i, "");
+    const title = (first.split(/[.;。]\s/)[0] || first).replace(/[.;。:]+$/, "").slice(0, 100).trim();
+    const people = db.settings.people || [];
+    const who = people.find((p) => { const f = this.norm(p.name.split(/\s+/)[0]); return f.length >= 3 && new RegExp(`(^|[^\\p{L}])${f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^\\p{L}])`, "u").test(n); });
+    const boss = (raw.match(/\b(diretora|diretor|director|hq|ceo|presidente)\b/i) || raw.match(/(总监|总部)/) || [])[1] || "";
+    const from = boss ? (/^hq$|^ceo$/i.test(boss) ? boss.toUpperCase() : boss[0].toUpperCase() + boss.slice(1).toLowerCase()) : who?.name || "";
+    const priority = /urgent|asap|imediat|hoje|today|critic|紧急|马上/.test(n) || /紧急|马上/.test(raw) ? "Alta" : /quando puder|sem pressa|no rush|baixa/.test(n) ? "Baixa" : "Média";
+    return { engine: "heuristica", type, title, description: raw.includes("\n") || raw.length > title.length + 2 ? raw : "", from, due: this.dueFrom(raw, today), priority, dept: who?.dept || "" };
+  },
+  ADMIN_SCHEMA: {
+    type: "object", additionalProperties: false, required: ["type", "title", "from", "due", "priority", "dept"],
+    properties: { type: { type: "string", enum: ["Ação para mim", "Sugestão", "Preocupação"] }, title: { type: "string" }, from: { type: "string" },
+      due: { type: "string", description: "AAAA-MM-DD ou vazio" }, priority: { type: "string", enum: ["Alta", "Média", "Baixa"] }, dept: { type: "string" } },
+  },
+  async parseAdmin(db, text, today) {
+    const h = this.heuristicAdmin(db, text, today);
+    if (!this.enabled()) return h;
+    const prompt = `Hoje é ${today}. A administradora (gestora de governança) escreveu um ponto para o controle das ações DELA. Classifique:\n`
+      + '- type: "Ação para mim" (algo pedido ou direcionado diretamente a ela, que ela mesma precisa fazer), "Sugestão" (ideia ou proposta dela) ou "Preocupação" (risco, receio ou ponto de atenção dela).\n'
+      + "- title: frase curta (até 12 palavras) no idioma do texto.\n- from: quem pediu ou de quem veio (nome exato do cadastro, ou Diretora/HQ), vazio se não houver.\n"
+      + "- due: prazo AAAA-MM-DD se citado (\"até sexta\" = próxima sexta), senão vazio.\n- priority: Alta, Média ou Baixa.\n- dept: departamento envolvido (da lista) ou vazio.\n\n"
+      + "Cadastro de pessoas: " + JSON.stringify((db.settings.people || []).map((p) => ({ nome: p.name, departamento: p.dept })))
+      + "\nDepartamentos: " + JSON.stringify(db.settings.areas || []) + "\n\nTexto:\n" + text;
+    try {
+      const o = await this.call(prompt, this.ADMIN_SCHEMA, "low", 2000);
+      const out = { ...h, engine: this.model };
+      if (this.ADMIN_TYPES.includes(o.type)) out.type = o.type;
+      if (o.title) out.title = o.title.slice(0, 140);
+      if (o.from) out.from = o.from;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(o.due)) out.due = o.due;
+      if (["Alta", "Média", "Baixa"].includes(o.priority)) out.priority = o.priority;
+      if ((db.settings.areas || []).includes(o.dept)) out.dept = o.dept;
       return out;
     } catch (e) {
       return { ...h, msg: `${t("Claude falhou:")} ${e.message}` };
@@ -2421,6 +2502,7 @@ const Core = {
     for (const p of db.projects) p.updates ??= [];
     db.assist_examples ??= [];
     db.finished ??= [];
+    db.admin ??= []; db.settings.admin_seq ??= 0;
     db.extraction_examples ??= [];
     // lista inicial de departamentos e responsáveis (uma vez só; a lista padrão antiga é substituída)
     if (!db.settings.migrated_departments) {
@@ -3411,7 +3493,7 @@ ${this.reportHtml(s, text, esc)}
     if (head === "state" && method === "GET") {
       let dirty = this.autoMeetings();
       for (const p of db.projects) dirty = (await this.syncSchedules(p)) || dirty;
-      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons", "finished"].map((k) => [k, db[k]])), events: db.events.slice(-60),
+      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons", "finished", "admin"].map((k) => [k, db[k]])), events: db.events.slice(-60),
         alerts: this.alerts(), stale_pitems: this.stalePItems(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
         summaries: db.summaries.slice(-30), today: todayISO(), assist_stats: this.assistStats(), extraction_count: (db.extraction_examples || []).length };
     }
@@ -3422,6 +3504,33 @@ ${this.reportHtml(s, text, esc)}
       }
       AI.IMPACT_TYPES = db.settings.lists.impact_types;
       return db.settings;
+    }
+    if (head === "admin_parse" && method === "POST") return AI.parseAdmin(db, body.text || "", todayISO());
+    if (head === "admin") {
+      // Ações do administrador: pontos direcionados a ela, sugestões e preocupações dela
+      const ADMIN_FIELDS = ["type", "title", "description", "from", "due", "priority", "status", "dept"];
+      const clean = (b) => Object.fromEntries(ADMIN_FIELDS.filter((k) => b[k] !== undefined).map((k) => [k, typeof b[k] === "string" ? b[k].trim() : b[k]]));
+      if (method === "POST" && !rid) {
+        if (!String(body.title || "").trim()) throw new ApiError(t("Escreva o ponto."));
+        db.settings.admin_seq = (+db.settings.admin_seq || 0) + 1;
+        const rec = { type: "Ação para mim", priority: "Média", status: "Aberto", ...clean(body), id: "ADM" + String(db.settings.admin_seq).padStart(3, "0"),
+          text: body.text || "", engine: body.engine || "", created_at: nowISO(), updated_at: nowISO(), history: [] };
+        db.admin.push(rec);
+        this.log("admin.created", rec.id, "{id} registrado: {title}", { id: rec.id, title: rec.title });
+        return rec;
+      }
+      const rec = db.admin.find((x) => x.id === rid);
+      if (!rec) throw new ApiError(t("{id} não encontrado", { id: rid }));
+      if (method === "PATCH") {
+        const was = rec.status;
+        Object.assign(rec, clean(body));
+        if (body.note?.trim()) rec.history.push({ date: nowISO(), text: body.note.trim(), kind: "progress" });
+        if (rec.status === "Fechado" && was !== "Fechado") rec.closed_at = nowISO();
+        if (rec.status !== "Fechado") rec.closed_at = "";
+        this.touch(rec);
+        return rec;
+      }
+      if (method === "DELETE") { db.admin = db.admin.filter((x) => x.id !== rid); this.log("admin.deleted", rid, "{id} removido", { id: rid }); return { ok: true }; }
     }
     if (head === "meeting_parse" && method === "POST") {
       // reunião escrita de forma corrida -> campos sugeridos (IA ou heurística) para a usuária só ajustar
@@ -4904,7 +5013,7 @@ const STATUS_ITEM = ["Aberto", "Em andamento", "Aguardando", "Concluído"];
 const LEVELS = ["Alta", "Média", "Baixa"];
 const PITEM_STATUS = ["Aberto", "Em andamento", "Finalizado"];
 const MEETING_STATUS = ["Agendada", "Pendente", "Solicitada", "Realizada", "Não realizada", "Cancelada"];
-const MODULES = ["painel", "entradas", "lista", "projetos", "reunioes", "riscos", "fluxos", "summaries"];
+const MODULES = ["painel", "entradas", "lista", "projetos", "temporarios", "reunioes", "riscos", "fluxos", "summaries", "admin"];
 const SCENARIOS = { projects: ["se realizado", "se não realizado"], risks: ["se concretizar", "se tratado"] };
 const ACT_FIELDS = { scope: "Scope", target: "Target", item: "Item", n: "Nº", subitem: "Subitem", last_progress: "Last Progress",
   owner: "Responsável", start: "Início", finish: "Término / prazo", progress: "% concluído" };
@@ -5176,7 +5285,7 @@ function render() {
   b.className = "badge" + (S.ai.enabled ? " on" : "");
   b.textContent = S.ai.enabled ? (I18N.lang === "pt" ? "IA: " : "AI: ") + S.ai.model : t("IA offline (heurística)");
   b.title = S.ai.detail ? t(S.ai.detail) : "";
-  const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, temporarios: viewTemporarios, reunioes: viewReunioes, riscos: viewRiscos,
+  const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, temporarios: viewTemporarios, admin: viewAdmin, reunioes: viewReunioes, riscos: viewRiscos,
     fluxos: viewFluxos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
   $("#view").innerHTML = V(id, tab);
   if (V === viewEntradas && id) openTriage(id);
@@ -5709,6 +5818,96 @@ function projectDetail(p, tab) {
   ${tabs("projetos/" + p.id, T, tab)}${body(p)}`;
 }
 /* Projetos menores e temporários: lista própria, cadastro rápido e as mesmas abas (itens, riscos e problemas, arquivos). */
+// ------------------------------------------------------------------ Ações do administrador
+const ADMIN_TYPES = ["Ação para mim", "Sugestão", "Preocupação"];
+const ADMIN_STATUS = ["Aberto", "Em andamento", "Fechado"];
+const ADMIN_ICON = { "Ação para mim": "🎯", "Sugestão": "💡", "Preocupação": "⚠" };
+function viewAdmin(tab = "") {
+  const all = S.db.admin || [], open = all.filter((x) => x.status !== "Fechado");
+  const T = [["", t("Abertos")], ["acoes", t("Ações para mim")], ["sugestoes", t("Sugestões")], ["preocupacoes", t("Preocupações")], ["fechados", t("Fechados")]];
+  const byTab = { acoes: "Ação para mim", sugestoes: "Sugestão", preocupacoes: "Preocupação" };
+  const cnt = (k) => k === "fechados" ? all.length - open.length : byTab[k] ? open.filter((x) => x.type === byTab[k]).length : open.length;
+  const list = (tab === "fechados" ? all.filter((x) => x.status === "Fechado").sort((a, b) => (b.closed_at || "").localeCompare(a.closed_at || ""))
+    : open.filter((x) => !byTab[tab] || x.type === byTab[tab]).sort((a, b) => ({ Alta: 0, Média: 1, Baixa: 2 }[a.priority] ?? 1) - ({ Alta: 0, Média: 1, Baixa: 2 }[b.priority] ?? 1) || (a.due || "9999").localeCompare(b.due || "9999")));
+  const late = (x) => x.due && x.due < S.today && x.status !== "Fechado";
+  return `<h1>${t("Ações do administrador")}</h1><p class="muted how-line">${t("ADMIN_HELP")}</p>
+  <div class="card quick-input"><h2>⚡ ${t("Novo ponto")}</h2>
+    <textarea id="ad-text" style="min-height:90px" placeholder="${esc(t("ADMIN_PLACEHOLDER"))}" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))busy($('#ad-add'), ()=>addAdmin(false))"></textarea>
+    <div class="actions"><button id="ad-add" onclick="busy(this, ()=>addAdmin(false))">✓ ${t("Registrar")}</button>
+      <button class="ghost" id="ad-fill" onclick="busy(this, fillAdmin)">✨ ${t("Preencher os campos")}</button></div>
+    <details class="more" id="ad-review"><summary>${t("Campos (opcionais)")}</summary><div id="ad-filled"></div>
+      <div class="row"><div>${L("Tipo")}<select id="ad-type">${opts(ADMIN_TYPES, "Ação para mim")}</select></div><div style="grid-column: span 2">${L("Título")}<input id="ad-title"></div></div>
+      <div class="row"><div>${L("Quem pediu / de onde veio")}<input id="ad-from" list="ad-people"></div><div>${L("Prazo")}<input type="date" id="ad-due"></div>
+        <div>${L("Prioridade")}<select id="ad-prio">${opts(LEVELS, "Média")}</select></div><div>${L("Departamento")}${deptSelect("ad-dept", "")}</div></div>
+      <datalist id="ad-people">${["Diretora", "HQ", ...peopleList().map((p) => p.name)].map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
+      <div class="actions"><button id="ad-save" onclick="busy(this, ()=>addAdmin(true))">✓ ${t("Salvar")}</button></div></details></div>
+  ${tabs("admin", T.map(([k, l]) => [k, `${l} (${cnt(k)})`]), tab || "").replace('href="#admin/"', 'href="#admin"')}
+  <div class="card" style="overflow:auto"><table class="adlist">${th(["ID", "Tipo", "Ponto", "Quem pediu", "Prazo", "Prioridade", "Status", ""])}
+  ${list.map((x) => `<tr data-id="${x.id}" class="${late(x) ? "overdue" : ""}"><td>${x.id}</td>
+    <td><select class="small-sel" onchange="busy(this, ()=>patchAdmin('${x.id}', {type: this.value}))">${opts(ADMIN_TYPES, x.type)}</select></td>
+    <td class="g-title">${ADMIN_ICON[x.type] || ""} <a href="javascript:void 0" onclick="editAdmin('${x.id}')">${esc(x.title)}</a>
+      ${x.description ? `<br><small class="muted">${esc(x.description.slice(0, 160))}</small>` : ""}${x.history?.length ? `<br><small class="muted">↳ ${esc(x.history.at(-1).date.slice(0, 10))} ${esc(x.history.at(-1).text)}</small>` : ""}</td>
+    <td>${esc(x.from || "")}${x.dept ? `<br><small class="muted">${esc(x.dept)}</small>` : ""}</td>
+    <td><input type="date" value="${esc(x.due || "")}" onchange="busy(this, ()=>patchAdmin('${x.id}', {due: this.value}))">${late(x) ? `<br><small class="late-txt">${t("{n} dias de atraso", { n: daysSince(x.due) })}</small>` : ""}</td>
+    <td><select class="small-sel" onchange="busy(this, ()=>patchAdmin('${x.id}', {priority: this.value}))">${opts(LEVELS, x.priority || "Média")}</select></td>
+    <td>${x.status === "Fechado" ? `${pill(t("Fechado"), "p-Baixa")}<br><small class="muted">${esc((x.closed_at || "").slice(0, 10))}</small>` : `<select class="small-sel" onchange="busy(this, ()=>patchAdmin('${x.id}', {status: this.value}))">${opts(ADMIN_STATUS.slice(0, 2), x.status)}</select>`}</td>
+    <td class="nowrap">${x.status === "Fechado" ? `<button class="small ghost ad-reopen" onclick="busy(this, ()=>patchAdmin('${x.id}', {status: 'Aberto'}))">${t("Reabrir")}</button>` : `<button class="small ad-close" onclick="busy(this, ()=>patchAdmin('${x.id}', {status: 'Fechado'}))">✓ ${t("Fechar")}</button>`}
+      <button class="small ghost ad-edit" title="${esc(t("Editar"))}" onclick="editAdmin('${x.id}')">✎</button>
+      <button class="small ghost danger ad-del" title="${esc(t("Excluir"))}" onclick="busy(this, ()=>deleteAdmin('${x.id}'))">🗑</button></td></tr>`).join("")
+    || `<tr><td colspan=8 class="muted">${t(tab === "fechados" ? "Nenhum ponto fechado." : "Nenhum ponto em aberto.")}</td></tr>`}</table></div>`;
+}
+async function fillAdmin() {
+  const text = $("#ad-text").value.trim();
+  if (!text) throw new Error(t("Escreva o ponto."));
+  const f = await api("admin_parse", "POST", { text });
+  for (const [k, v] of [["type", f.type], ["title", f.title], ["from", f.from], ["due", f.due], ["prio", f.priority], ["dept", f.dept]]) if (v) $("#ad-" + k).value = v;
+  $("#ad-review").open = true;
+  $("#ad-filled").innerHTML = `<div class="alert lv-baixa">✨ ${t(f.engine === "heuristica" ? "Campos sugeridos a partir do texto (sem IA). Ajuste o que precisar e salve." : "Campos sugeridos pela IA. Ajuste o que precisar e salve.")}</div>`;
+  ADMIN_FILLED = { text, engine: f.engine, description: f.description };
+}
+let ADMIN_FILLED = null;
+async function addAdmin(reviewed) {
+  const text = $("#ad-text").value.trim();
+  if (!reviewed || !$("#ad-title").value.trim()) { if (!text) throw new Error(t("Escreva o ponto.")); if (!ADMIN_FILLED || ADMIN_FILLED.text !== text) await fillAdmin(); }
+  const r = await api("admin", "POST", { type: $("#ad-type").value, title: $("#ad-title").value, from: $("#ad-from").value, due: $("#ad-due").value, priority: $("#ad-prio").value,
+    dept: $("#ad-dept").value, description: ADMIN_FILLED?.description || "", text, engine: ADMIN_FILLED?.engine || "" });
+  ADMIN_FILLED = null;
+  toast(t("Registrado em {id}", { id: r.id })); await refresh();
+}
+async function patchAdmin(id, body) {
+  await api("admin/" + id, "PATCH", body);
+  toast(t(body.status === "Fechado" ? "{id} fechado" : "Item atualizado", { id })); await refresh();
+}
+function editAdmin(id) {
+  const x = (S.db.admin || []).find((a) => a.id === id);
+  if (!x) return;
+  openModal(`<h2>${x.id} · ${esc(x.title)}</h2>
+    <div class="row"><div>${L("Tipo")}<select id="ae-type">${opts(ADMIN_TYPES, x.type)}</select></div><div>${L("Status")}<select id="ae-status">${opts(ADMIN_STATUS, x.status)}</select></div></div>
+    ${L("Título")}<input id="ae-title" value="${esc(x.title)}">
+    ${L("Descrição")}<textarea id="ae-desc" style="min-height:70px">${esc(x.description || "")}</textarea>
+    <div class="row"><div>${L("Quem pediu / de onde veio")}<input id="ae-from" list="ad-people" value="${esc(x.from || "")}"></div><div>${L("Prazo")}<input type="date" id="ae-due" value="${esc(x.due || "")}"></div>
+      <div>${L("Prioridade")}<select id="ae-prio">${opts(LEVELS, x.priority || "Média")}</select></div><div>${L("Departamento")}${deptSelect("ae-dept", x.dept || "")}</div></div>
+    ${L("Registrar progresso")}<textarea id="ae-note" style="min-height:50px" placeholder="${esc(t("Novo progresso…"))}"></textarea>
+    ${x.text && x.text !== x.title ? `<details class="more"><summary>${t("Texto original")}</summary><p class="muted">${esc(x.text)}</p></details>` : ""}
+    ${x.history?.length ? `<ul class="tl">${x.history.slice().reverse().map((h) => `<li><span class="muted">${esc(h.date.slice(0, 10))}</span> ${esc(h.text)}</li>`).join("")}</ul>` : ""}
+    <div class="actions"><button id="ae-save" onclick="busy(this, ()=>saveAdmin('${x.id}'))">${t("Salvar")}</button>
+      <button class="ghost danger" onclick="busy(this, ()=>deleteAdmin('${x.id}'))">🗑 ${t("Excluir")}</button></div>`);
+}
+async function saveAdmin(id) {
+  const title = $("#ae-title").value.trim();
+  if (!title) throw new Error(t("Escreva o ponto."));
+  await api("admin/" + id, "PATCH", { type: $("#ae-type").value, status: $("#ae-status").value, title, description: $("#ae-desc").value, from: $("#ae-from").value,
+    due: $("#ae-due").value, priority: $("#ae-prio").value, dept: $("#ae-dept").value, note: $("#ae-note").value });
+  closeModal(); toast(t("Item atualizado")); await refresh();
+}
+async function deleteAdmin(id) {
+  const x = (S.db.admin || []).find((a) => a.id === id) || {};
+  if (!confirm(t("DELETE_ITEM_CONFIRM", { id, title: x.title || "" }))) return;
+  await api("admin/" + id, "DELETE");
+  if (!$("#modal").classList.contains("hidden")) closeModal();
+  toast(t("{id} excluído", { id })); await refresh();
+}
+
 function viewTemporarios() {
   const list = S.db.projects.filter((p) => p.small).sort((a, b) => (["Concluído", "Cancelado"].includes(a.status) - ["Concluído", "Cancelado"].includes(b.status)) || (a.end_date || "9999").localeCompare(b.end_date || "9999"));
   return `<h1>${t("Projetos menores e temporários")}</h1><p class="muted how-line">${t("SMALL_HELP")}</p>
@@ -6262,7 +6461,7 @@ async function uploadLogo() {
   await saveAp({ logo: data });
 }
 function cfgModules(st) {
-  const names = { painel: "Painel", entradas: "Entradas", lista: "Lista geral", projetos: "Projetos", reunioes: "Reuniões", riscos: "Riscos", fluxos: "Fluxos", summaries: "Summaries" };
+  const names = { painel: "Painel", entradas: "Entradas", lista: "Lista geral", projetos: "Projetos", temporarios: "Projetos menores", reunioes: "Reuniões", riscos: "Riscos", fluxos: "Fluxos", summaries: "Summaries", admin: "Ações do administrador" };
   return `<div class="grid"><div class="card"><h2>${t("Módulos visíveis no menu")}</h2>
     <div class="checks">${MODULES.map((m) => `<label><input type="checkbox" class="mod" value="${m}" ${(st.hidden_modules || []).includes(m) ? "" : "checked"}> ${t(names[m])}</label>`).join("")}</div>
     <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{hidden_modules:[...document.querySelectorAll('.mod')].filter(c=>!c.checked).map(c=>c.value)}); await refresh(); toast(t('Salvo'));})">${t("Salvar")}</button></div></div>

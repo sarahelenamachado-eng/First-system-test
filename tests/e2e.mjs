@@ -338,12 +338,61 @@ async function scenarioMeetingText(page, label, ai) {
   assert.ok(today);
 }
 
+/** Ações do administrador: ações para ela, sugestões e preocupações, com entrada rápida, editar, fechar e excluir. */
+async function scenarioAdmin(page, label, ai) {
+  await go(page, "admin", "#ad-text");
+  const friday = await page.evaluate(() => { const c = new Date(todayISO() + "T12:00:00").getDay(); return addDays(todayISO(), ((5 - c + 7) % 7) || 7); });
+  await page.fill("#ad-text", "A diretora me pediu para revisar o orçamento de segurança até sexta");
+  await page.click("#ad-add");
+  await page.waitForFunction(() => (S.db.admin || []).length === 1, null, { polling: 100 });
+  let a = await page.evaluate(() => S.db.admin[0]);
+  assert.equal(a.type, "Ação para mim"); assert.equal(a.from, "Diretora"); assert.equal(a.due, friday, label + ": prazo até sexta");
+  assert.equal(a.title, ai ? "Revisar orçamento de segurança" : "A diretora me pediu para revisar o orçamento de segurança até sexta", label + ": título");
+  // sugestão: preencher os campos, ajustar e salvar
+  await page.fill("#ad-text", "Sugestão: fazer uma reunião semanal de 15 min com EHS para acompanhar as inspeções");
+  await page.click("#ad-fill");
+  await page.waitForFunction(() => document.querySelector("#ad-review").open, null, { polling: 100 });
+  assert.equal(await page.inputValue("#ad-type"), "Sugestão", label + ": tipo sugestão");
+  await page.fill("#ad-title", "Reunião semanal de 15 min com EHS");
+  await page.click("#ad-save");
+  await page.waitForFunction(() => (S.db.admin || []).length === 2, null, { polling: 100 });
+  assert.equal(await page.evaluate(() => S.db.admin[1].title), "Reunião semanal de 15 min com EHS");
+  await page.fill("#ad-text", "Estou preocupada com o atraso da subestação, pode afetar o prazo do projeto");
+  await page.click("#ad-add");
+  await page.waitForFunction(() => (S.db.admin || []).length === 3, null, { polling: 100 });
+  assert.equal(await page.evaluate(() => S.db.admin[2].type), "Preocupação", label + ": tipo preocupação");
+  if (shots) await page.screenshot({ path: `${shots}/${label}-15-acoes-admin.png`, fullPage: true });
+  // abas por tipo
+  await go(page, "admin/sugestoes", ".adlist");
+  assert.deepEqual(await page.$$eval(".adlist tr[data-id]", (r) => r.map((x) => x.dataset.id)), ["ADM002"], label + ": aba Sugestões");
+  // editar
+  await go(page, "admin", ".adlist");
+  await page.click("tr[data-id='ADM003'] .ad-edit");
+  await page.waitForSelector("#ae-title");
+  await page.fill("#ae-title", "Atraso da subestação");
+  await page.fill("#ae-note", "Conversei com a Ana");
+  await page.click("#ae-save");
+  await page.waitForFunction(() => S.db.admin.find((x) => x.id === "ADM003").title === "Atraso da subestação", null, { polling: 100 });
+  assert.equal(await page.evaluate(() => S.db.admin.find((x) => x.id === "ADM003").history[0].text), "Conversei com a Ana");
+  // fechar: sai dos abertos e vai para Fechados
+  await page.click("tr[data-id='ADM001'] .ad-close");
+  await page.waitForFunction(() => S.db.admin.find((x) => x.id === "ADM001").status === "Fechado" && !document.querySelector(".adlist tr[data-id='ADM001']"), null, { polling: 100 });
+  await go(page, "admin/fechados", ".adlist");
+  assert.deepEqual(await page.$$eval(".adlist tr[data-id]", (r) => r.map((x) => x.dataset.id)), ["ADM001"], label + ": aba Fechados");
+  // excluir (com confirmação)
+  await go(page, "admin", ".adlist");
+  await page.click("tr[data-id='ADM002'] .ad-del");
+  await page.waitForFunction(() => !S.db.admin.some((x) => x.id === "ADM002"), null, { polling: 100 });
+  assert.equal(await page.evaluate(() => S.db.admin.length), 2);
+}
+
 /** Interface em inglês e chinês: cada texto com o inglês em cima e o chinês embaixo. */
 async function scenarioBilingual(page, label) {
   await page.evaluate(() => setLang("bi"));
   await go(page, "lista", ".glist");
   const nav = await page.$$eval("nav a[href='#lista'] .bi-pair", (e) => e.map((x) => [x.childNodes[0].textContent, x.querySelector(".bi-zh").textContent]));
   assert.deepEqual(nav, [["General list", "总清单"]], label + ": menu em duas linhas");
+  assert.match(await page.$eval("nav a[href='#admin']", (e) => e.innerText), /Admin actions\s*\n\s*管理员事项/, label + ": aba Ações do administrador");
   const h1 = await page.$eval("#view h1", (e) => e.innerText);
   assert.ok(/General governance list|General list/i.test(h1.split("\n")[0]) && /[\u4e00-\u9fff]/.test(h1.split("\n")[1] || ""), label + ": título inglês em cima, chinês embaixo: " + h1);
   assert.match(await page.$eval(".g-close", (e) => e.innerText), /Close\s*\n?\s*关闭/);
@@ -368,6 +417,7 @@ async function scenarioBilingual(page, label) {
   await scenarioDeptsAndSubitems(page, "heuristico");
   await scenarioListAndSmall(page, "heuristico");
   await scenarioMeetingText(page, "heuristico", false);
+  await scenarioAdmin(page, "heuristico", false);
   await scenarioBilingual(page, "heuristico");
   assert.match(r.narrative, /^Hoje foram realizadas 1 reuniões e discutidos 1 tópicos/);
   assert.match(r.narrative, /\n1\. Reunião GPS: Aprovar o plano de cabos/);
@@ -386,7 +436,8 @@ async function scenarioBilingual(page, label) {
     if (/CONCLUSÃO/.test(text)) prompt = text;
     const sch = body.output_config.format?.schema;
     // avaliação da IA sem "novo projeto": a regra dos subitens tem que valer mesmo assim
-    const out0 = sch?.properties?.attendees && sch?.properties?.mtype ? JSON.stringify(/troca/.test(text) || /extintores/.test(text)
+    const out0 = sch?.properties?.type?.enum ? JSON.stringify(/orçamento/.test(text) ? { type: "Ação para mim", title: "Revisar orçamento de segurança", from: "Diretora", due: "", priority: "Alta", dept: "EHS" } : { type: "", title: "", from: "", due: "", priority: "", dept: "" })
+      : sch?.properties?.attendees && sch?.properties?.mtype ? JSON.stringify(/troca/.test(text) || /extintores/.test(text)
         ? { title: "Segurança: troca de extintores", date: "", time: "", duration: 0, attendees: ["Alfredo", "Barry 姚鹤康"], departments: ["EHS"], project_id: "", level: "Gerencial", mtype: "Decisão", scheduling: "Pré-agendada", agenda: "Trocar extintores" }
         : { title: "", date: "", time: "", duration: 0, attendees: [], departments: [], project_id: "", level: "", mtype: "", scheduling: "", agenda: "" })
       : sch?.properties?.relation_mode ? JSON.stringify({ related: [], relation_mode: "novo", include_in: "", relation_explanation: "", scope: "Localização", scope_action: "Estudar",
@@ -401,6 +452,7 @@ async function scenarioBilingual(page, label) {
   await scenarioDeptsAndSubitems(page, "ia");
   await scenarioListAndSmall(page, "ia");
   await scenarioMeetingText(page, "ia", true);
+  await scenarioAdmin(page, "ia", true);
   await scenarioBilingual(page, "ia");
   assert.match(await page.evaluate(() => S.db.inputs.at(-1).ai_suggestion.engine), /claude/, "avaliação veio da IA simulada");
   assert.match(r.narrative, /Itens com progresso hoje: IT001 cabos lançados/);

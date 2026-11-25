@@ -248,6 +248,63 @@ critério da organização e siga-os quando aplicáveis.`; },
       return { ...h, msg: `${t("Claude falhou:")} ${e.message}` };
     }
   },
+  // ------------------------------------------------------------ Ações do administrador
+  ADMIN_TYPES: ["Ação para mim", "Sugestão", "Preocupação"],
+  /** Prazo citado no texto: data, "hoje", "amanhã" ou dia da semana (próxima ocorrência). */
+  dueFrom(raw, today) {
+    const n = this.norm(raw), y = today.slice(0, 4);
+    let m;
+    if ((m = raw.match(/\b(\d{4})-(\d{2})-(\d{2})\b/))) return m[0];
+    if ((m = raw.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/))) return `${m[3] ? (m[3].length === 2 ? "20" + m[3] : m[3]) : y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    if ((m = raw.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/))) return `${y}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+    if (/\b(amanha|tomorrow)\b|明天/.test(n)) return addDays(today, 1);
+    if (/\b(hoje|today)\b|今天/.test(n)) return today;
+    const days = [[/domingo|sunday|周日|星期日/, 0], [/segunda|monday|周一|星期一/, 1], [/terca|tuesday|周二|星期二/, 2], [/quarta|wednesday|周三|星期三/, 3],
+      [/quinta|thursday|周四|星期四/, 4], [/sexta|friday|周五|星期五/, 5], [/sabado|saturday|周六|星期六/, 6]];
+    for (const [re, d] of days) if (re.test(n) || re.test(raw)) { const cur = new Date(today + "T12:00:00").getDay(); return addDays(today, ((d - cur + 7) % 7) || 7); }
+    return "";
+  },
+  heuristicAdmin(db, text, today) {
+    const raw = String(text || "").trim(), n = this.norm(raw);
+    const type = /sugest|sugiro|sugerir|proponho|proposta|poderiamos|seria bom|que tal|suggest|propos|idea|建议|提议/.test(n) || /建议|提议/.test(raw) ? "Sugestão"
+      : /preocup|receio|medo|risco|tenho duvida|nao sei se|worr|concern|afraid|risk|担心|风险|顾虑/.test(n) || /担心|风险|顾虑/.test(raw) ? "Preocupação" : "Ação para mim";
+    const first = raw.split("\n")[0].replace(/^(sugest[aã]o|preocupa[cç][aã]o|a[cç][aã]o)\s*[:\-–]\s*/i, "");
+    const title = (first.split(/[.;。]\s/)[0] || first).replace(/[.;。:]+$/, "").slice(0, 100).trim();
+    const people = db.settings.people || [];
+    const who = people.find((p) => { const f = this.norm(p.name.split(/\s+/)[0]); return f.length >= 3 && new RegExp(`(^|[^\\p{L}])${f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^\\p{L}])`, "u").test(n); });
+    const boss = (raw.match(/\b(diretora|diretor|director|hq|ceo|presidente)\b/i) || raw.match(/(总监|总部)/) || [])[1] || "";
+    const from = boss ? (/^hq$|^ceo$/i.test(boss) ? boss.toUpperCase() : boss[0].toUpperCase() + boss.slice(1).toLowerCase()) : who?.name || "";
+    const priority = /urgent|asap|imediat|hoje|today|critic|紧急|马上/.test(n) || /紧急|马上/.test(raw) ? "Alta" : /quando puder|sem pressa|no rush|baixa/.test(n) ? "Baixa" : "Média";
+    return { engine: "heuristica", type, title, description: raw.includes("\n") || raw.length > title.length + 2 ? raw : "", from, due: this.dueFrom(raw, today), priority, dept: who?.dept || "" };
+  },
+  ADMIN_SCHEMA: {
+    type: "object", additionalProperties: false, required: ["type", "title", "from", "due", "priority", "dept"],
+    properties: { type: { type: "string", enum: ["Ação para mim", "Sugestão", "Preocupação"] }, title: { type: "string" }, from: { type: "string" },
+      due: { type: "string", description: "AAAA-MM-DD ou vazio" }, priority: { type: "string", enum: ["Alta", "Média", "Baixa"] }, dept: { type: "string" } },
+  },
+  async parseAdmin(db, text, today) {
+    const h = this.heuristicAdmin(db, text, today);
+    if (!this.enabled()) return h;
+    const prompt = `Hoje é ${today}. A administradora (gestora de governança) escreveu um ponto para o controle das ações DELA. Classifique:\n`
+      + '- type: "Ação para mim" (algo pedido ou direcionado diretamente a ela, que ela mesma precisa fazer), "Sugestão" (ideia ou proposta dela) ou "Preocupação" (risco, receio ou ponto de atenção dela).\n'
+      + "- title: frase curta (até 12 palavras) no idioma do texto.\n- from: quem pediu ou de quem veio (nome exato do cadastro, ou Diretora/HQ), vazio se não houver.\n"
+      + "- due: prazo AAAA-MM-DD se citado (\"até sexta\" = próxima sexta), senão vazio.\n- priority: Alta, Média ou Baixa.\n- dept: departamento envolvido (da lista) ou vazio.\n\n"
+      + "Cadastro de pessoas: " + JSON.stringify((db.settings.people || []).map((p) => ({ nome: p.name, departamento: p.dept })))
+      + "\nDepartamentos: " + JSON.stringify(db.settings.areas || []) + "\n\nTexto:\n" + text;
+    try {
+      const o = await this.call(prompt, this.ADMIN_SCHEMA, "low", 2000);
+      const out = { ...h, engine: this.model };
+      if (this.ADMIN_TYPES.includes(o.type)) out.type = o.type;
+      if (o.title) out.title = o.title.slice(0, 140);
+      if (o.from) out.from = o.from;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(o.due)) out.due = o.due;
+      if (["Alta", "Média", "Baixa"].includes(o.priority)) out.priority = o.priority;
+      if ((db.settings.areas || []).includes(o.dept)) out.dept = o.dept;
+      return out;
+    } catch (e) {
+      return { ...h, msg: `${t("Claude falhou:")} ${e.message}` };
+    }
+  },
   subitems(text) {
     const s = String(text || "");
     const re = /(?<=^|[\s；;。.,，:：])(\d{1,2})\s*(?:[.．](?!\d)|[)、])\s*/g;

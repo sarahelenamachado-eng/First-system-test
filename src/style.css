@@ -316,3 +316,9 @@ button .bi-zh, .btn .bi-zh { color: inherit; opacity: .85; }
 .glist .pm-d > summary { font-size: 13px; padding: 4px 22px 4px 6px; max-width: 170px; }
 .quick-add .pm { display: inline-block; min-width: 180px; }
 .p-del { padding: 3px 7px; }
+.adlist td { vertical-align: top; }
+.adlist select, .adlist input { font-size: 13px; padding: 4px 6px; }
+.adlist td:nth-child(2) select { min-width: 140px; }
+.adlist td:nth-child(6) select { min-width: 90px; }
+.adlist input[type=date] { width: 135px; }
+.adlist .g-title { min-width: 240px; }

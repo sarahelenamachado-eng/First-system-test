@@ -174,6 +174,13 @@ registrado e o status atual), **progressos dos projetos** (tudo o que foi regist
 pelos itens/atividades do projeto ou pela caixa "Progresso do projeto"), progresso dos itens da lista geral, demandas por origem, itens críticos, prazos, projetos (% concluído), riscos,
 reuniões e decisões, infos a reportar, alertas e linha do tempo. Também salvos em HTML na pasta `SUMMARIES`.
 
+### Ações do administrador
+Última aba do menu, para o seu controle pessoal: **ações direcionadas diretamente a você**, **suas sugestões** e **suas
+preocupações**. Escreva o ponto do seu jeito e clique em **Registrar**: a IA (ou, sem chave, regras simples) sugere o tipo, um
+título, quem pediu, o prazo ("até sexta" vira a próxima sexta), a prioridade e o departamento. **Preencher os campos** mostra
+a sugestão para ajustar antes de salvar. Abas: Abertos, Ações para mim, Sugestões, Preocupações e Fechados. Em cada linha dá
+para mudar tipo, prazo, prioridade e status, **✓ Fechar**, **✎ Editar** (com registro de progresso) e **🗑 Excluir**.
+
 ### 8. Configurações
 Aparência (nome, cor, tamanho do texto, densidade, faixa vermelha, logo), módulos visíveis, idioma, listas
 (origens, tipos de entrada, categorias de impacto, áreas, rótulos dos fluxos), regras de alertas e reuniões,

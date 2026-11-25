@@ -7,7 +7,7 @@ const STATUS_ITEM = ["Aberto", "Em andamento", "Aguardando", "Concluído"];
 const LEVELS = ["Alta", "Média", "Baixa"];
 const PITEM_STATUS = ["Aberto", "Em andamento", "Finalizado"];
 const MEETING_STATUS = ["Agendada", "Pendente", "Solicitada", "Realizada", "Não realizada", "Cancelada"];
-const MODULES = ["painel", "entradas", "lista", "projetos", "reunioes", "riscos", "fluxos", "summaries"];
+const MODULES = ["painel", "entradas", "lista", "projetos", "temporarios", "reunioes", "riscos", "fluxos", "summaries", "admin"];
 const SCENARIOS = { projects: ["se realizado", "se não realizado"], risks: ["se concretizar", "se tratado"] };
 const ACT_FIELDS = { scope: "Scope", target: "Target", item: "Item", n: "Nº", subitem: "Subitem", last_progress: "Last Progress",
   owner: "Responsável", start: "Início", finish: "Término / prazo", progress: "% concluído" };
@@ -279,7 +279,7 @@ function render() {
   b.className = "badge" + (S.ai.enabled ? " on" : "");
   b.textContent = S.ai.enabled ? (I18N.lang === "pt" ? "IA: " : "AI: ") + S.ai.model : t("IA offline (heurística)");
   b.title = S.ai.detail ? t(S.ai.detail) : "";
-  const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, temporarios: viewTemporarios, reunioes: viewReunioes, riscos: viewRiscos,
+  const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, temporarios: viewTemporarios, admin: viewAdmin, reunioes: viewReunioes, riscos: viewRiscos,
     fluxos: viewFluxos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
   $("#view").innerHTML = V(id, tab);
   if (V === viewEntradas && id) openTriage(id);
@@ -812,6 +812,96 @@ function projectDetail(p, tab) {
   ${tabs("projetos/" + p.id, T, tab)}${body(p)}`;
 }
 /* Projetos menores e temporários: lista própria, cadastro rápido e as mesmas abas (itens, riscos e problemas, arquivos). */
+// ------------------------------------------------------------------ Ações do administrador
+const ADMIN_TYPES = ["Ação para mim", "Sugestão", "Preocupação"];
+const ADMIN_STATUS = ["Aberto", "Em andamento", "Fechado"];
+const ADMIN_ICON = { "Ação para mim": "🎯", "Sugestão": "💡", "Preocupação": "⚠" };
+function viewAdmin(tab = "") {
+  const all = S.db.admin || [], open = all.filter((x) => x.status !== "Fechado");
+  const T = [["", t("Abertos")], ["acoes", t("Ações para mim")], ["sugestoes", t("Sugestões")], ["preocupacoes", t("Preocupações")], ["fechados", t("Fechados")]];
+  const byTab = { acoes: "Ação para mim", sugestoes: "Sugestão", preocupacoes: "Preocupação" };
+  const cnt = (k) => k === "fechados" ? all.length - open.length : byTab[k] ? open.filter((x) => x.type === byTab[k]).length : open.length;
+  const list = (tab === "fechados" ? all.filter((x) => x.status === "Fechado").sort((a, b) => (b.closed_at || "").localeCompare(a.closed_at || ""))
+    : open.filter((x) => !byTab[tab] || x.type === byTab[tab]).sort((a, b) => ({ Alta: 0, Média: 1, Baixa: 2 }[a.priority] ?? 1) - ({ Alta: 0, Média: 1, Baixa: 2 }[b.priority] ?? 1) || (a.due || "9999").localeCompare(b.due || "9999")));
+  const late = (x) => x.due && x.due < S.today && x.status !== "Fechado";
+  return `<h1>${t("Ações do administrador")}</h1><p class="muted how-line">${t("ADMIN_HELP")}</p>
+  <div class="card quick-input"><h2>⚡ ${t("Novo ponto")}</h2>
+    <textarea id="ad-text" style="min-height:90px" placeholder="${esc(t("ADMIN_PLACEHOLDER"))}" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))busy($('#ad-add'), ()=>addAdmin(false))"></textarea>
+    <div class="actions"><button id="ad-add" onclick="busy(this, ()=>addAdmin(false))">✓ ${t("Registrar")}</button>
+      <button class="ghost" id="ad-fill" onclick="busy(this, fillAdmin)">✨ ${t("Preencher os campos")}</button></div>
+    <details class="more" id="ad-review"><summary>${t("Campos (opcionais)")}</summary><div id="ad-filled"></div>
+      <div class="row"><div>${L("Tipo")}<select id="ad-type">${opts(ADMIN_TYPES, "Ação para mim")}</select></div><div style="grid-column: span 2">${L("Título")}<input id="ad-title"></div></div>
+      <div class="row"><div>${L("Quem pediu / de onde veio")}<input id="ad-from" list="ad-people"></div><div>${L("Prazo")}<input type="date" id="ad-due"></div>
+        <div>${L("Prioridade")}<select id="ad-prio">${opts(LEVELS, "Média")}</select></div><div>${L("Departamento")}${deptSelect("ad-dept", "")}</div></div>
+      <datalist id="ad-people">${["Diretora", "HQ", ...peopleList().map((p) => p.name)].map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
+      <div class="actions"><button id="ad-save" onclick="busy(this, ()=>addAdmin(true))">✓ ${t("Salvar")}</button></div></details></div>
+  ${tabs("admin", T.map(([k, l]) => [k, `${l} (${cnt(k)})`]), tab || "").replace('href="#admin/"', 'href="#admin"')}
+  <div class="card" style="overflow:auto"><table class="adlist">${th(["ID", "Tipo", "Ponto", "Quem pediu", "Prazo", "Prioridade", "Status", ""])}
+  ${list.map((x) => `<tr data-id="${x.id}" class="${late(x) ? "overdue" : ""}"><td>${x.id}</td>
+    <td><select class="small-sel" onchange="busy(this, ()=>patchAdmin('${x.id}', {type: this.value}))">${opts(ADMIN_TYPES, x.type)}</select></td>
+    <td class="g-title">${ADMIN_ICON[x.type] || ""} <a href="javascript:void 0" onclick="editAdmin('${x.id}')">${esc(x.title)}</a>
+      ${x.description ? `<br><small class="muted">${esc(x.description.slice(0, 160))}</small>` : ""}${x.history?.length ? `<br><small class="muted">↳ ${esc(x.history.at(-1).date.slice(0, 10))} ${esc(x.history.at(-1).text)}</small>` : ""}</td>
+    <td>${esc(x.from || "")}${x.dept ? `<br><small class="muted">${esc(x.dept)}</small>` : ""}</td>
+    <td><input type="date" value="${esc(x.due || "")}" onchange="busy(this, ()=>patchAdmin('${x.id}', {due: this.value}))">${late(x) ? `<br><small class="late-txt">${t("{n} dias de atraso", { n: daysSince(x.due) })}</small>` : ""}</td>
+    <td><select class="small-sel" onchange="busy(this, ()=>patchAdmin('${x.id}', {priority: this.value}))">${opts(LEVELS, x.priority || "Média")}</select></td>
+    <td>${x.status === "Fechado" ? `${pill(t("Fechado"), "p-Baixa")}<br><small class="muted">${esc((x.closed_at || "").slice(0, 10))}</small>` : `<select class="small-sel" onchange="busy(this, ()=>patchAdmin('${x.id}', {status: this.value}))">${opts(ADMIN_STATUS.slice(0, 2), x.status)}</select>`}</td>
+    <td class="nowrap">${x.status === "Fechado" ? `<button class="small ghost ad-reopen" onclick="busy(this, ()=>patchAdmin('${x.id}', {status: 'Aberto'}))">${t("Reabrir")}</button>` : `<button class="small ad-close" onclick="busy(this, ()=>patchAdmin('${x.id}', {status: 'Fechado'}))">✓ ${t("Fechar")}</button>`}
+      <button class="small ghost ad-edit" title="${esc(t("Editar"))}" onclick="editAdmin('${x.id}')">✎</button>
+      <button class="small ghost danger ad-del" title="${esc(t("Excluir"))}" onclick="busy(this, ()=>deleteAdmin('${x.id}'))">🗑</button></td></tr>`).join("")
+    || `<tr><td colspan=8 class="muted">${t(tab === "fechados" ? "Nenhum ponto fechado." : "Nenhum ponto em aberto.")}</td></tr>`}</table></div>`;
+}
+async function fillAdmin() {
+  const text = $("#ad-text").value.trim();
+  if (!text) throw new Error(t("Escreva o ponto."));
+  const f = await api("admin_parse", "POST", { text });
+  for (const [k, v] of [["type", f.type], ["title", f.title], ["from", f.from], ["due", f.due], ["prio", f.priority], ["dept", f.dept]]) if (v) $("#ad-" + k).value = v;
+  $("#ad-review").open = true;
+  $("#ad-filled").innerHTML = `<div class="alert lv-baixa">✨ ${t(f.engine === "heuristica" ? "Campos sugeridos a partir do texto (sem IA). Ajuste o que precisar e salve." : "Campos sugeridos pela IA. Ajuste o que precisar e salve.")}</div>`;
+  ADMIN_FILLED = { text, engine: f.engine, description: f.description };
+}
+let ADMIN_FILLED = null;
+async function addAdmin(reviewed) {
+  const text = $("#ad-text").value.trim();
+  if (!reviewed || !$("#ad-title").value.trim()) { if (!text) throw new Error(t("Escreva o ponto.")); if (!ADMIN_FILLED || ADMIN_FILLED.text !== text) await fillAdmin(); }
+  const r = await api("admin", "POST", { type: $("#ad-type").value, title: $("#ad-title").value, from: $("#ad-from").value, due: $("#ad-due").value, priority: $("#ad-prio").value,
+    dept: $("#ad-dept").value, description: ADMIN_FILLED?.description || "", text, engine: ADMIN_FILLED?.engine || "" });
+  ADMIN_FILLED = null;
+  toast(t("Registrado em {id}", { id: r.id })); await refresh();
+}
+async function patchAdmin(id, body) {
+  await api("admin/" + id, "PATCH", body);
+  toast(t(body.status === "Fechado" ? "{id} fechado" : "Item atualizado", { id })); await refresh();
+}
+function editAdmin(id) {
+  const x = (S.db.admin || []).find((a) => a.id === id);
+  if (!x) return;
+  openModal(`<h2>${x.id} · ${esc(x.title)}</h2>
+    <div class="row"><div>${L("Tipo")}<select id="ae-type">${opts(ADMIN_TYPES, x.type)}</select></div><div>${L("Status")}<select id="ae-status">${opts(ADMIN_STATUS, x.status)}</select></div></div>
+    ${L("Título")}<input id="ae-title" value="${esc(x.title)}">
+    ${L("Descrição")}<textarea id="ae-desc" style="min-height:70px">${esc(x.description || "")}</textarea>
+    <div class="row"><div>${L("Quem pediu / de onde veio")}<input id="ae-from" list="ad-people" value="${esc(x.from || "")}"></div><div>${L("Prazo")}<input type="date" id="ae-due" value="${esc(x.due || "")}"></div>
+      <div>${L("Prioridade")}<select id="ae-prio">${opts(LEVELS, x.priority || "Média")}</select></div><div>${L("Departamento")}${deptSelect("ae-dept", x.dept || "")}</div></div>
+    ${L("Registrar progresso")}<textarea id="ae-note" style="min-height:50px" placeholder="${esc(t("Novo progresso…"))}"></textarea>
+    ${x.text && x.text !== x.title ? `<details class="more"><summary>${t("Texto original")}</summary><p class="muted">${esc(x.text)}</p></details>` : ""}
+    ${x.history?.length ? `<ul class="tl">${x.history.slice().reverse().map((h) => `<li><span class="muted">${esc(h.date.slice(0, 10))}</span> ${esc(h.text)}</li>`).join("")}</ul>` : ""}
+    <div class="actions"><button id="ae-save" onclick="busy(this, ()=>saveAdmin('${x.id}'))">${t("Salvar")}</button>
+      <button class="ghost danger" onclick="busy(this, ()=>deleteAdmin('${x.id}'))">🗑 ${t("Excluir")}</button></div>`);
+}
+async function saveAdmin(id) {
+  const title = $("#ae-title").value.trim();
+  if (!title) throw new Error(t("Escreva o ponto."));
+  await api("admin/" + id, "PATCH", { type: $("#ae-type").value, status: $("#ae-status").value, title, description: $("#ae-desc").value, from: $("#ae-from").value,
+    due: $("#ae-due").value, priority: $("#ae-prio").value, dept: $("#ae-dept").value, note: $("#ae-note").value });
+  closeModal(); toast(t("Item atualizado")); await refresh();
+}
+async function deleteAdmin(id) {
+  const x = (S.db.admin || []).find((a) => a.id === id) || {};
+  if (!confirm(t("DELETE_ITEM_CONFIRM", { id, title: x.title || "" }))) return;
+  await api("admin/" + id, "DELETE");
+  if (!$("#modal").classList.contains("hidden")) closeModal();
+  toast(t("{id} excluído", { id })); await refresh();
+}
+
 function viewTemporarios() {
   const list = S.db.projects.filter((p) => p.small).sort((a, b) => (["Concluído", "Cancelado"].includes(a.status) - ["Concluído", "Cancelado"].includes(b.status)) || (a.end_date || "9999").localeCompare(b.end_date || "9999"));
   return `<h1>${t("Projetos menores e temporários")}</h1><p class="muted how-line">${t("SMALL_HELP")}</p>
@@ -1365,7 +1455,7 @@ async function uploadLogo() {
   await saveAp({ logo: data });
 }
 function cfgModules(st) {
-  const names = { painel: "Painel", entradas: "Entradas", lista: "Lista geral", projetos: "Projetos", reunioes: "Reuniões", riscos: "Riscos", fluxos: "Fluxos", summaries: "Summaries" };
+  const names = { painel: "Painel", entradas: "Entradas", lista: "Lista geral", projetos: "Projetos", temporarios: "Projetos menores", reunioes: "Reuniões", riscos: "Riscos", fluxos: "Fluxos", summaries: "Summaries", admin: "Ações do administrador" };
   return `<div class="grid"><div class="card"><h2>${t("Módulos visíveis no menu")}</h2>
     <div class="checks">${MODULES.map((m) => `<label><input type="checkbox" class="mod" value="${m}" ${(st.hidden_modules || []).includes(m) ? "" : "checked"}> ${t(names[m])}</label>`).join("")}</div>
     <div class="actions"><button onclick="busy(this, async()=>{await api('settings','PATCH',{hidden_modules:[...document.querySelectorAll('.mod')].filter(c=>!c.checked).map(c=>c.value)}); await refresh(); toast(t('Salvo'));})">${t("Salvar")}</button></div></div>

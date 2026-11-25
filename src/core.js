@@ -169,6 +169,7 @@ const Core = {
     for (const p of db.projects) p.updates ??= [];
     db.assist_examples ??= [];
     db.finished ??= [];
+    db.admin ??= []; db.settings.admin_seq ??= 0;
     db.extraction_examples ??= [];
     // lista inicial de departamentos e responsáveis (uma vez só; a lista padrão antiga é substituída)
     if (!db.settings.migrated_departments) {
@@ -1159,7 +1160,7 @@ ${this.reportHtml(s, text, esc)}
     if (head === "state" && method === "GET") {
       let dirty = this.autoMeetings();
       for (const p of db.projects) dirty = (await this.syncSchedules(p)) || dirty;
-      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons", "finished"].map((k) => [k, db[k]])), events: db.events.slice(-60),
+      return { _dirty: dirty, db: Object.fromEntries([...COLLECTIONS, "settings", "flow_examples", "meeting_suggestions", "risk_lessons", "finished", "admin"].map((k) => [k, db[k]])), events: db.events.slice(-60),
         alerts: this.alerts(), stale_pitems: this.stalePItems(), ai: AI.status(), workspace: Store.name, definitions: AI.DEFINITIONS, impact_types: AI.IMPACT_TYPES,
         summaries: db.summaries.slice(-30), today: todayISO(), assist_stats: this.assistStats(), extraction_count: (db.extraction_examples || []).length };
     }
@@ -1170,6 +1171,33 @@ ${this.reportHtml(s, text, esc)}
       }
       AI.IMPACT_TYPES = db.settings.lists.impact_types;
       return db.settings;
+    }
+    if (head === "admin_parse" && method === "POST") return AI.parseAdmin(db, body.text || "", todayISO());
+    if (head === "admin") {
+      // Ações do administrador: pontos direcionados a ela, sugestões e preocupações dela
+      const ADMIN_FIELDS = ["type", "title", "description", "from", "due", "priority", "status", "dept"];
+      const clean = (b) => Object.fromEntries(ADMIN_FIELDS.filter((k) => b[k] !== undefined).map((k) => [k, typeof b[k] === "string" ? b[k].trim() : b[k]]));
+      if (method === "POST" && !rid) {
+        if (!String(body.title || "").trim()) throw new ApiError(t("Escreva o ponto."));
+        db.settings.admin_seq = (+db.settings.admin_seq || 0) + 1;
+        const rec = { type: "Ação para mim", priority: "Média", status: "Aberto", ...clean(body), id: "ADM" + String(db.settings.admin_seq).padStart(3, "0"),
+          text: body.text || "", engine: body.engine || "", created_at: nowISO(), updated_at: nowISO(), history: [] };
+        db.admin.push(rec);
+        this.log("admin.created", rec.id, "{id} registrado: {title}", { id: rec.id, title: rec.title });
+        return rec;
+      }
+      const rec = db.admin.find((x) => x.id === rid);
+      if (!rec) throw new ApiError(t("{id} não encontrado", { id: rid }));
+      if (method === "PATCH") {
+        const was = rec.status;
+        Object.assign(rec, clean(body));
+        if (body.note?.trim()) rec.history.push({ date: nowISO(), text: body.note.trim(), kind: "progress" });
+        if (rec.status === "Fechado" && was !== "Fechado") rec.closed_at = nowISO();
+        if (rec.status !== "Fechado") rec.closed_at = "";
+        this.touch(rec);
+        return rec;
+      }
+      if (method === "DELETE") { db.admin = db.admin.filter((x) => x.id !== rid); this.log("admin.deleted", rid, "{id} removido", { id: rid }); return { ok: true }; }
     }
     if (head === "meeting_parse" && method === "POST") {
       // reunião escrita de forma corrida -> campos sugeridos (IA ou heurística) para a usuária só ajustar

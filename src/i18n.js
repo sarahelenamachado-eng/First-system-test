@@ -956,6 +956,23 @@ Object.assign(D, {
     "Excluir {id} · {name}?\n\nOs {n} itens e os {iss} riscos/problemas do projeto são apagados junto.\nOs {items} itens da lista geral e os {risks} riscos ligados a ele continuam, só sem o vínculo. As reuniões também continuam.\nA pasta do projeto no computador é mantida."]
 });
 
+Object.assign(D, {
+  "Ações do administrador": ["Admin actions", "管理员事项"], "Abertos": ["Open", "未结"], "Ações para mim": ["Actions for me", "交给我的行动"],
+  "Sugestões": ["Suggestions", "建议"], "Preocupações": ["Concerns", "关注点"], "Fechados": ["Closed", "已关闭"], "Fechado": ["Closed", "已关闭"],
+  "Ação para mim": ["Action for me", "交给我的行动"], "Sugestão": ["Suggestion", "建议"], "Preocupação": ["Concern", "关注点"],
+  ADMIN_HELP: ["Your own control: points directed to you, your suggestions and your concerns. Write it as it is and click Register; the type and fields are suggested from the text.",
+    "您自己的跟踪：直接交给您的事项、您的建议和关注点。直接写下内容并点击“登记”，系统会根据文字建议类型和字段。",
+    "Seu controle pessoal: pontos direcionados diretamente a você, suas sugestões e suas preocupações. Escreva do seu jeito e clique em Registrar; o tipo e os campos são sugeridos a partir do texto."],
+  "Novo ponto": ["New point", "新事项"],
+  ADMIN_PLACEHOLDER: ["E.g.: The director asked me to review the safety budget by Friday / Suggestion: weekly 15-min meeting with EHS / I'm worried about the delay in the substation",
+    "例如：总监让我周五前审核安全预算 / 建议：每周与EHS开15分钟会 / 我担心变电站的延误",
+    "Ex.: A diretora me pediu para revisar o orçamento de segurança até sexta / Sugestão: reunião semanal de 15 min com EHS / Estou preocupada com o atraso da subestação"],
+  "Campos (opcionais)": ["Fields (optional)", "字段（可选）"], "Quem pediu / de onde veio": ["Requested by / came from", "由谁提出/来源"], "Quem pediu": ["Requested by", "提出人"],
+  "Ponto": ["Point", "事项"], "Nenhum ponto fechado.": ["No closed points.", "暂无已关闭事项。"], "Nenhum ponto em aberto.": ["No open points.", "暂无未结事项。"],
+  "Escreva o ponto.": ["Write the point.", "请写下事项。"], "{id} fechado": ["{id} closed", "{id}已关闭"], "Editar": ["Edit", "编辑"], "Texto original": ["Original text", "原文"],
+  "{id} registrado: {title}": ["{id} recorded: {title}", "{id}已登记：{title}"], "{id} removido": ["{id} removed", "{id}已删除"]
+});
+
 /* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
 function biRender(root) {
   if (!root) return;
