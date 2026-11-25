@@ -89,7 +89,7 @@ progresso) e **Progresso e histórico geral**.
   incluir no item existente. Duplicados já criados podem ser juntados com **Mesclar**.
 
 ### Dashboards (Projetos, Reuniões e Riscos)
-Cada módulo abre com um dashboard: frase-resumo, indicadores e gráficos, e o botão **Analisar com IA**, que
+Reuniões e Riscos abrem com um dashboard; Projetos abre na **lista de projetos** e o dashboard fica na segunda aba. O dashboard tem frase-resumo, indicadores e gráficos, e o botão **Analisar com IA**, que
 interpreta os números e sugere a ação.
 - **Projetos:** "do total de XX itens, XX completos", itens em andamento e atrasados, atividades, últimos progressos; "de XX projetos ativos, XX têm itens atrasados e XX representam risco em relação ao atraso";
   situação (no prazo / atrasados / risco de atraso), atrasos por tipo, distribuição da conclusão e projetos que exigem atenção.

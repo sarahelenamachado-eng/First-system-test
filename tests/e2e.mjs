@@ -256,6 +256,9 @@ async function scenarioListAndSmall(page, label) {
   if (shots) await page.screenshot({ path: `${shots}/${label}-9-projetos-menores.png`, fullPage: true });
   await go(page, "projetos", "#view table");
   assert.ok(!(await page.textContent("#view")).includes("Mutirão de 5S"), label + ": projeto menor não aparece em Projetos");
+  // Projetos abre na lista de projetos (o dashboard é a segunda aba)
+  assert.match(await page.textContent("#view .tabs a.on"), /Lista de projetos/, label + ": Projetos abre na lista");
+  assert.ok((await page.textContent("#view table")).includes("Subestação"), label + ": lista de projetos na primeira página");
   // aba Riscos e problemas no projeto menor e no projeto normal
   for (const pid of [sp.id, "PROJ001"]) {
     await go(page, `projetos/${pid}/riscos`, "#is-text");

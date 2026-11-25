@@ -772,9 +772,10 @@ async function addScenario(col, id, sc) {
 // ------------------------------------------------------------------ projetos
 function viewProjetos(id, tab) {
   if (id && !["dash", "lista"].includes(id)) return projectDetail(byId("projects", id), tab || "geral");
-  const T = [["dash", t("Dashboard")], ["lista", t("Lista de projetos")]];
-  const head = `<h1>${t("Gerenciamento de projetos")}</h1>${tabs("projetos", T, id || "dash")}`;
-  if ((id || "dash") === "dash") return head + dashProjectsView();
+  // abre na lista de projetos; o dashboard fica na segunda aba
+  const T = [["lista", t("Lista de projetos")], ["dash", t("Dashboard")]];
+  const head = `<h1>${t("Gerenciamento de projetos")}</h1>${tabs("projetos", T, id || "lista")}`;
+  if (id === "dash") return head + dashProjectsView();
   const list = S.db.projects.filter((p) => !p.small).sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0));
   return `${head}
   <div class="grid" style="grid-template-columns: minmax(300px,2.2fr) minmax(280px,1fr)">
