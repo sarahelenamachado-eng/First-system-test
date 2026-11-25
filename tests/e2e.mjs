@@ -337,14 +337,14 @@ async function scenarioMeetingText(page, label, ai) {
   const ics = await page.evaluate((id) => icsFor(byId("meetings", id)), rq.id);
   assert.ok(ics.includes("BEGIN:VEVENT") && ics.includes("DTSTART:") && /SUMMARY:.*mutir/i.test(ics), label + ": convite .ics");
   await page.check("#inv-done-teams");
-  await page.waitForFunction((id) => Core.find("meetings", id).in_teams === true, rq.id, { polling: 100 });
+  await page.waitForFunction((id) => S.db.meetings.find((x) => x.id === id).in_teams === true && !document.querySelector("input:disabled"), rq.id, { polling: 100 });
   await page.evaluate(() => closeModal());
   await go(page, "reunioes/solicitadas", "#rqt-text");
   assert.ok(!(await page.textContent("#view")).includes(rq.id), label + ": agendada sai da lista de solicitações");
   await go(page, "reunioes/agendadas", ".sched-list");
   assert.ok((await page.textContent(`.sched-list tr[data-id='${rq.id}']`)).includes(tomorrow), label + ": aparece em Agendadas");
   await page.check(`.sched-list tr[data-id='${rq.id}'] .sc-ding`);
-  await page.waitForFunction((id) => Core.find("meetings", id).in_dingtalk === true, rq.id, { polling: 100 });
+  await page.waitForFunction((id) => S.db.meetings.find((x) => x.id === id).in_dingtalk === true && !document.querySelector("input:disabled"), rq.id, { polling: 100 });
   if (shots) await page.screenshot({ path: `${shots}/${label}-16-agendadas.png`, fullPage: true });
   // solicitação sem data: fica em Solicitações; "Agendar" leva para Agendadas
   await go(page, "reunioes/solicitadas", "#rqt-text");
