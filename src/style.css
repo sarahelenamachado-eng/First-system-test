@@ -268,3 +268,29 @@ button.chip.on { background: var(--brand); border-color: var(--brand); color: #f
 .report .r-table td.c { text-align: center; width: 36px; }
 .report tr.overdue td { background: #fff4f4; }
 .summary-doc .annex { margin-top: 24px; }
+/* modo bilíngue: inglês em cima, chinês embaixo */
+.bi-pair { display: inline-block; line-height: 1.25; vertical-align: top; }
+.bi-zh { color: var(--muted, #666); font-size: .9em; font-weight: inherit; }
+nav .bi-pair, .tabs .bi-pair, button .bi-pair, .btn .bi-pair { text-align: center; }
+
+/* Lista geral: novo item rápido e edição na linha */
+.quick-add { padding: 10px 14px; }
+.quick-add .qa-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.quick-add .qa-row #qa-title { flex: 1 1 280px; min-width: 200px; }
+.quick-add .qa-row select, .quick-add .qa-row input[type=date] { width: auto; max-width: 220px; }
+.glist td { vertical-align: top; }
+.glist select, .glist input { font-size: 13px; padding: 4px 6px; min-height: 0; }
+.glist td:nth-child(3) select { max-width: 170px; }
+.glist input[type=date] { width: 135px; }
+.glist .g-title { min-width: 200px; }
+.glist .lp { min-width: 200px; }
+.glist .g-prog { display: block; width: 100%; margin-top: 4px; border-style: dashed; }
+.glist .g-close { white-space: nowrap; }
+.glist .bi-zh, .quick-add .bi-zh { font-size: .85em; }
+.inline-filters { display: inline-block; }
+.inline-filters > summary { cursor: pointer; padding: 6px 4px; color: var(--muted, #666); }
+.inline-filters[open] { display: inline-flex; gap: 6px; align-items: center; }
+.how-line { margin: -4px 0 12px; }
+.quick-input textarea { font-size: 15px; }
+button .bi-zh, .btn .bi-zh { color: inherit; opacity: .85; }
+#view > .card + .card { margin-top: var(--gap, 14px); }

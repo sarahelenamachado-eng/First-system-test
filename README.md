@@ -16,8 +16,9 @@ Plataforma local (navegador + pasta no computador) que implementa a lógica de g
 Sem chave da IA a plataforma funciona normalmente com sugestões heurísticas (palavras‑chave, similaridade
 com o histórico e decisões anteriores). O selo no canto superior direito mostra se a IA está ativa.
 
-**Idiomas:** português, inglês e chinês simplificado — escolha no seletor no canto superior direito.
-A interface, os alertas, o histórico, os summaries e as respostas da IA seguem o idioma escolhido.
+**Idiomas:** a plataforma abre em **English + 中文**: cada texto aparece em inglês e, na linha de baixo, em chinês
+(nas listas de opção e nas caixas do navegador: "English / 中文"). No seletor do canto superior direito dá para trocar
+para só inglês, só chinês ou português. A interface, os alertas, o histórico, os summaries e as respostas da IA seguem o idioma escolhido.
 O que você digita (títulos, descrições, atas) fica como foi escrito.
 
 **Tradução automática do conteúdo (com a IA ligada):** o que você escreve (entradas, itens, projetos, riscos,
@@ -48,8 +49,9 @@ Todos os campos de departamento, responsável e participantes passam a ser lista
 o departamento dela é preenchido.
 
 ### 1. Entradas (Inputs management)
-**Entrada rápida:** cole ou escreva o que chegou numa caixa só (1ª linha = título, o resto = descrição), escolha o responsável
-e clique em **Registrar**: a IA (ou a heurística, sem chave) classifica e o item já vai para a lista geral. O resto dos campos fica em
+**Entrada rápida:** 1. escreva o que chegou numa caixa só (1ª linha = título, o resto = descrição); 2. clique em **Registrar**
+(ou Ctrl+Enter); 3. pronto. Responsável, prazo e origem ficam logo abaixo da caixa; o quadro **Registradas hoje** mostra em
+que item ou projeto cada entrada virou. A IA (ou a heurística, sem chave) classifica e o item já vai para a lista geral. O resto dos campos fica em
 "Mais detalhes (opcional)". **Registrar e revisar a classificação** abre a triagem completa, com o botão **Aceitar a sugestão e registrar**.
 Fluxo em 3 etapas para cada entrada vinda da **Diretora, Reunião, Departamento ou HQ**: entrada da informação →
 assessment (relação com itens já levantados + classificação de escopo, prioridade, urgência, impactos e gaps) →
@@ -59,6 +61,10 @@ desse projeto (a lista aparece na triagem para ajustar). Um item da lista geral 
 A IA sugere, você confirma ou corrige, e a decisão fica guardada para a IA aprender.
 
 ### 2. Lista geral de governança
+- **Editar direto na linha:** responsável, prazo, prioridade e status são listas na própria linha; o campo
+  "＋ Novo progresso…" registra o progresso com Enter. No topo, **＋ Novo item** cria um item escrevendo e apertando Enter.
+- **Fechar / 关闭:** o botão de cada linha fecha o item: ele sai da lista geral e aparece só na aba **Itens fechados**
+  (histórico por mês e por projeto / departamento). Origem e definição ficam em "Mais filtros".
 - **Itens de projeto para confirmar:** um item de projeto (aba *Itens do projeto*) que fica **5 dias sem atualização** aparece
   no topo da lista geral. Ali você registra o progresso, muda o status ou marca como finalizado. O número de dias fica em
   Configurações → Regras.
@@ -97,6 +103,14 @@ Abas de cada projeto:
 - **Impactos e riscos** — o que acontece *se o projeto for realizado* e *se não for*.
 - **Arquivos / master schedule** — arquivos na pasta local do projeto, com organização pela IA.
 - **Fluxo** — mapa visual do projeto.
+- **Riscos e problemas** — riscos e problemas que surgiram no projeto: tipo, descrição, gravidade, responsável,
+  ação / tratamento e status (Aberto, Em tratamento, Resolvido). Um risco pode ir para o módulo Riscos com **→ Riscos**.
+
+### Projetos menores e temporários
+Aba própria no menu para demandas temporárias: melhoria de operação de um departamento, controle de um risco
+temporário, demanda temporária ou outro (campo **Motivo**). Cada um tem responsável, departamento, data de término,
+itens (um por linha ao criar) e as abas Visão geral, Itens, **Riscos e problemas** e Arquivos. Eles não aparecem na
+lista de Projetos; a caixa "Projeto menor / temporário" na visão geral move um projeto entre as duas abas.
 
 ### 4. Reuniões
 Abre em **Solicitações** (requisitadas em aberto / realizadas e encerradas). Abas: Solicitações · Dashboard · **Calendário** (clique num dia para inserir; sugestões da IA tracejadas) · **Obrigatórias** ·

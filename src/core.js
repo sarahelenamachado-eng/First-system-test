@@ -23,6 +23,11 @@ function syncPeopleList(people, names) {
 }
 
 class ApiError extends Error {}
+/** HTML salvo na pasta (sem o desenho automático da tela): pares bilíngues viram "inglês<br>中文". */
+function biHtml(html) {
+  return html.replace(/<title>([\s\S]*?)<\/title>/, (m, x) => `<title>${biFlat(x)}</title>`).replace(/(<[^>]*>)|([^<]+)/g, (m, tag, txt) =>
+    tag ? biFlat(tag) : txt.includes(BI_S) ? txt.replace(BI_RE, (_, en, zh) => (en === zh ? en : `${en}<br><span style="color:#666">${zh}</span>`)) : txt);
+}
 
 /* Departamentos e principais responsáveis (lista inicial; editável em Configurações → Departamentos e pessoas). */
 const DEFAULT_DEPARTMENTS = [
@@ -121,11 +126,11 @@ const TRANSLATABLE = {
   meetings: ["title", "agenda", "minutes", "notes"],
   mandatory: ["title", "notes"],
 };
-const SUB_TRANSLATABLE = { item_actions: ["text", "progress"], pitems: ["title", "objective", "progress_desc"], activities: ["notes"], scenarios: ["description"], inputs_log: ["text"], actions: ["text", "gap_reason"], history: ["text"] };
+const SUB_TRANSLATABLE = { item_actions: ["text", "progress"], pitems: ["title", "objective", "progress_desc"], issues: ["text", "action"], activities: ["notes"], scenarios: ["description"], inputs_log: ["text"], actions: ["text", "gap_reason"], history: ["text"] };
 function strHash(s) { let h = 5381; s = String(s); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
-const SUB_LISTS = { projects: ["pitems", "activities", "scenarios"], risks: ["inputs_log", "scenarios"], items: ["item_actions"] };
-const SUB_PREFIX = { pitems: "IT", activities: "AT", scenarios: "SC", inputs_log: "RI", item_actions: "AC" };
-const SUB_LABEL = { pitems: "Itens do projeto", activities: "Atividades", scenarios: "Impactos e riscos", inputs_log: "Inputs do risco", item_actions: "Ações do item" };
+const SUB_LISTS = { projects: ["pitems", "activities", "scenarios", "issues"], risks: ["inputs_log", "scenarios"], items: ["item_actions"] };
+const SUB_PREFIX = { issues: "RP", pitems: "IT", activities: "AT", scenarios: "SC", inputs_log: "RI", item_actions: "AC" };
+const SUB_LABEL = { issues: "Riscos e problemas", pitems: "Itens do projeto", activities: "Atividades", scenarios: "Impactos e riscos", inputs_log: "Inputs do risco", item_actions: "Ações do item" };
 
 const Core = {
   db: null,
@@ -148,7 +153,7 @@ const Core = {
   normalize(db) {
     const d = defaultSettings();
     db.settings = { ...d, ...db.settings, lists: { ...d.lists, ...(db.settings?.lists || {}) }, appearance: { ...d.appearance, ...(db.settings?.appearance || {}) } };
-    for (const p of db.projects) { p.main ??= false; p.pitems ??= []; p.activities ??= []; p.scenarios ??= []; p.actions ??= []; p.schedules ??= []; p.sub_seq ??= 0; }
+    for (const p of db.projects) { p.main ??= false; p.small ??= false; p.issues ??= []; p.pitems ??= []; p.activities ??= []; p.scenarios ??= []; p.actions ??= []; p.schedules ??= []; p.sub_seq ??= 0; }
     for (const r of db.risks) { r.impacts ??= []; r.inputs_log ??= []; r.scenarios ??= []; r.sub_seq ??= 0; }
     for (const m of db.meetings) { m.status ??= "Realizada"; m.scheduling ??= m.auto || m.status === "Solicitada" ? "Pré-agendada" : ""; }
     db.flows ??= [];
@@ -225,7 +230,7 @@ const Core = {
       rec.status ??= "Em andamento";
       rec.actions ??= [];
       rec.schedules ??= [];
-      rec.pitems ??= []; rec.activities ??= []; rec.scenarios ??= []; rec.main ??= false; rec.sub_seq = 0;
+      rec.pitems ??= []; rec.activities ??= []; rec.scenarios ??= []; rec.issues ??= []; rec.main ??= false; rec.small ??= false; rec.sub_seq = 0;
       rec.last_monitored = todayISO();
       rec.next_meeting ??= addDays(todayISO(), +db.settings.project_meeting_cadence_days || 15);
       rec.folder = this.folderFor("projects", rec.id);
@@ -324,7 +329,7 @@ const Core = {
     }
     // aprendizado: guarda sugestão x decisão
     this.db.feedback.push({ date: nowISO(), ref: inp.id, text: AI.inputText(inp), ai: inp.ai_suggestion || null, final: { ...a, definitions: defs, relation_mode: mode } });
-    Object.assign(inp, { status: "Registrado", item_id: item.id, assessment: a, definitions: defs });
+    Object.assign(inp, { status: "Registrado", item_id: item.id, project_id: created.project || "", registered_at: nowISO(), assessment: a, definitions: defs });
     this.touch(inp);
     this.log("inputs.committed", inp.id, "{inp} classificado e registrado em {item} ({defs})", { inp: inp.id, item: item.id, defs: defs.map((d) => AI.DEFINITIONS[d] || d) });
     return created;
@@ -373,7 +378,7 @@ const Core = {
     rec.done_at = date;
     rec.archive_file = file;
     if (kind === "items") (rec.history ??= []).push({ date: nowISO(), text: I18N.fill("Finalizado — salvo em {file}", { file }), kind: "progress", done: true });
-    try { await Store.write(file, this.finishedHtml(kind, rec, proj, place)); }
+    try { await Store.write(file, biHtml(this.finishedHtml(kind, rec, proj, place))); }
     catch (e) { console.warn("arquivo do item finalizado:", e); rec.archive_file = ""; }
     const key = `${kind}:${proj?.id || ""}:${rec.id}`;
     this.db.finished = this.db.finished.filter((f) => f.key !== key);
@@ -589,8 +594,9 @@ ${(rec.item_actions || []).length ? `<h2>${esc(t("Ações do item"))}</h2><ul>${
   /** Corpo do summary no formato do modelo (usado na tela e no HTML salvo na pasta). */
   reportHtml(s, conclusion, esc, link = (id, label) => esc(label)) {
     const r = s.report;
-    const date = (iso) => { const d = new Date((iso || "") + "T12:00:00"); return isNaN(d) ? iso || "" : d.toLocaleDateString(I18N.htmlLang(), { day: "numeric", month: "long" }); };
-    const title = t(r.title[0], r.kind === "weekly" ? { start: date(r.title[1].start), end: date(r.title[1].end) } : { date: date(r.title[1].date) });
+    const date = (iso, loc = I18N.htmlLang()) => { const d = new Date((iso || "") + "T12:00:00"); return isNaN(d) ? iso || "" : d.toLocaleDateString(loc, { day: "numeric", month: "long" }); };
+    const ttl = (lang, loc) => I18N.tl(r.title[0], r.kind === "weekly" ? { start: date(r.title[1].start, loc), end: date(r.title[1].end, loc) } : { date: date(r.title[1].date, loc) }, lang);
+    const title = I18N.lang === "bi" ? biPair(ttl("en", "en"), ttl("zh", "zh-CN")) : ttl(I18N.lang, I18N.htmlLang());
     const hd = (hs) => `<tr>${hs.map((h) => `<th>${esc(t(h))}</th>`).join("")}</tr>`;
     const empty = (n, txt) => `<tr><td colspan=${n} class="muted">${esc(txt)}</td></tr>`;
     const meetRows = r.meetings.map((m, i) => {
@@ -1082,6 +1088,7 @@ ${this.reportHtml(s, text, esc)}
   // ------------------------------------------------------------ tradução automática
   /** Texto do campo no idioma pedido (tradução válida para o texto atual) ou o original. */
   loc(rec, field, lang = I18N.lang) {
+    if (lang === "bi") return biPair(this.loc(rec, field, "en"), this.loc(rec, field, "zh"));
     const v = rec?.[field], tr = rec?.tr?.[field];
     if (!v || !tr || tr.hash !== strHash(v) || tr.source === lang || !tr.segments?.length) return v || "";
     return tr.segments.map((x) => x[lang]).filter(Boolean).join(" ") || v;
@@ -1215,7 +1222,7 @@ ${this.reportHtml(s, text, esc)}
       const summary = this.buildSummary(kind, body.date || todayISO());
       const text = body.narrative === false ? "" : await AI.narrative(summary);
       const file = `SUMMARIES/${kind === "weekly" ? "semanal" : "diario"}_${summary.period.start}_${I18N.lang}.html`;
-      await Store.write(file, this.summaryHtml(summary, text));
+      await Store.write(file, biHtml(this.summaryHtml(summary, text)));
       db.summaries = db.summaries.filter((x) => x.file !== file);
       db.summaries.push({ type: kind, period: summary.period, file, generated_at: nowISO() });
       return { summary, narrative: text, file };
@@ -1440,6 +1447,18 @@ ${this.reportHtml(s, text, esc)}
       rec.definitions = [...new Set([...(rec.definitions || []), "novo_projeto"])];
       this.touch(rec);
       return { project: proj.id, pitems: this.addSubitems(proj, subs, rec.id) };
+    }
+    if (col === "projects" && action === "issue_to_risk") {
+      // risco surgido no projeto -> registro no módulo Riscos, vinculado ao projeto
+      const x = (rec.issues || []).find((e) => e.id === body.issue);
+      if (!x) throw new ApiError(t("{id} não encontrado", { id: body.issue }));
+      if (x.risk_id && this.find("risks", x.risk_id)) return { risk: x.risk_id };
+      const risk = await this.createRecord("risks", { title: x.text.slice(0, 120), description: `${rec.id} · ${rec.name}: ${x.text}`, owner: x.owner || rec.owner || "",
+        mode: "Monitorar", probability: x.severity || "Média", impact: { Alta: "Alto", Média: "Médio", Baixa: "Baixo" }[x.severity] || "Médio", notes: x.action || "" });
+      this.link("projects", rec.id, "risks", risk.id);
+      x.risk_id = risk.id;
+      this.touch(rec);
+      return { risk: risk.id };
     }
     if (col === "items" && action === "merge") return this.mergeItems(rid, (body.into || "").toUpperCase());
     if (col === "items" && action === "progress") {

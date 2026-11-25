@@ -3,36 +3,63 @@
  * A chave de cada texto é o próprio texto em português. Valores guardados nos dados (status,
  * prioridade, origem, impactos…) também são chaves em português e só são traduzidos na tela.
  * Parâmetros {x} são substituídos; parâmetros que são listas têm cada item traduzido. */
+/* Modo bilíngue (bi): cada texto aparece em inglês e, na linha de baixo, em chinês.
+ * t() devolve um par marcado [en|zh]; depois de desenhar a tela, biRender() troca o par por
+ * "inglês <br> 中文" (em atributos e opções de lista: "English / 中文"). */
+const BI_S = "\uE000", BI_M = "\uE001", BI_E = "\uE002";
+const BI_RE = /\uE000([^\uE000-\uE002]*)\uE001([^\uE000-\uE002]*)\uE002/g;
+/** Escolhe um idioma de um texto com pares (which = "en" | "zh"), ou junta os dois com sep. */
+function biPick(s, which, sep = " / ") {
+  if (typeof s !== "string" || !s.includes(BI_S)) return s;
+  let prev;
+  do { prev = s; s = s.replace(BI_RE, (_, en, zh) => (which === "en" ? en : which === "zh" ? zh : en === zh ? en : en + sep + zh)); } while (s !== prev && s.includes(BI_S));
+  return s.replace(/[\uE000-\uE002]/g, ""); // pedaço de par cortado (ex.: texto encurtado): descarta as marcas
+}
+const biFlat = (s, sep = " / ") => biPick(String(s ?? ""), "both", sep);
+const biPair = (en, zh) => (en === zh || !zh ? en : !en ? zh : BI_S + en + BI_M + zh + BI_E);
+
 const I18N = {
-  lang: "pt",
-  LANGS: { pt: "Português", en: "English", zh: "中文" },
+  lang: "bi",
+  LANGS: { bi: "English + 中文", en: "English", zh: "中文", pt: "Português" },
 
   async init() {
     let l = null;
     try { l = await KV.get("lang"); } catch { /* sem IndexedDB */ }
-    if (!l) { const nav = (navigator.language || "pt").toLowerCase(); l = nav.startsWith("zh") ? "zh" : nav.startsWith("en") ? "en" : "pt"; }
-    this.lang = this.LANGS[l] ? l : "pt";
+    // a plataforma passa a abrir em inglês + chinês (uma vez; depois vale a escolha do usuário)
+    let moved = true;
+    try { moved = await KV.get("lang_bi_default"); } catch { /* sem IndexedDB */ }
+    if (!moved) { l = "bi"; try { await KV.set("lang_bi_default", true); await KV.set("lang", "bi"); } catch { /* sem IndexedDB */ } }
+    this.lang = this.LANGS[l] ? l : "bi";
   },
   async set(l) {
-    this.lang = this.LANGS[l] ? l : "pt";
+    this.lang = this.LANGS[l] ? l : "bi";
     try { await KV.set("lang", this.lang); } catch { /* sem IndexedDB */ }
   },
-  htmlLang() { return { pt: "pt-BR", en: "en", zh: "zh-CN" }[this.lang]; },
+  htmlLang() { return { pt: "pt-BR", en: "en", zh: "zh-CN", bi: "en" }[this.lang]; },
   /** Nome do idioma para instruir a IA. */
-  aiLanguage() { return { pt: "português do Brasil", en: "inglês (English)", zh: "chinês simplificado (简体中文)" }[this.lang]; },
+  aiLanguage() {
+    return { pt: "português do Brasil", en: "inglês (English)", zh: "chinês simplificado (简体中文)",
+      bi: "inglês e chinês simplificado: cada frase ou ponto em inglês e, na linha de baixo, a mesma frase em chinês (简体中文)" }[this.lang];
+  },
 
-  /** Preenche {params} num modelo já traduzido. */
-  fill(tpl, params = {}, tr = (x) => x) {
+  /** Preenche {params} num modelo já traduzido (pick escolhe o idioma de parâmetros bilíngues). */
+  fill(tpl, params = {}, tr = (x) => x, pick = null) {
     return String(tpl).replace(/\{(\w+)\}/g, (m, k) => {
       const v = params[k];
       if (v === undefined || v === null) return "";
-      return Array.isArray(v) ? v.map(tr).join(", ") : String(v);
+      const out = Array.isArray(v) ? v.map(tr).join(", ") : String(v);
+      return pick ? biPick(out, pick) : out;
     });
   },
-  t(key, params) {
+  /** Texto num idioma específico (pt | en | zh). */
+  tl(key, params, lang) {
     const e = D[key];
-    const tpl = e ? (this.lang === "pt" ? e[2] ?? key : this.lang === "en" ? e[0] : e[1]) : key;
-    return params ? this.fill(tpl, params, (x) => I18N.t(x)) : tpl;
+    const tpl = e ? (lang === "pt" ? e[2] ?? key : lang === "en" ? e[0] : e[1]) : key;
+    return params ? this.fill(tpl, params, (x) => I18N.tl(x, null, lang), lang === "pt" ? null : lang) : tpl;
+  },
+  t(key, params) {
+    if (this.lang !== "bi") return this.tl(key, params, this.lang);
+    return biPair(this.tl(key, params, "en"), this.tl(key, params, "zh"));
   },
 };
 const t = (key, params) => I18N.t(key, params);
@@ -869,3 +896,88 @@ Object.assign(D, {
   "Aceitar a sugestão e registrar": ["Accept the suggestion and register", "接受建议并登记"], "ou ajuste abaixo antes de confirmar": ["or adjust below before confirming", "或在下方调整后再确认"],
   "Mais detalhes: riscos, impactos, gaps e sua análise": ["More details: risks, impacts, gaps and your analysis", "更多信息：风险、影响、差距和您的分析"]
 });
+
+Object.assign(D, {
+  "Mais filtros": ["More filters", "更多筛选"], "Itens fechados": ["Closed items", "已关闭事项"], "Novo item": ["New item", "新事项"],
+  "O que precisa ser feito?": ["What needs to be done?", "需要做什么？"], "Fechar": ["Close", "关闭"],
+  "Fechar o item: sai da lista geral e vai para Itens fechados": ["Close the item: it leaves the general list and goes to Closed items", "关闭事项：从总清单移除并进入“已关闭事项”"],
+  "itens fechados ficam na aba Itens fechados": ["closed items stay in the Closed items tab", "已关闭的事项在“已关闭事项”标签中"],
+  "{id} fechado: saiu da lista geral e está em Itens fechados": ["{id} closed: removed from the general list and moved to Closed items", "{id}已关闭：已从总清单移到“已关闭事项”"],
+  "Escreva o item.": ["Write the item.", "请输入事项。"], "Riscos e problemas": ["Risks and issues", "风险与问题"], "Arquivos": ["Files", "文件"],
+  "Projetos menores": ["Small projects", "小型项目"], "Projetos menores e temporários": ["Small and temporary projects", "小型及临时项目"],
+  "Projeto menor / temporário": ["Small / temporary project", "小型/临时项目"],
+  "Ex.: Mutirão de 5S no almoxarifado": ["E.g.: 5S drive in the warehouse", "例如：仓库5S整理活动"],
+  "Criar projeto menor": ["Create small project", "创建小型项目"], "Nenhum projeto menor ainda.": ["No small projects yet.", "暂无小型项目。"],
+  "Projeto {id} criado": ["Project {id} created", "项目{id}已创建"],
+  ISSUES_HELP: ["Record risks and issues that came up in this project. A risk can also be sent to the risk register.", "记录本项目中出现的风险与问题。风险也可以转入风险登记表。", "Registre os riscos e problemas que surgiram neste projeto. Um risco também pode ser enviado ao módulo Riscos."],
+  "Nenhum risco ou problema registrado.": ["No risks or issues recorded.", "暂无风险或问题记录。"],
+  "Descreva o risco ou problema.": ["Describe the risk or issue.", "请描述风险或问题。"], "Registrado em {id}": ["Recorded in {id}", "已记录到{id}"],
+  "Data de término": ["End date", "结束日期"], "Itens (um por linha, opcional)": ["Items (one per line, optional)", "事项（每行一个，可选）"],
+  "O que aconteceu / o que pode acontecer": ["What happened / what could happen", "发生了什么/可能发生什么"],
+  "Gravidade": ["Severity", "严重程度"], "Ação / tratamento": ["Action / treatment", "措施/处理"], "Término": ["End", "结束"],
+  "Problema": ["Issue", "问题"], "Resolvido": ["Resolved", "已解决"], "Motivo": ["Purpose", "目的"],
+  "Melhoria de operação": ["Operational improvement", "运营改善"], "Controle de risco temporário": ["Temporary risk control", "临时风险控制"],
+  "Demanda temporária": ["Temporary demand", "临时需求"], "Outro": ["Other", "其他"], "Enviar ao registro de riscos": ["Send to risk register", "转入风险登记表"]
+});
+
+Object.assign(D, {
+  INPUT_HOW: ["1. Write what came in  ·  2. Click Register  ·  3. Done: it goes to the general list (numbered lists become a project)", "1. 写下收到的内容  ·  2. 点击“登记”  ·  3. 完成：进入总清单（编号列表会变成项目）", "1. Escreva o que chegou  ·  2. Clique em Registrar  ·  3. Pronto: vai para a lista geral (listas numeradas viram projeto)"],
+  SMALL_HELP: ["To follow temporary demands: improving a department's operation, controlling a temporary risk, and so on. Each one has its own items and a Risks and issues tab.", "用于跟进临时需求：部门运营改善、临时风险控制等。每个项目有自己的事项和“风险与问题”标签。", "Para acompanhar demandas temporárias: melhoria de operação de um departamento, controle de um risco temporário etc. Cada um tem seus itens e a aba Riscos e problemas."],
+  "Registradas hoje": ["Registered today", "今日已登记"], "Virou": ["Became", "转为"]
+});
+
+/* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
+function biRender(root) {
+  if (!root) return;
+  const attrs = (el) => { for (const a of [...(el.attributes || [])]) if (a.value.includes(BI_S)) el.setAttribute(a.name, biFlat(a.value)); };
+  if (root.nodeType === 3) return biText(root);
+  if (root.nodeType !== 1) return;
+  attrs(root);
+  root.querySelectorAll("*").forEach(attrs);
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [];
+  while (w.nextNode()) if (w.currentNode.nodeValue.includes(BI_S)) list.push(w.currentNode);
+  list.forEach(biText);
+  root.querySelectorAll("textarea, input").forEach((el) => { if (String(el.value).includes(BI_S)) el.value = biFlat(el.value); });
+}
+function biText(node) {
+  const v = node.nodeValue, p = node.parentNode;
+  if (!v.includes(BI_S) || !p) return;
+  if (["OPTION", "TEXTAREA", "TITLE", "SCRIPT", "STYLE"].includes(p.nodeName)) { node.nodeValue = biFlat(v); return; }
+  const pair = (en, zh) => {
+    const z = document.createElement("span"); z.className = "bi-zh"; z.textContent = zh.trim();
+    const w = document.createElement("span"); w.className = "bi-pair"; w.append(en.trim(), document.createElement("br"), z);
+    return w;
+  };
+  // texto simples em volta dos pares (ícones, números, " · ") fica fora, numa linha só
+  if (!v.replace(BI_RE, "").match(/[\uE000-\uE002]/)) {
+    const frag = document.createDocumentFragment();
+    let last = 0;
+    for (const m of v.matchAll(BI_RE)) {
+      if (m.index > last) frag.append(v.slice(last, m.index));
+      frag.append(m[1] === m[2] ? m[1] : pair(m[1], m[2]));
+      last = m.index + m[0].length;
+    }
+    if (last < v.length) frag.append(v.slice(last));
+    p.replaceChild(frag, node);
+    return;
+  }
+  const en = biPick(v, "en"), zh = biPick(v, "zh");
+  if (en === zh) { node.nodeValue = en; return; }
+  const z = document.createElement("span"); z.className = "bi-zh"; z.textContent = zh.trim();
+  const w = document.createElement("span"); w.className = "bi-pair"; w.append(en.trim(), document.createElement("br"), z);
+  p.replaceChild(w, node);
+}
+if (typeof document !== "undefined" && typeof MutationObserver !== "undefined") {
+  new MutationObserver((muts) => {
+    for (const m of muts) {
+      if (m.type === "attributes") { const val = m.target.getAttribute(m.attributeName); if (val && val.includes(BI_S)) m.target.setAttribute(m.attributeName, biFlat(val)); }
+      else if (m.type === "characterData") biText(m.target);
+      else m.addedNodes.forEach((n) => biRender(n));
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+  // caixas do navegador (confirmar / avisar) não mostram HTML: as duas línguas em linhas separadas
+  const _confirm = window.confirm.bind(window), _alert = window.alert.bind(window), _prompt = window.prompt.bind(window);
+  window.confirm = (m) => _confirm(biFlat(m, "\n"));
+  window.alert = (m) => _alert(biFlat(m, "\n"));
+  window.prompt = (m, d) => _prompt(biFlat(m, "\n"), d);
+}

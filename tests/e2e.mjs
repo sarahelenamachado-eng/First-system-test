@@ -22,6 +22,8 @@ async function newPage(aiMock) {
   if (aiMock) await page.route("https://api.anthropic.com/v1/messages", aiMock);
   await page.goto("https://teste.local/index.html");
   await page.waitForSelector(".welcome");
+  // a plataforma abre em inglês + chinês; os cenários abaixo conferem os textos em português
+  await page.evaluate(() => setLang("pt"));
   if (aiMock) await page.evaluate(() => AI.configure("sk-ant-teste", "claude-opus-5-5"));
   await page.evaluate(async () => { await Store.use(await navigator.storage.getDirectory()); await boot(); });
   await page.waitForSelector("#as-text");
@@ -71,8 +73,8 @@ async function scenario(page, label) {
   await page.click("#modal-body button:has-text('Salvar')");
   await page.waitForSelector("text=Item atualizado");
   await page.evaluate(() => closeModal());
-  await go(page, "lista", "table");
-  const ids = await page.$$eval("#view table tr.click td:first-child", (t) => t.map((x) => x.textContent));
+  await go(page, "lista", ".glist");
+  const ids = await page.$$eval("#view .glist tr[data-id]", (t) => t.map((x) => x.dataset.id));
   assert.deepEqual(ids, ["GOV001"], label + ": finalizado sai da lista geral");
   await go(page, "lista/finalizados", "#view h2");
   const fin = await page.textContent("#view");
@@ -152,7 +154,7 @@ async function scenarioDeptsAndSubitems(page, label) {
   if (shots) await page.screenshot({ path: `${shots}/${label}-6-triagem.png` });
   await page.fill("#t-subs", "Organizar almoxarifado\nPintar faixas");
   await page.click("button:has-text('Aceitar a sugestão e registrar')");
-  await page.waitForSelector("text=2 itens");
+  await page.waitForFunction(() => S.db.projects.some((p) => p.name === "Ações de 5S"));
   assert.deepEqual(await page.evaluate(() => S.db.projects.find((p) => p.name === "Ações de 5S").pitems.map((x) => x.title)), ["Organizar almoxarifado", "Pintar faixas"]);
   await go(page, `projetos/${proj.id}/itens`, "#pi-new-t");
   assert.equal(await page.$eval(`#pi-w-IT001`, (e) => e.tagName + ":" + e.value), "SELECT:Peter 姜大鹏", label + ": responsável do item é lista");
@@ -163,7 +165,96 @@ async function scenarioDeptsAndSubitems(page, label) {
   await go(page, "lista/" + gid, ".subs-box button");
   await page.click(".subs-box button");
   await page.waitForSelector("text=3 itens criados");
+  await page.waitForFunction(() => S.db.projects.some((p) => p.name === "Programa 5S"));
   assert.deepEqual(await page.evaluate(() => S.db.projects.find((p) => p.name === "Programa 5S").pitems.map((x) => x.title)), ["Organizar almoxarifado", "Pintar faixas", "Auditoria mensal"]);
+}
+
+/** Lista geral editável na linha, botão Fechar, projetos menores e aba de riscos e problemas. */
+async function scenarioListAndSmall(page, label) {
+  const listIds = () => page.$$eval("#view .glist tr[data-id]", (t) => t.map((x) => x.dataset.id));
+  await go(page, "lista", "#qa-title");
+  // novo item direto na lista: escreve e aperta Enter
+  await page.fill("#qa-title", "Comprar EPIs para a brigada");
+  await page.selectOption("#qa-owner", "Alfredo");
+  await page.press("#qa-title", "Enter");
+  await page.waitForSelector(".glist >> text=Comprar EPIs para a brigada");
+  const gid = await page.evaluate(() => S.db.items.find((i) => i.title === "Comprar EPIs para a brigada").id);
+  assert.equal(await page.evaluate((id) => Core.find("items", id).area_main, gid), "EHS", label + ": departamento vem da pessoa");
+  // edição na linha: prioridade e progresso
+  await page.selectOption(`tr[data-id='${gid}'] td:nth-child(5) select`, "Alta");
+  await page.waitForFunction((id) => S.db.items.find((i) => i.id === id).priority === "Alta", gid);
+  await page.fill(`tr[data-id='${gid}'] .g-prog`, "Cotação recebida");
+  await page.press(`tr[data-id='${gid}'] .g-prog`, "Enter");
+  await page.waitForSelector(`tr[data-id='${gid}'] .lp >> text=Cotação recebida`);
+  if (shots) await page.screenshot({ path: `${shots}/${label}-8-lista-editavel.png`, fullPage: true });
+  // Fechar: sai da lista geral e aparece só em Itens fechados
+  await page.click(`tr[data-id='${gid}'] .g-close`);
+  await page.waitForSelector(`text=${gid} fechado`);
+  await page.waitForFunction((id) => !S.db.items.find((i) => i.id === id).status.includes("Andamento") && !document.querySelector(`.glist tr[data-id='${id}']`), gid);
+  assert.ok(!(await listIds()).includes(gid), label + ": item fechado sai da lista geral");
+  await go(page, "lista/finalizados", "#view h2");
+  assert.ok((await page.textContent("#view")).includes("Comprar EPIs para a brigada"), label + ": item fechado na aba Itens fechados");
+  assert.match(await page.textContent("#view .tabs"), /Itens fechados/);
+  // projetos menores e temporários: aba própria, fora da lista de projetos
+  await go(page, "temporarios", "#tp-name");
+  await page.fill("#tp-name", "Mutirão de 5S no almoxarifado");
+  await page.selectOption("#tp-owner", "Lira");
+  await page.selectOption("#tp-purpose", "Controle de risco temporário");
+  await page.fill("#tp-end", await page.evaluate(() => addDays(todayISO(), 20)));
+  await page.fill("#tp-items", "Separar materiais\nPintar faixas");
+  await page.click("#tp-add");
+  await page.waitForSelector("#view table >> text=Mutirão de 5S no almoxarifado");
+  const sp = await page.evaluate(() => S.db.projects.find((p) => p.name === "Mutirão de 5S no almoxarifado"));
+  assert.equal(sp.small, true); assert.equal(sp.purpose, "Controle de risco temporário"); assert.equal(sp.dept, "Production 生产");
+  assert.deepEqual(sp.pitems.map((x) => x.title), ["Separar materiais", "Pintar faixas"]);
+  assert.ok((await page.textContent("#view table")).includes("Controle de risco temporário"));
+  if (shots) await page.screenshot({ path: `${shots}/${label}-9-projetos-menores.png`, fullPage: true });
+  await go(page, "projetos", "#view table");
+  assert.ok(!(await page.textContent("#view")).includes("Mutirão de 5S"), label + ": projeto menor não aparece em Projetos");
+  // aba Riscos e problemas no projeto menor e no projeto normal
+  for (const pid of [sp.id, "PROJ001"]) {
+    await go(page, `projetos/${pid}/riscos`, "#is-text");
+    await page.selectOption("#is-type", "Risco");
+    await page.fill("#is-text", "Chuva pode atrasar a pintura " + pid);
+    await page.selectOption("#is-sev", "Alta");
+    await page.fill("#is-action", "Pintar na área coberta");
+    await page.click("#is-add");
+    await page.waitForSelector("#is-table >> text=Chuva pode atrasar a pintura " + pid);
+    await page.fill("#is-text", "Faltou tinta " + pid);
+    await page.click("#is-add");
+    await page.waitForSelector("#is-table >> text=Faltou tinta " + pid);
+  }
+  if (shots) await page.screenshot({ path: `${shots}/${label}-10-riscos-problemas.png`, fullPage: true });
+  await page.click("#is-table button:has-text('Riscos')");
+  await page.waitForFunction(() => Core.find("projects", "PROJ001").issues.some((x) => x.risk_id));
+  const rid = await page.evaluate(() => Core.find("projects", "PROJ001").issues.find((x) => x.risk_id).risk_id);
+  assert.ok((await page.evaluate((r) => Core.find("risks", r).title, rid)).startsWith("Chuva pode atrasar"), label + ": risco enviado ao registro de riscos");
+  await page.selectOption("#is-table tr:has-text('Faltou tinta') select", "Resolvido");
+  await page.waitForFunction(() => Core.find("projects", "PROJ001").issues.some((x) => x.status === "Resolvido"));
+  await go(page, "temporarios", "#view table");
+  assert.match(await page.textContent(`#view tr:has-text('${sp.id}')`), /2/, label + ": contagem de riscos e problemas abertos");
+}
+
+/** Interface em inglês e chinês: cada texto com o inglês em cima e o chinês embaixo. */
+async function scenarioBilingual(page, label) {
+  await page.evaluate(() => setLang("bi"));
+  await go(page, "lista", ".glist");
+  const nav = await page.$$eval("nav a[href='#lista'] .bi-pair", (e) => e.map((x) => [x.childNodes[0].textContent, x.querySelector(".bi-zh").textContent]));
+  assert.deepEqual(nav, [["General list", "总清单"]], label + ": menu em duas linhas");
+  const h1 = await page.$eval("#view h1", (e) => e.innerText);
+  assert.ok(/General governance list|General list/i.test(h1.split("\n")[0]) && /[\u4e00-\u9fff]/.test(h1.split("\n")[1] || ""), label + ": título inglês em cima, chinês embaixo: " + h1);
+  assert.match(await page.$eval(".g-close", (e) => e.innerText), /Close\s*\n?\s*关闭/);
+  const ph = await page.getAttribute("#qa-title", "placeholder");
+  assert.equal(ph, "What needs to be done? / 需要做什么？", label + ": placeholder sem marcadores");
+  assert.ok(!(await page.content()).includes("\uE000"), label + ": nenhum marcador sobrando");
+  if (shots) await page.screenshot({ path: `${shots}/${label}-11-ingles-chines.png`, fullPage: true });
+  await go(page, "temporarios", "#tp-name");
+  assert.match(await page.$eval("#view h1", (e) => e.innerText), /Small and temporary projects\s*\n\s*小型及临时项目/);
+  if (shots) await page.screenshot({ path: `${shots}/${label}-12-temporarios-bi.png`, fullPage: true });
+  await go(page, "entradas", "#f-text");
+  assert.match(await page.$eval("#f-quick", (e) => e.innerText), /Register\s*\n\s*登记/);
+  if (shots) await page.screenshot({ path: `${shots}/${label}-13-entradas-bi.png`, fullPage: true });
+  await page.evaluate(() => setLang("pt"));
 }
 
 // ---------------------------------------------------------------- 1) modo heurístico (sem chave)
@@ -172,6 +263,8 @@ async function scenarioDeptsAndSubitems(page, label) {
   assert.match(await page.textContent("#ai-badge"), /heurística/);
   const r = await scenario(page, "heuristico");
   await scenarioDeptsAndSubitems(page, "heuristico");
+  await scenarioListAndSmall(page, "heuristico");
+  await scenarioBilingual(page, "heuristico");
   assert.match(r.narrative, /^Hoje foram realizadas 1 reuniões e discutidos 1 tópicos/);
   assert.match(r.narrative, /\n1\. Reunião GPS: Aprovar o plano de cabos/);
   assert.match(r.narrative, /Subestação: /);
@@ -199,6 +292,8 @@ async function scenarioDeptsAndSubitems(page, label) {
   assert.match(await page.textContent("#ai-badge"), /claude-opus-5-5/);
   const r = await scenario(page, "ia");
   await scenarioDeptsAndSubitems(page, "ia");
+  await scenarioListAndSmall(page, "ia");
+  await scenarioBilingual(page, "ia");
   assert.match(await page.evaluate(() => S.db.inputs.at(-1).ai_suggestion.engine), /claude/, "avaliação veio da IA simulada");
   assert.match(r.narrative, /Itens com progresso hoje: IT001 cabos lançados/);
   assert.ok(prompt.includes("lista numerada") && prompt.includes('"projetos_e_itens_com_progresso"') && prompt.includes("Cabos lançados até o painel 3") && prompt.includes("Aprovar o plano de cabos"), "prompt da IA leva reuniões e progresso");

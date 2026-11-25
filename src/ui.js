@@ -75,8 +75,10 @@ function toast(text) {
   clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.add("hidden"), 3500);
 }
 async function busy(btn, fn) {
-  const old = btn.textContent; btn.disabled = true; btn.textContent = t("Processando…");
-  try { await fn(); } catch (e) { toast(t("Erro: ") + t(e.message)); } finally { btn.disabled = false; btn.textContent = old; }
+  // campos (select/input) só ficam travados; botões mostram "Processando…"
+  const isBtn = btn.tagName === "BUTTON", old = isBtn ? btn.innerHTML : "";
+  btn.disabled = true; if (isBtn) btn.textContent = t("Processando…");
+  try { await fn(); } catch (e) { toast(t("Erro: ") + t(e.message)); } finally { btn.disabled = false; if (isBtn) btn.innerHTML = old; }
 }
 function openModal(html) { $("#modal-body").innerHTML = html; $("#modal").classList.remove("hidden"); }
 function closeModal() { $("#modal").classList.add("hidden"); }
@@ -95,7 +97,7 @@ async function openFile(rel) {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 function download(url, name) { const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
-function downloadText(text, name, type) { const url = URL.createObjectURL(new Blob([text], { type })); download(url, name); setTimeout(() => URL.revokeObjectURL(url), 60000); }
+function downloadText(text, name, type) { const url = URL.createObjectURL(new Blob([biFlat(text)], { type })); download(url, biFlat(name, "_")); setTimeout(() => URL.revokeObjectURL(url), 60000); }
 function fileLink(rel, label) { return `<a href="#" data-rel="${esc(rel)}" onclick="openFile(this.dataset.rel);return false">${esc(label)}</a>`; }
 function exportCsv() { downloadText(Core.exportCsv(), `${t("lista_governanca")}_${S.today}.csv`, "text/csv;charset=utf-8"); }
 function linksHtml(rec) {
@@ -117,7 +119,7 @@ async function sub(col, id, list, entry, extra = {}) { await api(`${col}/${id}/s
 async function subRemove(col, id, list, sid) { if (confirm(t("Excluir este registro?"))) { await api(`${col}/${id}/sub`, "POST", { list, remove: sid }); await refresh(); } }
 
 // ------------------------------------------------------------------ traduções do conteúdo
-const LANG_LABEL = { pt: "Português", en: "English", zh: "中文" };
+const LANG_LABEL = { pt: "Português", en: "English", zh: "中文", bi: "English + 中文" };
 function trButton(col, id) { return `<button class="small ghost tr-btn" title="${esc(t("Traduções"))}" onclick="event.stopPropagation();openTranslations('${col}','${id}')">🌐 ${t("Traduções")}</button>`; }
 /** Mostra, abaixo de um campo editável, a tradução no idioma da tela (quando o original está em outro idioma). */
 function trPreview(rec, f) {
@@ -171,13 +173,16 @@ async function translateNow(col, id, force = false) {
   openTranslations(col, id);
 }
 async function copyText(text) {
+  text = biFlat(text, "\n");
   try { await navigator.clipboard.writeText(text); toast(t("Copiado")); }
   catch { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); toast(t("Copiado")); }
 }
 // quando a tradução em segundo plano termina, atualiza a tela (se o usuário não estiver digitando)
 window.addEventListener("gov-translated", () => {
   const ae = document.activeElement;
-  if (S && !["INPUT", "TEXTAREA", "SELECT"].includes(ae?.tagName) && $("#modal").classList.contains("hidden")) refresh();
+  // também não redesenha se há texto digitado e ainda não salvo em algum campo da tela
+  const dirty = [...document.querySelectorAll("#view input, #view textarea")].some((e) => !["checkbox", "radio", "file"].includes(e.type) && e.value !== e.defaultValue);
+  if (S && !dirty && !["INPUT", "TEXTAREA", "SELECT"].includes(ae?.tagName) && $("#modal").classList.contains("hidden")) refresh();
 });
 
 // ------------------------------------------------------------------ aparência e idioma
@@ -200,6 +205,7 @@ function applyStaticTexts() {
   const sel = $("#lang");
   if (sel) sel.value = I18N.lang;
   document.querySelector(".brand .ai").textContent = I18N.lang === "pt" ? "IA" : "AI";
+  document.title = biFlat(t("Governança")) + " AI";
   if (!S?.db.settings.appearance.title) $("#app-title").textContent = t("Governança");
 }
 async function setLang(l) {
@@ -214,12 +220,13 @@ function render() {
   if (!S) return;
   applyAppearance();
   const [view, id, tab] = (location.hash.slice(1) || "painel").split("/");
-  document.querySelectorAll("nav a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + view));
+  const navView = view === "projetos" && byId("projects", id)?.small ? "temporarios" : view;
+  document.querySelectorAll("nav a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === "#" + navView));
   const b = $("#ai-badge");
   b.className = "badge" + (S.ai.enabled ? " on" : "");
-  b.textContent = S.ai.enabled ? t("IA: ") + S.ai.model : t("IA offline (heurística)");
+  b.textContent = S.ai.enabled ? (I18N.lang === "pt" ? "IA: " : "AI: ") + S.ai.model : t("IA offline (heurística)");
   b.title = S.ai.detail ? t(S.ai.detail) : "";
-  const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, reunioes: viewReunioes, riscos: viewRiscos,
+  const V = { painel: viewPainel, entradas: viewEntradas, lista: viewLista, projetos: viewProjetos, temporarios: viewTemporarios, reunioes: viewReunioes, riscos: viewRiscos,
     fluxos: viewFluxos, summaries: viewSummaries, config: viewConfig }[view] || viewPainel;
   $("#view").innerHTML = V(id, tab);
   if (V === viewEntradas && id) openTriage(id);
@@ -264,17 +271,20 @@ function viewEntradas() {
   const pages = Math.max(1, Math.ceil(all.length / 25));
   FI.page = Math.min(FI.page, pages - 1);
   const list = all.slice(FI.page * 25, (FI.page + 1) * 25);
+  const today = S.db.inputs.filter((i) => i.status === "Registrado" && String(i.registered_at || i.updated_at || i.created_at || "").slice(0, 10) === S.today).reverse();
+  const res = (i) => i.item_id ? `<a href="#lista/${i.item_id}">${i.item_id}</a>${i.project_id ? ` · <a href="#projetos/${i.project_id}/itens">${i.project_id}</a>` : ""}` : "";
   return `<h1>${t("Inputs management")}</h1>
-  <div class="steps"><span class="step on">${t("1. Entrada da informação")}</span><span class="step">${t("2. Assessment (relação + classificação)")}</span><span class="step">${t("3. Definição")}</span><span class="step">${t("4. Lista geral + módulos")}</span></div>
-  <div class="grid" style="grid-template-columns: minmax(320px, 1.1fr) minmax(300px, 1fr)">
+  <p class="muted how-line">${t("INPUT_HOW")}</p>
   <div class="card quick-input"><h2>⚡ ${t("Nova entrada")}</h2>${LAST_QUICK ? quickResult(LAST_QUICK) : ""}
-    <p class="muted">${t("QUICK_INPUT_HINT")}</p>
-    <textarea id="f-text" style="min-height:120px" placeholder="${esc(t("QUICK_INPUT_PLACEHOLDER"))}"></textarea>
-    <div class="row"><div>${L("Origem")}<select id="f-source">${opts(LIST("sources"), LIST("sources")[0])}</select></div>
-      <div>${L("Responsável")}${personSelect("f-owner", "", "f-area")}</div><div>${L("Prazo")}<input id="f-due" type="date"></div></div>
+    <textarea id="f-text" style="min-height:110px" placeholder="${esc(t("QUICK_INPUT_PLACEHOLDER"))}" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))busy($('#f-quick'), ()=>saveInput(false))"></textarea>
+    <div class="row"><div>${L("Responsável")}${personSelect("f-owner", "", "f-area")}</div><div>${L("Prazo")}<input id="f-due" type="date"></div>
+      <div>${L("Origem")}<select id="f-source">${opts(LIST("sources"), LIST("sources")[0])}</select></div></div>
+    <div class="actions"><button id="f-quick" onclick="busy(this, ()=>saveInput(false))">✓ ${t("Registrar")}</button>
+      <button class="ghost" id="f-review" onclick="busy(this, ()=>saveInput(true))">${t("Registrar e revisar a classificação")}</button></div>
     <details class="more"><summary>${t("Mais detalhes (opcional)")}</summary>${inputForm()}</details>
-    <div class="actions"><button id="f-quick" onclick="busy(this, ()=>saveInput(false))">${t("Registrar")}</button>
-      <button class="ghost" id="f-review" onclick="busy(this, ()=>saveInput(true))">${t("Registrar e revisar a classificação")}</button></div></div>
+    </div>
+  ${today.length && !FI.all ? `<div class="card"><h2>✓ ${t("Registradas hoje")} (${today.length})</h2><table>${th(["ID", "Entrada", "Virou"])}
+    ${today.map((i) => `<tr class="click" onclick="location.hash='entradas/${i.id}'"><td>${i.id}</td><td>${esc(lc(i, "title"))}</td><td onclick="event.stopPropagation()">${res(i)}</td></tr>`).join("")}</table></div>` : ""}
   <div class="card"><h2>${t(FI.all ? "Entradas" : "Entradas pendentes")} (${all.length})</h2>
     <div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(FI.q)}" onchange="FI.q=this.value;FI.page=0;render()">
       <label class="inline-check"><input type="checkbox" ${FI.all ? "checked" : ""} onchange="FI.all=this.checked;FI.page=0;render()"> ${t("Mostrar registradas")}</label></div>
@@ -282,7 +292,7 @@ function viewEntradas() {
     ${list.map((i) => `<tr class="click" onclick="location.hash='entradas/${i.id}'"><td>${i.id}</td><td>${esc(lc(i, "title"))}</td><td>${esc(tv(i.source))}</td>
       <td>${pill(tv(i.status), i.status === "Registrado" ? "p-Baixa" : "p-Média")} ${i.item_id ? pill(i.item_id) : ""}</td></tr>`).join("") || `<tr><td colspan=4 class="muted">${t(FI.all ? "Nenhuma entrada." : "Nenhuma entrada pendente.")}</td></tr>`}
   </table>
-  ${pages > 1 ? `<div class="pager"><span></span><span><button class="small ghost" ${FI.page === 0 ? "disabled" : ""} onclick="FI.page--;render()">←</button> ${FI.page + 1} / ${pages} <button class="small ghost" ${FI.page >= pages - 1 ? "disabled" : ""} onclick="FI.page++;render()">→</button></span></div>` : ""}</div></div>`;
+  ${pages > 1 ? `<div class="pager"><span></span><span><button class="small ghost" ${FI.page === 0 ? "disabled" : ""} onclick="FI.page--;render()">←</button> ${FI.page + 1} / ${pages} <button class="small ghost" ${FI.page >= pages - 1 ? "disabled" : ""} onclick="FI.page++;render()">→</button></span></div>` : ""}</div>`;
 }
 let LAST_QUICK = null;
 function quickResult(r) {
@@ -457,10 +467,9 @@ function listToolbar() {
   return `<div class="toolbar"><input placeholder="${esc(t("Buscar…"))}" value="${esc(F.q)}" onchange="F.q=this.value;F.page=0;render()">
     <select onchange="F.status=this.value;F.page=0;render()"><option value="">${t("Status")}</option>${opts(STATUS_ITEM.filter((x) => x !== "Concluído"), F.status)}</select>
     <select onchange="F.prio=this.value;F.page=0;render()"><option value="">${t("Prioridade")}</option>${opts(LEVELS, F.prio)}</select>
-    <select onchange="F.src=this.value;F.page=0;render()"><option value="">${t("Origem")}</option>${opts(LIST("sources"), F.src)}</select>
-    <select onchange="F.def=this.value;F.page=0;render()"><option value="">${t("Definição")}</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${esc(t(v))}</option>`).join("")}</select>
+    <details class="more inline-filters"><summary>${t("Mais filtros")}</summary><select onchange="F.src=this.value;F.page=0;render()"><option value="">${t("Origem")}</option>${opts(LIST("sources"), F.src)}</select>
+    <select onchange="F.def=this.value;F.page=0;render()"><option value="">${t("Definição")}</option>${Object.entries(S.definitions).map(([k, v]) => `<option value="${k}" ${F.def === k ? "selected" : ""}>${esc(t(v))}</option>`).join("")}</select></details>
     <select onchange="F.due=this.value;F.page=0;render()"><option value="">${t("Prazo")}</option><option value="vencidos" ${F.due === "vencidos" ? "selected" : ""}>${t("Vencidos")}</option><option value="proximos" ${F.due === "proximos" ? "selected" : ""}>${t("Vencem em breve")}</option></select>
-    <a class="btn ghost" href="#lista/finalizados">${t("Ver finalizados (histórico)")}</a>
     <button class="ghost" onclick="exportCsv()">${t("Baixar planilha (CSV)")}</button></div>`;
 }
 /** Tabela paginada de itens (usada na lista geral e no painel por departamento). */
@@ -468,14 +477,50 @@ function itemsTable(all) {
   const pages = Math.max(1, Math.ceil(all.length / PAGE));
   F.page = Math.min(F.page, pages - 1);
   const rows = all.slice(F.page * PAGE, (F.page + 1) * PAGE);
-  return `<div class="card" style="overflow:auto"><table>${th(["ID", "Item", "Departamento", "Responsável", "Prazo", "Prioridade", "Impactos", "Definição", "Último progresso", "Status"])}
-  ${rows.map((i) => { const lp = lastProgress(i), la = lateActions(i); return `<tr class="click ${isOverdue(i) || la.length ? "overdue" : ""}" onclick="location.hash='lista/${i.id}'"><td>${i.id}</td><td>${esc(lc(i, "title"))}</td><td>${esc(deptOf(i) || "—")}</td><td>${esc(i.owner)}</td>
-    <td>${dueCell(i)}${la.length ? `<br><small class="late-txt">${t("{n} ações vencidas", { n: la.length })}</small>` : ""}</td>
-    <td>${prio(i.priority)}</td><td>${(i.impacts || []).map((x) => pill(t(x))).join("")}</td><td>${(i.definitions || []).map((d) => pill(defLabel(d))).join("")}</td>
-    <td class="lp">${lp ? `<span class="muted">${esc((lp.date || "").slice(0, 10))}</span> ${esc(lc(lp, "text").slice(0, 120))}` : '<span class="muted">—</span>'}</td><td>${esc(tv(i.status))}</td></tr>`; }).join("") || `<tr><td colspan=10 class="muted">${t("Nenhum item.")}</td></tr>`}
+  const open = STATUS_ITEM.filter((x) => x !== "Concluído");
+  return `<div class="card quick-add" id="qa-box"><div class="qa-row"><b>＋ ${t("Novo item")}</b>
+      <input id="qa-title" placeholder="${esc(t("O que precisa ser feito?"))}" onkeydown="if(event.key==='Enter')busy(this, quickAddItem)">
+      ${personSelect("qa-owner", "")}<input type="date" id="qa-due" title="${esc(t("Prazo"))}">
+      <button id="qa-add" onclick="busy(this, quickAddItem)">${t("Adicionar")}</button></div></div>
+  <div class="card" style="overflow:auto"><table class="glist">${th(["ID", "Item", "Responsável", "Prazo", "Prioridade", "Último progresso", "Status", ""])}
+  ${rows.map((i) => { const lp = lastProgress(i), la = lateActions(i); return `<tr class="${isOverdue(i) || la.length ? "overdue" : ""}" data-id="${i.id}"><td><a href="#lista/${i.id}">${i.id}</a></td>
+    <td class="g-title"><a href="#lista/${i.id}">${esc(lc(i, "title"))}</a>${deptOf(i) ? `<br><small class="muted">${esc(deptOf(i))}</small>` : ""}${la.length ? `<br><small class="late-txt">${t("{n} ações vencidas", { n: la.length })}</small>` : ""}</td>
+    <td>${personSelect(`g-o-${i.id}`, i.owner || "", "", `onchange="busy(this, ()=>quickPatch('${i.id}', 'owner', this.value))"`)}</td>
+    <td><input type="date" class="${isOverdue(i) ? "late" : ""}" value="${esc(i.due_date)}" onchange="busy(this, ()=>quickPatch('${i.id}', 'due_date', this.value))">${isOverdue(i) ? `<br><small class="late-txt">${t("{n} dias de atraso", { n: daysSince(i.due_date) })}</small>` : ""}</td>
+    <td><select class="small-sel" onchange="busy(this, ()=>quickPatch('${i.id}', 'priority', this.value))">${opts(LEVELS, i.priority || "Média")}</select></td>
+    <td class="lp">${lp ? `<span class="muted">${esc((lp.date || "").slice(0, 10))}</span> ${esc(lc(lp, "text").slice(0, 120))}` : ""}
+      <input class="g-prog" placeholder="＋ ${esc(t("Novo progresso…"))}" onkeydown="if(event.key==='Enter'&&this.value.trim())busy(this, ()=>quickProgress('${i.id}', this.value))"></td>
+    <td><select class="small-sel" onchange="busy(this, ()=>quickPatch('${i.id}', 'status', this.value))">${opts(open.includes(i.status) ? open : [i.status, ...open], i.status)}</select></td>
+    <td><button class="small g-close" title="${esc(t("Fechar o item: sai da lista geral e vai para Itens fechados"))}" onclick="busy(this, ()=>closeItem('${i.id}'))">✓ ${t("Fechar")}</button></td></tr>`; }).join("") || `<tr><td colspan=8 class="muted">${t("Nenhum item.")}</td></tr>`}
   </table>
-  <div class="pager"><span class="muted">${t("{n} itens", { n: all.length })}${" · " + t("finalizados ficam no histórico")}</span>
+  <div class="pager"><span class="muted">${t("{n} itens", { n: all.length })} · ${t("itens fechados ficam na aba Itens fechados")}</span>
     ${pages > 1 ? `<button class="small ghost" ${F.page === 0 ? "disabled" : ""} onclick="F.page--;render()">←</button> ${F.page + 1} / ${pages} <button class="small ghost" ${F.page >= pages - 1 ? "disabled" : ""} onclick="F.page++;render()">→</button>` : ""}</div></div>`;
+}
+/* Edição direto na linha da lista geral. */
+async function quickPatch(id, field, value) {
+  const it = byId("items", id), body = { [field]: value, _silent: true };
+  if (field === "owner" && !deptOf(it)) { const p = peopleList().find((x) => x.name === value); if (p?.dept) body.area_main = p.dept; }
+  await api("items/" + id, "PATCH", body);
+  toast(t("Item atualizado")); await refresh();
+}
+async function quickProgress(id, text) {
+  await api(`items/${id}/progress`, "POST", { text: text.trim() });
+  toast(t("Progresso registrado")); await refresh();
+}
+async function closeItem(id) {
+  await api("items/" + id, "PATCH", { status: "Concluído", _note: undefined });
+  toast(t("{id} fechado: saiu da lista geral e está em Itens fechados", { id })); await refresh();
+}
+async function quickAddItem() {
+  const title = $("#qa-title").value.trim();
+  if (!title) throw new Error(t("Escreva o item."));
+  const dup = Core.findDuplicates(title);
+  if (dup.length && !confirm(t("DUP_CONFIRM", { ids: dup.join(", ") }))) return;
+  const owner = $("#qa-owner").value, p = peopleList().find((x) => x.name === owner);
+  const it = await api("items", "POST", { title, owner, due_date: $("#qa-due").value, area_main: (DEP_SEL && DEP_SEL !== "" ? DEP_SEL : "") || p?.dept || "",
+    source: "Outro", source_detail: "Pedido pontual", emitted_at: S.today, priority: "Média", urgency: "Média", item_actions: [], sub_seq: 0 });
+  toast(t("Registrado em {id}", { id: it.id })); await refresh();
+  $("#qa-title")?.focus();
 }
 /* Departamento do item = "Área principal". Itens sem departamento ficam em "Geral". */
 const deptOf = (i) => (i.area_main || "").trim();
@@ -488,7 +533,7 @@ function departments() {
 let DEP_SEL = null; // null = nenhum escolhido; "" = Geral (sem departamento)
 function viewLista(id) {
   const nDone = (S.db.finished || []).length;
-  const T = [["", t("Lista geral")], ["departamentos", t("Por departamento")], ["finalizados", `${t("Finalizados (histórico)")} (${nDone})`]];
+  const T = [["", t("Lista geral")], ["departamentos", t("Por departamento")], ["finalizados", `✓ ${t("Itens fechados")} (${nDone})`]];
   const cur = ["departamentos", "finalizados"].includes(id) ? id : "";
   const tabsHtml = `<div class="tabs">${T.map(([k, l]) => `<a href="#lista${k ? "/" + k : ""}" class="${cur === k ? "on" : ""}">${l}</a>`).join("")}</div>`;
   const nOver = S.db.items.filter((i) => isOverdue(i) || lateActions(i).length).length, nSoon = S.db.items.filter(isDueSoon).length;
@@ -663,7 +708,7 @@ function viewProjetos(id, tab) {
   const T = [["dash", t("Dashboard")], ["lista", t("Lista de projetos")]];
   const head = `<h1>${t("Gerenciamento de projetos")}</h1>${tabs("projetos", T, id || "dash")}`;
   if ((id || "dash") === "dash") return head + dashProjectsView();
-  const list = S.db.projects.slice().sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0));
+  const list = S.db.projects.filter((p) => !p.small).sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0));
   return `${head}
   <div class="grid" style="grid-template-columns: minmax(300px,2.2fr) minmax(280px,1fr)">
   <div class="card" style="overflow:auto"><table>${th(["ID", "Projeto", "Responsável", "% concluído", "Atividades", "Itens adicionais abertos", "Próx. reunião", "Status"])}
@@ -679,23 +724,84 @@ function projectDetail(p, tab) {
   if (!p) return `<p>${t("Projeto não encontrado.")}</p>`;
   const pct = Core.projectPct(p), apct = Core.activitiesPct(p);
   const open = (p.actions || []).filter((a) => a.status !== "Concluída").length;
-  const T = [["geral", t("Visão geral")], ["itens", `${t("Itens do projeto")} (${pct == null ? 0 : pct}%)`], ["atividades", `${t("Atividades (planilha)")} (${p.activities.length})`],
-    ["adicionais", `${t("Itens adicionais do projeto")} (${open})`], ["impactos", t("Impactos e riscos")], ["arquivos", t("Arquivos / master schedule")], ["fluxo", t("Fluxo")]];
-  const body = { geral: projOverview, itens: projItems, atividades: projActivities, adicionais: projAdditional, impactos: (x) => scenariosTab("projects", x), arquivos: projFiles, fluxo: projFlow }[tab] || projOverview;
-  return `<p><a href="#projetos/lista">← ${t("Projetos")}</a></p>
+  const nIss = (p.issues || []).filter((x) => x.status !== "Resolvido").length;
+  const issuesT = ["riscos", `⚠ ${t("Riscos e problemas")} (${nIss})`];
+  const T = p.small
+    ? [["geral", t("Visão geral")], ["itens", `${t("Itens do projeto")} (${pct == null ? 0 : pct}%)`], issuesT, ["arquivos", t("Arquivos")]]
+    : [["geral", t("Visão geral")], ["itens", `${t("Itens do projeto")} (${pct == null ? 0 : pct}%)`], issuesT, ["atividades", `${t("Atividades (planilha)")} (${p.activities.length})`],
+      ["adicionais", `${t("Itens adicionais do projeto")} (${open})`], ["impactos", t("Impactos e riscos")], ["arquivos", t("Arquivos / master schedule")], ["fluxo", t("Fluxo")]];
+  const body = { geral: projOverview, itens: projItems, riscos: issuesTab, atividades: projActivities, adicionais: projAdditional, impactos: (x) => scenariosTab("projects", x), arquivos: projFiles, fluxo: projFlow }[tab] || projOverview;
+  return `<p>${p.small ? `<a href="#temporarios">← ${t("Projetos menores e temporários")}</a>` : `<a href="#projetos/lista">← ${t("Projetos")}</a>`}</p>
   <div class="title-row"><h1>${p.main ? '<span class="star">★</span> ' : ""}${p.id} · ${esc(lc(p, "name"))} ${trButton("projects", p.id)}</h1><div class="pct-big">${t("Concluído")}: ${bar(pct)}</div></div>
   <p class="muted">${t("Pasta local:")} <code>${esc(S.workspace)}/${esc(p.folder)}</code>${apct != null ? ` · ${t("Progresso das atividades")}: ${apct}%` : ""}</p>
   ${tabs("projetos/" + p.id, T, tab)}${body(p)}`;
+}
+/* Projetos menores e temporários: lista própria, cadastro rápido e as mesmas abas (itens, riscos e problemas, arquivos). */
+function viewTemporarios() {
+  const list = S.db.projects.filter((p) => p.small).sort((a, b) => (["Concluído", "Cancelado"].includes(a.status) - ["Concluído", "Cancelado"].includes(b.status)) || (a.end_date || "9999").localeCompare(b.end_date || "9999"));
+  return `<h1>${t("Projetos menores e temporários")}</h1><p class="muted how-line">${t("SMALL_HELP")}</p>
+  <div class="card quick-add"><div class="row">
+    <div style="grid-column: span 2">${L("Nome")}<input id="tp-name" placeholder="${esc(t("Ex.: Mutirão de 5S no almoxarifado"))}"></div>
+    <div>${L("Responsável")}${personSelect("tp-owner", "", "tp-dept")}</div><div>${L("Departamento")}${deptSelect("tp-dept", "")}</div></div>
+    <div class="row"><div>${L("Motivo")}<select id="tp-purpose">${opts(SMALL_PURPOSES, "Melhoria de operação")}</select></div><div>${L("Data de término")}<input type="date" id="tp-end"></div></div>
+    ${L("Itens (um por linha, opcional)")}<textarea id="tp-items" style="min-height:60px"></textarea>
+    <div class="actions"><button id="tp-add" onclick="busy(this, addSmallProject)">＋ ${t("Criar projeto menor")}</button></div></div>
+  <div class="card" style="overflow:auto;margin-top:var(--gap)"><table>${th(["ID", "Projeto", "Motivo", "Responsável", "Departamento", "% concluído", "Riscos e problemas", "Término", "Status"])}
+  ${list.map((p) => { const late = p.end_date && p.end_date < S.today && !["Concluído", "Cancelado"].includes(p.status), iss = (p.issues || []).filter((x) => x.status !== "Resolvido").length;
+    return `<tr class="click ${late ? "overdue" : ""}" onclick="location.hash='projetos/${p.id}'"><td>${p.id}</td><td>${esc(lc(p, "name"))}</td><td>${esc(tv(p.purpose || ""))}</td><td>${esc(p.owner)}</td><td>${esc(p.dept || "")}</td>
+    <td>${bar(Core.projectPct(p))}</td><td>${iss ? pill(String(iss), "p-Alta") : '<span class="muted">0</span>'}</td><td>${late ? pill(p.end_date, "p-Alta") : esc(p.end_date || "")}</td><td>${esc(tv(p.status))}</td></tr>`; }).join("")
+    || `<tr><td colspan=9 class="muted">${t("Nenhum projeto menor ainda.")}</td></tr>`}</table></div>`;
+}
+async function addSmallProject() {
+  const name = $("#tp-name").value.trim();
+  if (!name) throw new Error(t("Informe o nome."));
+  const p = await api("projects", "POST", { name, owner: $("#tp-owner").value, dept: $("#tp-dept").value, purpose: $("#tp-purpose").value, end_date: $("#tp-end").value, small: true });
+  for (const title of $("#tp-items").value.split("\n").map((x) => x.trim()).filter(Boolean))
+    await api(`projects/${p.id}/sub`, "POST", { list: "pitems", entry: { title, owner: p.owner, status: "Aberto", progress_desc: "" } });
+  toast(t("Projeto {id} criado", { id: p.id }));
+  await refresh();
+}
+/* Riscos e problemas surgidos durante o projeto. */
+const ISSUE_STATUS = ["Aberto", "Em tratamento", "Resolvido"];
+const SMALL_PURPOSES = ["Melhoria de operação", "Controle de risco temporário", "Demanda temporária", "Outro"];
+function issuesTab(p) {
+  const list = (p.issues || []).slice().sort((a, b) => (a.status === "Resolvido") - (b.status === "Resolvido") || (b.created_at || "").localeCompare(a.created_at || ""));
+  return `<div class="card"><h2>⚠ ${t("Riscos e problemas")}</h2><p class="muted">${t("ISSUES_HELP")}</p>
+    <div class="row"><div>${L("Tipo")}<select id="is-type">${opts(["Problema", "Risco"], "Problema")}</select></div><div style="grid-column: span 2">${L("O que aconteceu / o que pode acontecer")}<input id="is-text"></div>
+      <div>${L("Gravidade")}<select id="is-sev">${opts(LEVELS, "Média")}</select></div><div>${L("Responsável")}${personSelect("is-owner", p.owner || "")}</div></div>
+    ${L("Ação / tratamento")}<input id="is-action">
+    <div class="actions"><button id="is-add" onclick="busy(this, ()=>addIssue('${p.id}'))">＋ ${t("Registrar")}</button></div>
+    <div style="overflow:auto"><table id="is-table">${th(["ID", "Tipo", "Descrição", "Gravidade", "Responsável", "Ação / tratamento", "Status", "Data", ""])}
+    ${list.map((x) => `<tr class="${x.status === "Resolvido" ? "done" : x.severity === "Alta" ? "overdue" : ""}"><td>${x.id}</td><td>${pill(tv(x.type), x.type === "Risco" ? "p-Média" : "p-Alta")}</td>
+      <td>${esc(lc(x, "text"))}</td><td>${prio(x.severity)}</td><td>${esc(x.owner)}</td>
+      <td><input value="${esc(x.action)}" onchange="busy(this, ()=>sub('projects','${p.id}','issues',{id:'${x.id}',action:this.value}))"></td>
+      <td><select onchange="busy(this, ()=>sub('projects','${p.id}','issues',{id:'${x.id}',status:this.value,resolved_at:this.value==='Resolvido'?S.today:''}))">${opts(ISSUE_STATUS, x.status)}</select></td>
+      <td class="nowrap">${esc((x.created_at || "").slice(0, 10))}</td>
+      <td class="nowrap">${x.type === "Risco" ? (x.risk_id ? `<a href="#riscos/${x.risk_id}">${x.risk_id}</a>` : `<button class="small ghost" title="${esc(t("Enviar ao registro de riscos"))}" onclick="busy(this, ()=>issueToRisk('${p.id}','${x.id}'))">→ ${t("Riscos")}</button>`) : ""}
+        <button class="small ghost danger" onclick="busy(this, ()=>subRemove('projects','${p.id}','issues','${x.id}'))">×</button></td></tr>`).join("")
+      || `<tr><td colspan=9 class="muted">${t("Nenhum risco ou problema registrado.")}</td></tr>`}</table></div></div>`;
+}
+async function addIssue(pid) {
+  const text = $("#is-text").value.trim();
+  if (!text) throw new Error(t("Descreva o risco ou problema."));
+  await sub("projects", pid, "issues", { type: $("#is-type").value, text, severity: $("#is-sev").value, owner: $("#is-owner").value, action: $("#is-action").value.trim(), status: "Aberto" });
+}
+async function issueToRisk(pid, id) {
+  const r = await api(`projects/${pid}/issue_to_risk`, "POST", { issue: id });
+  toast(t("Registrado em {id}", { id: r.risk })); await refresh();
 }
 function projOverview(p) {
   const meetings = S.db.meetings.filter((m) => m.project_id === p.id).slice().reverse();
   return `<div class="grid">
   <div class="card"><h2>${t("Dados")}</h2>${L("Descrição")}<textarea id="pd-desc">${esc(p.description)}</textarea>${trPreview(p, "description")}
     ${L("Objetivo do projeto")}<textarea id="pd-obj" style="min-height:50px">${esc(p.objective)}</textarea>
-    <div class="row"><div>${L("Responsável")}${personSelect("pd-owner", p.owner)}</div><div>${L("Status")}<select id="pd-status">${opts(["Em andamento", "Em risco", "Pausado", "Concluído", "Cancelado"], p.status)}</select></div><div>${L("Próxima reunião")}<input type="date" id="pd-next" value="${esc(p.next_meeting)}"></div></div>
-    <div class="checks"><label><input type="checkbox" id="pd-main" ${p.main ? "checked" : ""}> ${t("Projeto principal (gera reuniões de acompanhamento automaticamente)")}</label></div>
+    <div class="row"><div>${L("Responsável")}${personSelect("pd-owner", p.owner)}</div><div>${L("Status")}<select id="pd-status">${opts(["Em andamento", "Em risco", "Pausado", "Concluído", "Cancelado"], p.status)}</select></div><div>${L("Próxima reunião")}<input type="date" id="pd-next" value="${esc(p.next_meeting)}"></div>
+      <div>${L("Data de término")}<input type="date" id="pd-end" value="${esc(p.end_date)}"></div></div>
+    <div class="checks"><label><input type="checkbox" id="pd-main" ${p.main ? "checked" : ""}> ${t("Projeto principal (gera reuniões de acompanhamento automaticamente)")}</label>
+      <label><input type="checkbox" id="pd-small" ${p.small ? "checked" : ""}> ${t("Projeto menor / temporário")}</label></div>
+    ${p.small ? `<div class="row"><div>${L("Motivo")}<select id="pd-purpose">${opts(SMALL_PURPOSES, p.purpose || "Outro")}</select></div><div>${L("Departamento")}${deptSelect("pd-dept", p.dept || "")}</div></div>` : ""}
     ${L("Atualização / monitoramento")}<textarea id="pd-note" style="min-height:50px"></textarea>
-    <div class="actions"><button onclick="busy(this, async()=>{await api('projects/${p.id}','PATCH',{description:$('#pd-desc').value,objective:$('#pd-obj').value,owner:$('#pd-owner').value,status:$('#pd-status').value,next_meeting:$('#pd-next').value,main:$('#pd-main').checked,_note:$('#pd-note').value.trim()||undefined}); toast(t('Projeto atualizado')); await refresh();})">${t("Salvar (marca monitoramento)")}</button>
+    <div class="actions"><button onclick="busy(this, async()=>{await api('projects/${p.id}','PATCH',{description:$('#pd-desc').value,objective:$('#pd-obj').value,owner:$('#pd-owner').value,status:$('#pd-status').value,next_meeting:$('#pd-next').value,end_date:$('#pd-end').value,small:$('#pd-small').checked,...($('#pd-purpose')?{purpose:$('#pd-purpose').value,dept:$('#pd-dept').value}:{}),main:$('#pd-main').checked,_note:$('#pd-note').value.trim()||undefined}); toast(t('Projeto atualizado')); await refresh();})">${t("Salvar (marca monitoramento)")}</button>
     <a class="btn ghost" href="#reunioes/confirmar" onclick="window._newMeetingProject='${p.id}'">${t("Registrar reunião")}</a></div>
     ${L("Vínculos")}<div>${linksHtml(p)}</div>${linkForm("projects", p.id)}</div>
   <div>${projectProgressBox(p)}<div class="card" style="margin-top:var(--gap)"><h2>${t("Reuniões do projeto")}</h2><table>${th(["ID", "Reunião", "Data", "Status"])}
