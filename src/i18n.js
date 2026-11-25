@@ -949,6 +949,13 @@ Object.assign(D, {
   "Campos sugeridos pela IA. Ajuste o que precisar e salve.": ["Fields suggested by the AI. Adjust what you need and save.", "AI已建议字段。请调整后保存。"]
 });
 
+Object.assign(D, {
+  "Excluir projeto": ["Delete project", "删除项目"],
+  DELETE_PROJECT_CONFIRM: ["Delete {id} · {name}?\n\nThe project's {n} items and {iss} risks/issues are deleted with it.\nThe {items} general-list items and {risks} risks linked to it stay, just without the link. Meetings stay too.\nThe project folder on your computer is kept.",
+    "删除{id} · {name}？\n\n项目的{n}个事项和{iss}个风险/问题将一并删除。\n与其关联的{items}个总清单事项和{risks}个风险会保留，只是取消关联。会议也会保留。\n电脑上的项目文件夹会保留。",
+    "Excluir {id} · {name}?\n\nOs {n} itens e os {iss} riscos/problemas do projeto são apagados junto.\nOs {items} itens da lista geral e os {risks} riscos ligados a ele continuam, só sem o vínculo. As reuniões também continuam.\nA pasta do projeto no computador é mantida."]
+});
+
 /* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
 function biRender(root) {
   if (!root) return;

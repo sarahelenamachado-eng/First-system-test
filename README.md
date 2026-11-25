@@ -110,6 +110,9 @@ Abas de cada projeto:
 - **Impactos e riscos** — o que acontece *se o projeto for realizado* e *se não for*.
 - **Arquivos / master schedule** — arquivos na pasta local do projeto, com organização pela IA.
 - **Fluxo** — mapa visual do projeto.
+- **Excluir projeto** — botão 🗑 na lista (Projetos e Projetos menores) e "Excluir projeto" na visão geral. A confirmação
+  diz o que acontece: itens e riscos/problemas do projeto são apagados junto; itens da lista geral, riscos e reuniões ligados
+  continuam, só sem o vínculo; a pasta do projeto no computador é mantida.
 - **Riscos e problemas** — riscos e problemas que surgiram no projeto: tipo, descrição, gravidade, responsável,
   ação / tratamento e status (Aberto, Em tratamento, Resolvido). Um risco pode ir para o módulo Riscos com **→ Riscos**.
 

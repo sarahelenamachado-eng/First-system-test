@@ -281,6 +281,22 @@ async function scenarioListAndSmall(page, label) {
   await page.waitForFunction(() => Core.find("projects", "PROJ001").issues.some((x) => x.status === "Resolvido"));
   await go(page, "temporarios", "#view table");
   assert.match(await page.textContent(`#view tr:has-text('${sp.id}')`), /2/, label + ": contagem de riscos e problemas abertos");
+  // excluir projetos: pede confirmação dizendo o que acontece com itens, riscos e reuniões
+  let msg = "";
+  const onDlg = (d) => { msg = d.message(); };
+  page.on("dialog", onDlg);
+  await page.click(`#view tr:has-text('${sp.id}') .p-del`);
+  await page.waitForFunction((id) => !S.db.projects.some((p) => p.id === id), sp.id, { polling: 100 });
+  assert.ok(msg.includes(sp.id) && msg.includes("2 itens") && msg.includes("2 riscos/problemas") && msg.includes("pasta do projeto"), label + ": confirmação explica o que acontece: " + msg);
+  assert.ok(!(await page.textContent("#view")).includes("Mutirão de 5S"), label + ": projeto menor excluído some da lista");
+  const p5 = await page.evaluate(() => S.db.projects.find((p) => p.name === "Programa 5S").id);
+  const g5 = await page.evaluate(() => S.db.items.find((i) => i.title === "Programa 5S").id);
+  await go(page, `projetos/${p5}`, "#pd-delete");
+  await page.click("#pd-delete");
+  await page.waitForFunction((id) => !S.db.projects.some((p) => p.id === id) && location.hash === "#projetos", p5, { polling: 100 });
+  assert.ok(msg.includes("1 itens da lista geral"), label + ": avisa do item da lista geral ligado: " + msg);
+  assert.deepEqual(await page.evaluate((g) => Core.find("items", g).links.projects || [], g5), [], label + ": item da lista geral fica, sem o vínculo");
+  page.off("dialog", onDlg);
 }
 
 /** Reunião escrita de forma corrida: a IA (ou a heurística) preenche os campos e a usuária só ajusta antes de salvar. */

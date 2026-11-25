@@ -1278,6 +1278,11 @@ ${this.reportHtml(s, text, esc)}
     if (method === "DELETE" && rec) {
       db[col] = db[col].filter((r) => r.id !== rid);
       // item excluído também sai do histórico de fechados; entradas que apontavam para ele ficam sem o vínculo
+      if (col === "projects") {
+        // itens do projeto saem com ele (também do histórico de fechados); reuniões ficam, sem o vínculo
+        db.finished = (db.finished || []).filter((f) => !(f.kind === "pitems" && f.project === rid));
+        for (const m of db.meetings) if (m.project_id === rid) { m.project_id = ""; if (m.auto && OPEN_MEETING.includes(m.status)) m.status = "Cancelada"; }
+      }
       if (col === "items") {
         db.finished = (db.finished || []).filter((f) => !(f.kind === "items" && f.id === rid));
         for (const inp of db.inputs) if (inp.item_id === rid) inp.item_id = "";

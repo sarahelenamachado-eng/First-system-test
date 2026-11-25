@@ -225,11 +225,17 @@ async function copyText(text) {
   catch { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); toast(t("Copiado")); }
 }
 // quando a tradução em segundo plano termina, atualiza a tela (se o usuário não estiver digitando)
-window.addEventListener("gov-translated", () => {
-  const ae = document.activeElement;
-  // também não redesenha se há texto digitado e ainda não salvo em algum campo da tela
-  const dirty = [...document.querySelectorAll("#view input, #view textarea")].some((e) => !["checkbox", "radio", "file"].includes(e.type) && e.value !== e.defaultValue);
-  if (S && !dirty && !["INPUT", "TEXTAREA", "SELECT"].includes(ae?.tagName) && $("#modal").classList.contains("hidden")) refresh();
+window.addEventListener("gov-translated", async () => {
+  // não redesenha se a usuária está num campo, tem texto digitado e ainda não salvo, ou uma janela aberta.
+  // A checagem é refeita depois de ler os dados (ela pode ter começado a digitar nesse meio tempo).
+  const busyNow = () => {
+    const ae = document.activeElement;
+    const dirty = [...document.querySelectorAll("#view input, #view textarea")].some((e) => !["checkbox", "radio", "file"].includes(e.type) && e.value !== e.defaultValue);
+    return dirty || ["INPUT", "TEXTAREA", "SELECT"].includes(ae?.tagName) || !$("#modal").classList.contains("hidden") || MODAL_ACTION || document.querySelector("button:disabled, input:disabled, select:disabled");
+  };
+  if (!S || busyNow()) return;
+  const st = await api("state");
+  if (!busyNow()) { S = st; render(); }
 });
 
 // ------------------------------------------------------------------ aparência e idioma
@@ -779,10 +785,11 @@ function viewProjetos(id, tab) {
   const list = S.db.projects.filter((p) => !p.small).sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0));
   return `${head}
   <div class="grid" style="grid-template-columns: minmax(300px,2.2fr) minmax(280px,1fr)">
-  <div class="card" style="overflow:auto"><table>${th(["ID", "Projeto", "Responsável", "% concluído", "Atividades", "Itens adicionais abertos", "Próx. reunião", "Status"])}
+  <div class="card" style="overflow:auto"><table>${th(["ID", "Projeto", "Responsável", "% concluído", "Atividades", "Itens adicionais abertos", "Próx. reunião", "Status", ""])}
   ${list.map((p) => `<tr class="click" onclick="location.hash='projetos/${p.id}'"><td>${p.id}</td><td>${p.main ? `<span class="star" title="${esc(t("Projeto principal"))}">★</span> ` : ""}${esc(lc(p, "name"))}</td><td>${esc(p.owner)}</td>
     <td>${bar(Core.projectPct(p))}</td><td>${bar(Core.activitiesPct(p))}</td><td>${(p.actions || []).filter((a) => a.status !== "Concluída").length}</td>
-    <td>${p.next_meeting <= S.today ? pill(p.next_meeting, "p-Alta") : esc(p.next_meeting)}</td><td>${esc(tv(p.status))}</td></tr>`).join("") || `<tr><td colspan=8 class="muted">${t("Nenhum projeto.")}</td></tr>`}
+    <td>${p.next_meeting <= S.today ? pill(p.next_meeting, "p-Alta") : esc(p.next_meeting)}</td><td>${esc(tv(p.status))}</td>
+    <td onclick="event.stopPropagation()"><button class="small ghost danger p-del" title="${esc(t("Excluir projeto"))}" onclick="busy(this, ()=>deleteProject('${p.id}'))">🗑</button></td></tr>`).join("") || `<tr><td colspan=9 class="muted">${t("Nenhum projeto.")}</td></tr>`}
   </table></div>
   <div class="card"><h2>${t("Novo projeto")}</h2>${L("Nome")}<input id="p-name">${L("Descrição")}<textarea id="p-desc"></textarea>${L("Responsável")}${personSelect("p-owner", "")}
     <div class="checks"><label><input type="checkbox" id="p-main"> ${t("Projeto principal (gera reuniões de acompanhamento automaticamente)")}</label></div>
@@ -814,11 +821,23 @@ function viewTemporarios() {
     <div class="row"><div>${L("Motivo")}<select id="tp-purpose">${opts(SMALL_PURPOSES, "Melhoria de operação")}</select></div><div>${L("Data de término")}<input type="date" id="tp-end"></div></div>
     ${L("Itens (um por linha, opcional)")}<textarea id="tp-items" style="min-height:60px"></textarea>
     <div class="actions"><button id="tp-add" onclick="busy(this, addSmallProject)">＋ ${t("Criar projeto menor")}</button></div></div>
-  <div class="card" style="overflow:auto;margin-top:var(--gap)"><table>${th(["ID", "Projeto", "Motivo", "Responsável", "Departamento", "% concluído", "Riscos e problemas", "Término", "Status"])}
+  <div class="card" style="overflow:auto;margin-top:var(--gap)"><table>${th(["ID", "Projeto", "Motivo", "Responsável", "Departamento", "% concluído", "Riscos e problemas", "Término", "Status", ""])}
   ${list.map((p) => { const late = p.end_date && p.end_date < S.today && !["Concluído", "Cancelado"].includes(p.status), iss = (p.issues || []).filter((x) => x.status !== "Resolvido").length;
     return `<tr class="click ${late ? "overdue" : ""}" onclick="location.hash='projetos/${p.id}'"><td>${p.id}</td><td>${esc(lc(p, "name"))}</td><td>${esc(tv(p.purpose || ""))}</td><td>${esc(p.owner)}</td><td>${esc(p.dept || "")}</td>
-    <td>${bar(Core.projectPct(p))}</td><td>${iss ? pill(String(iss), "p-Alta") : '<span class="muted">0</span>'}</td><td>${late ? pill(p.end_date, "p-Alta") : esc(p.end_date || "")}</td><td>${esc(tv(p.status))}</td></tr>`; }).join("")
-    || `<tr><td colspan=9 class="muted">${t("Nenhum projeto menor ainda.")}</td></tr>`}</table></div>`;
+    <td>${bar(Core.projectPct(p))}</td><td>${iss ? pill(String(iss), "p-Alta") : '<span class="muted">0</span>'}</td><td>${late ? pill(p.end_date, "p-Alta") : esc(p.end_date || "")}</td><td>${esc(tv(p.status))}</td>
+    <td onclick="event.stopPropagation()"><button class="small ghost danger p-del" title="${esc(t("Excluir projeto"))}" onclick="busy(this, ()=>deleteProject('${p.id}'))">🗑</button></td></tr>`; }).join("")
+    || `<tr><td colspan=10 class="muted">${t("Nenhum projeto menor ainda.")}</td></tr>`}</table></div>`;
+}
+/* Exclui o projeto (pede confirmação dizendo o que acontece com itens, riscos e reuniões ligados a ele). */
+async function deleteProject(id) {
+  const p = byId("projects", id) || {};
+  const n = (p.pitems || []).length, iss = (p.issues || []).length;
+  const risks = (p.links?.risks || []).length, items = S.db.items.filter((i) => (i.links?.projects || []).includes(id)).length;
+  if (!confirm(t("DELETE_PROJECT_CONFIRM", { id, name: p.name || "", n, iss, items, risks }))) return;
+  await api("projects/" + id, "DELETE");
+  toast(t("{id} excluído", { id }));
+  location.hash = p.small ? "temporarios" : "projetos";
+  await refresh();
 }
 async function addSmallProject() {
   const name = $("#tp-name").value.trim();
@@ -870,7 +889,8 @@ function projOverview(p) {
     ${p.small ? `<div class="row"><div>${L("Motivo")}<select id="pd-purpose">${opts(SMALL_PURPOSES, p.purpose || "Outro")}</select></div><div>${L("Departamento")}${deptSelect("pd-dept", p.dept || "")}</div></div>` : ""}
     ${L("Atualização / monitoramento")}<textarea id="pd-note" style="min-height:50px"></textarea>
     <div class="actions"><button onclick="busy(this, async()=>{await api('projects/${p.id}','PATCH',{description:$('#pd-desc').value,objective:$('#pd-obj').value,owner:$('#pd-owner').value,status:$('#pd-status').value,next_meeting:$('#pd-next').value,end_date:$('#pd-end').value,small:$('#pd-small').checked,...($('#pd-purpose')?{purpose:$('#pd-purpose').value,dept:$('#pd-dept').value}:{}),main:$('#pd-main').checked,_note:$('#pd-note').value.trim()||undefined}); toast(t('Projeto atualizado')); await refresh();})">${t("Salvar (marca monitoramento)")}</button>
-    <a class="btn ghost" href="#reunioes/confirmar" onclick="window._newMeetingProject='${p.id}'">${t("Registrar reunião")}</a></div>
+    <a class="btn ghost" href="#reunioes/confirmar" onclick="window._newMeetingProject='${p.id}'">${t("Registrar reunião")}</a>
+    <button class="ghost danger" id="pd-delete" onclick="busy(this, ()=>deleteProject('${p.id}'))">🗑 ${t("Excluir projeto")}</button></div>
     ${L("Vínculos")}<div>${linksHtml(p)}</div>${linkForm("projects", p.id)}</div>
   <div>${projectProgressBox(p)}<div class="card" style="margin-top:var(--gap)"><h2>${t("Reuniões do projeto")}</h2><table>${th(["ID", "Reunião", "Data", "Status"])}
     ${meetings.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=4 class="muted">—</td></tr>`}</table>
