@@ -491,7 +491,8 @@ function itemsTable(all) {
     <td class="lp">${lp ? `<span class="muted">${esc((lp.date || "").slice(0, 10))}</span> ${esc(lc(lp, "text").slice(0, 120))}` : ""}
       <input class="g-prog" placeholder="＋ ${esc(t("Novo progresso…"))}" onkeydown="if(event.key==='Enter'&&this.value.trim())busy(this, ()=>quickProgress('${i.id}', this.value))"></td>
     <td><select class="small-sel" onchange="busy(this, ()=>quickPatch('${i.id}', 'status', this.value))">${opts(open.includes(i.status) ? open : [i.status, ...open], i.status)}</select></td>
-    <td><button class="small g-close" title="${esc(t("Fechar o item: sai da lista geral e vai para Itens fechados"))}" onclick="busy(this, ()=>closeItem('${i.id}'))">✓ ${t("Fechar")}</button></td></tr>`; }).join("") || `<tr><td colspan=8 class="muted">${t("Nenhum item.")}</td></tr>`}
+    <td><button class="small g-close" title="${esc(t("Fechar o item: sai da lista geral e vai para Itens fechados"))}" onclick="busy(this, ()=>closeItem('${i.id}'))">✓ ${t("Fechar")}</button>
+      <button class="small ghost danger g-del" title="${esc(t("Excluir o item"))}" onclick="busy(this, ()=>deleteItem('${i.id}'))">🗑</button></td></tr>`; }).join("") || `<tr><td colspan=8 class="muted">${t("Nenhum item.")}</td></tr>`}
   </table>
   <div class="pager"><span class="muted">${t("{n} itens", { n: all.length })} · ${t("itens fechados ficam na aba Itens fechados")}</span>
     ${pages > 1 ? `<button class="small ghost" ${F.page === 0 ? "disabled" : ""} onclick="F.page--;render()">←</button> ${F.page + 1} / ${pages} <button class="small ghost" ${F.page >= pages - 1 ? "disabled" : ""} onclick="F.page++;render()">→</button>` : ""}</div></div>`;
@@ -510,6 +511,15 @@ async function quickProgress(id, text) {
 async function closeItem(id) {
   await api("items/" + id, "PATCH", { status: "Concluído", _note: undefined });
   toast(t("{id} fechado: saiu da lista geral e está em Itens fechados", { id })); await refresh();
+}
+/* Exclui o item de vez (pede confirmação). Diferente de Fechar, não fica em Itens fechados. */
+async function deleteItem(id) {
+  const it = byId("items", id) || {};
+  if (!confirm(t("DELETE_ITEM_CONFIRM", { id, title: it.title || "" }))) return;
+  await api("items/" + id, "DELETE");
+  if (!$("#modal").classList.contains("hidden")) closeModal();
+  if (location.hash.startsWith("#lista/" + id)) location.hash = "lista";
+  toast(t("{id} excluído", { id })); await refresh();
 }
 async function quickAddItem() {
   const title = $("#qa-title").value.trim();
@@ -576,7 +586,7 @@ function finishedPanel() {
     const rows = all.filter((f) => f.month === m), scopes = [...new Set(rows.map((f) => f.scope))];
     return `<div class="card"><h2>${esc(monthLabel(m))} <span class="muted">(${rows.length})</span></h2>${scopes.map((sc) => `<h3>${esc(sc)}</h3><table>${th(["ID", "Item", "Responsável", "Finalizado em", "Arquivo na pasta", ""])}
       ${rows.filter((f) => f.scope === sc).map((f) => `<tr><td>${f.kind === "items" ? `<a href="#lista/${f.id}">${f.id}</a>` : `<a href="#projetos/${f.project}/itens">${f.project} · ${f.id}</a>`}</td><td>${esc(f.title)}</td><td>${esc(f.owner)}</td><td>${esc(f.date)}</td>
-        <td>${f.file ? `<span title="${esc(f.file)}">${fileLink(f.file, f.file.split("/").slice(-2).join("/"))}</span>` : "—"}</td><td><button class="small ghost" onclick="busy(this, async()=>{await ${reopen(f)}; toast(t('Item reaberto')); await refresh();})">${t("Reabrir")}</button></td></tr>`).join("")}</table>`).join("")}</div>`;
+        <td>${f.file ? `<span title="${esc(f.file)}">${fileLink(f.file, f.file.split("/").slice(-2).join("/"))}</span>` : "—"}</td><td><button class="small ghost" onclick="busy(this, async()=>{await ${reopen(f)}; toast(t('Item reaberto')); await refresh();})">${t("Reabrir")}</button>${f.kind === "items" ? ` <button class="small ghost danger f-del" title="${esc(t("Excluir o item"))}" onclick="busy(this, ()=>deleteItem('${f.id}'))">🗑</button>` : ""}</td></tr>`).join("")}</table>`).join("")}</div>`;
   }).join("");
 }
 const monthLabel = (m) => { const d = new Date(m + "-15T12:00:00"); return isNaN(d) ? m : d.toLocaleDateString(I18N.htmlLang(), { month: "long", year: "numeric" }); };
@@ -614,7 +624,8 @@ function openItem(id) {
     <div>${L("Prazo")}<input type="date" id="i-due" value="${esc(i.due_date)}"></div><div>${L("Prioridade")}<select id="i-prio">${opts(LEVELS, i.priority)}</select></div>
     <div>${L("Departamento")}${deptSelect("i-dept", i.area_main, t("Geral (sem departamento)"))}</div></div>
   <div class="checks"><label><input type="checkbox" id="i-report" ${i.report ? "checked" : ""}> ${t("Info a ser reportada (entra no summary)")}</label></div>
-  <div class="actions"><button onclick="busy(this, ()=>saveItem('${i.id}'))">${t("Salvar")}</button></div>
+  <div class="actions"><button onclick="busy(this, ()=>saveItem('${i.id}'))">${t("Salvar")}</button>
+    <button class="ghost danger" id="i-delete" onclick="busy(this, ()=>deleteItem('${i.id}'))">🗑 ${t("Excluir o item")}</button></div>
 
   <h3>${t("Ações do item")}</h3>
   <div style="overflow:auto"><table>${th(["ID", "Ação", "Responsável", "Prazo", "Status", "Progresso", ""])}

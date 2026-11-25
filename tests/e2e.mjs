@@ -195,6 +195,23 @@ async function scenarioListAndSmall(page, label) {
   await go(page, "lista/finalizados", "#view h2");
   assert.ok((await page.textContent("#view")).includes("Comprar EPIs para a brigada"), label + ": item fechado na aba Itens fechados");
   assert.match(await page.textContent("#view .tabs"), /Itens fechados/);
+  // Excluir: pede confirmação e apaga de vez (pela linha, pela janela do item e pela aba Itens fechados)
+  const del = await page.evaluate(async () => { const a = await api("items", "POST", { title: "Item criado por engano" }); const b = await api("items", "POST", { title: "Outro item por engano" }); await refresh(); return [a.id, b.id]; });
+  await go(page, "lista", `tr[data-id='${del[0]}']`);
+  let asked = "";
+  const onDialog = (d) => { asked = d.message(); };
+  page.on("dialog", onDialog);
+  await page.click(`tr[data-id='${del[0]}'] .g-del`);
+  await page.waitForFunction((id) => !S.db.items.some((i) => i.id === id) && !document.querySelector(`.glist tr[data-id='${id}']`), del[0]);
+  assert.ok(asked.includes(del[0]) && asked.includes("Item criado por engano"), label + ": confirmação antes de excluir: " + asked);
+  await go(page, "lista/" + del[1], "#i-delete");
+  await page.click("#i-delete");
+  await page.waitForFunction((id) => !S.db.items.some((i) => i.id === id), del[1]);
+  assert.ok(await page.evaluate(() => document.querySelector("#modal").classList.contains("hidden")), label + ": janela fecha após excluir");
+  await go(page, "lista/finalizados", ".f-del");
+  await page.click(`tr:has-text('Comprar EPIs para a brigada') .f-del`);
+  await page.waitForFunction((id) => !S.db.items.some((i) => i.id === id) && !S.db.finished.some((f) => f.id === id), gid);
+  page.off("dialog", onDialog);
   // projetos menores e temporários: aba própria, fora da lista de projetos
   await go(page, "temporarios", "#tp-name");
   await page.fill("#tp-name", "Mutirão de 5S no almoxarifado");

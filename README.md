@@ -65,6 +65,8 @@ A IA sugere, você confirma ou corrige, e a decisão fica guardada para a IA apr
   "＋ Novo progresso…" registra o progresso com Enter. No topo, **＋ Novo item** cria um item escrevendo e apertando Enter.
 - **Fechar / 关闭:** o botão de cada linha fecha o item: ele sai da lista geral e aparece só na aba **Itens fechados**
   (histórico por mês e por projeto / departamento). Origem e definição ficam em "Mais filtros".
+- **Excluir:** o botão 🗑 da linha (ou "Excluir o item" na janela do item, ou 🗑 na aba Itens fechados) apaga o item de vez,
+  depois de pedir confirmação. Diferente de Fechar, o item excluído não fica em Itens fechados.
 - **Itens de projeto para confirmar:** um item de projeto (aba *Itens do projeto*) que fica **5 dias sem atualização** aparece
   no topo da lista geral. Ali você registra o progresso, muda o status ou marca como finalizado. O número de dias fica em
   Configurações → Regras.

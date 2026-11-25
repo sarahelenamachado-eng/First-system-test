@@ -1273,6 +1273,11 @@ ${this.reportHtml(s, text, esc)}
     }
     if (method === "DELETE" && rec) {
       db[col] = db[col].filter((r) => r.id !== rid);
+      // item excluído também sai do histórico de fechados; entradas que apontavam para ele ficam sem o vínculo
+      if (col === "items") {
+        db.finished = (db.finished || []).filter((f) => !(f.kind === "items" && f.id === rid));
+        for (const inp of db.inputs) if (inp.item_id === rid) inp.item_id = "";
+      }
       for (const other of COLLECTIONS) for (const r of db[other]) {
         const lst = r.links?.[col];
         if (lst?.includes(rid)) lst.splice(lst.indexOf(rid), 1);

@@ -926,6 +926,14 @@ Object.assign(D, {
   "Registradas hoje": ["Registered today", "今日已登记"], "Virou": ["Became", "转为"]
 });
 
+Object.assign(D, {
+  "Excluir o item": ["Delete the item", "删除事项"],
+  DELETE_ITEM_CONFIRM: ["Delete {id} · {title}? It will be removed for good (it will not go to Closed items). To keep the history, use Close instead.",
+    "删除{id} · {title}？删除后将永久移除（不会进入“已关闭事项”）。如需保留记录，请使用“关闭”。",
+    "Excluir {id} · {title}? Ele será apagado de vez (não vai para Itens fechados). Para guardar o histórico, use Fechar."],
+  "{id} excluído": ["{id} deleted", "{id}已删除"]
+});
+
 /* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
 function biRender(root) {
   if (!root) return;
