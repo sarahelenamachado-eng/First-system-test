@@ -330,6 +330,38 @@ async function scenarioMeetingText(page, label, ai) {
   const rq = await page.evaluate(() => S.db.meetings.find((x) => x.kind === "Solicitada" && (x.agenda || "").includes("mutirão de 5S")));
   assert.equal(rq.date, tomorrow); assert.equal(rq.time, "14:00"); assert.equal(rq.duration, 30); assert.equal(rq.status, "Agendada");
   assert.deepEqual(rq.attendees, ["Lira"], label + ": participante da solicitação");
+  // agendada: abre o convite para Teams e DingTalk, sai da lista de solicitações e vai para a aba Agendadas
+  await page.waitForSelector("#inv-box");
+  const href = await page.getAttribute("#inv-teams", "href");
+  assert.ok(href.startsWith("https://teams.microsoft.com/l/meeting/new?") && href.includes("subject=") && href.includes("startTime="), label + ": link do Teams preenchido");
+  const ics = await page.evaluate((id) => icsFor(byId("meetings", id)), rq.id);
+  assert.ok(ics.includes("BEGIN:VEVENT") && ics.includes("DTSTART:") && /SUMMARY:.*mutir/i.test(ics), label + ": convite .ics");
+  await page.check("#inv-done-teams");
+  await page.waitForFunction((id) => Core.find("meetings", id).in_teams === true, rq.id, { polling: 100 });
+  await page.evaluate(() => closeModal());
+  await go(page, "reunioes/solicitadas", "#rqt-text");
+  assert.ok(!(await page.textContent("#view")).includes(rq.id), label + ": agendada sai da lista de solicitações");
+  await go(page, "reunioes/agendadas", ".sched-list");
+  assert.ok((await page.textContent(`.sched-list tr[data-id='${rq.id}']`)).includes(tomorrow), label + ": aparece em Agendadas");
+  await page.check(`.sched-list tr[data-id='${rq.id}'] .sc-ding`);
+  await page.waitForFunction((id) => Core.find("meetings", id).in_dingtalk === true, rq.id, { polling: 100 });
+  if (shots) await page.screenshot({ path: `${shots}/${label}-16-agendadas.png`, fullPage: true });
+  // solicitação sem data: fica em Solicitações; "Agendar" leva para Agendadas
+  await go(page, "reunioes/solicitadas", "#rqt-text");
+  await page.fill("#rqt-text", "Revisão do layout do almoxarifado com Fred");
+  await page.click("#rq-save");
+  await page.waitForFunction(() => S.db.meetings.some((x) => x.kind === "Solicitada" && (x.agenda || "").includes("layout do almoxarifado")), null, { polling: 100 });
+  const r2 = await page.evaluate(() => S.db.meetings.find((x) => (x.agenda || "").includes("layout do almoxarifado")).id);
+  await page.waitForSelector(`#view tr:has-text('${r2}') button:has-text('Agendar')`);
+  await page.click(`#view tr:has-text('${r2}') button:has-text('Agendar')`);
+  await page.fill("#sc-date", tomorrow); await page.fill("#sc-time", "16:00");
+  await page.click("#modal-body button:has-text('Agendar e gerar convite')");
+  await page.waitForSelector("#inv-box");
+  assert.equal(await page.evaluate((id) => Core.find("meetings", id).status, r2), "Agendada");
+  if (shots) await page.screenshot({ path: `${shots}/${label}-17-convite.png` });
+  await page.evaluate(() => closeModal());
+  assert.ok(!(await page.textContent("#view")).includes(r2), label + ": agendada sai da lista de solicitações");
+  await go(page, "reunioes/solicitadas", "#rqt-text");
   // solicitação sem data no texto não ganha a data de hoje
   await page.fill("#rqt-text", "Conversa com o RH sobre treinamentos");
   await page.click("#rqt-fill");

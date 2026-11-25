@@ -125,6 +125,10 @@ lista de Projetos; a caixa "Projeto menor / temporário" na visão geral move um
 ### 4. Reuniões
 Abre em **Solicitações** (requisitadas em aberto / realizadas e encerradas). Abas: Solicitações · Dashboard · **Calendário** (clique num dia para inserir; sugestões da IA tracejadas) · **Obrigatórias** ·
 **Solicitadas** · Confirmar e registrar ata · **Tempo em reuniões** · **Controle de atas** · Todas.
+- **Fluxo de agendamento:** a solicitação fica em *Solicitações* até ser agendada. Ao clicar em **Agendar** (data e horário) ou
+  registrar uma solicitação já com data e horário, ela sai da lista e vai para a aba **📅 Agendadas**, e abre o **convite**:
+  link do Teams já preenchido, arquivo **.ics** (importável no Outlook/Teams e no DingTalk) e o texto pronto para colar no
+  DingTalk. As caixas "Já coloquei no Teams / no DingTalk" ficam na aba Agendadas, que avisa quantas ainda faltam.
 - **Escrever corrido primeiro:** em *Confirmar e registrar ata* (caixa **Registrar reunião**) e em *Solicitar reunião*, escreva
   a reunião do jeito que foi ("Reunião de segurança ontem às 9h30, 40 min, com Alfredo e Barry…") e clique em
   **Preencher os campos**: a IA (ou, sem chave, regras simples) sugere título, data, horário, duração, participantes do

@@ -330,6 +330,10 @@ button .bi-zh, .btn .bi-zh { color: inherit; opacity: .85; }
 .adlist td:nth-child(6) select { min-width: 90px; }
 .adlist input[type=date] { width: 135px; }
 .adlist .g-title { min-width: 240px; }
+.inv-text { white-space: pre-wrap; background: var(--bg-2); border-radius: 8px; padding: 10px 12px; font: inherit; }
+.inv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.inv-grid h3 { margin: 0 0 8px; display: flex; gap: 8px; align-items: center; }
+.sched-list td { vertical-align: top; }
 </style>
 </head>
 <body data-density="normal">
@@ -1457,6 +1461,20 @@ Object.assign(D, {
   "Ponto": ["Point", "事项"], "Nenhum ponto fechado.": ["No closed points.", "暂无已关闭事项。"], "Nenhum ponto em aberto.": ["No open points.", "暂无未结事项。"],
   "Escreva o ponto.": ["Write the point.", "请写下事项。"], "{id} fechado": ["{id} closed", "{id}已关闭"], "Editar": ["Edit", "编辑"], "Texto original": ["Original text", "原文"],
   "{id} registrado: {title}": ["{id} recorded: {title}", "{id}已登记：{title}"], "{id} removido": ["{id} removed", "{id}已删除"]
+});
+
+Object.assign(D, {
+  "Agendadas": ["Scheduled", "已安排"], "Reuniões agendadas": ["Scheduled meetings", "已安排的会议"],
+  SCHEDULED_HELP: ["Every scheduled meeting must be in Teams and DingTalk. Open the invite, put it in both and tick the boxes.", "每个已安排的会议都必须放到 Teams 和钉钉。打开邀请，放到两边后勾选。", "Toda reunião agendada deve estar no Teams e no DingTalk. Abra o convite, coloque nos dois e marque as caixas."],
+  "{n} reuniões ainda não foram colocadas no Teams e no DingTalk.": ["{n} meetings are not yet in Teams and DingTalk.", "{n}个会议尚未放到 Teams 和钉钉。"],
+  "Convite Teams / DingTalk": ["Teams / DingTalk invite", "Teams / 钉钉邀请"], "Remarcar": ["Reschedule", "改期"], "Nenhuma reunião agendada.": ["No scheduled meetings.", "暂无已安排的会议。"],
+  "Agendar e gerar convite": ["Schedule and create invite", "安排并生成邀请"], "Informe a data e o horário.": ["Enter the date and time.", "请填写日期和时间。"],
+  "Reunião agendada: foi para a aba Agendadas": ["Meeting scheduled: moved to the Scheduled tab", "会议已安排：已移到“已安排”标签"], "Convite": ["Invite", "邀请"],
+  INVITE_HELP: ["Put the meeting in Teams and in DingTalk, then tick the boxes. The .ics file can also be imported into Outlook/Teams and DingTalk calendars.", "请把会议放到 Teams 和钉钉，然后勾选。.ics 文件也可以导入 Outlook/Teams 和钉钉日历。", "Coloque a reunião no Teams e no DingTalk e marque as caixas. O arquivo .ics também pode ser importado no calendário do Outlook/Teams e do DingTalk."],
+  "Abrir no Teams (já preenchido)": ["Open in Teams (pre-filled)", "在 Teams 中打开（已填写）"], "Baixar convite (.ics)": ["Download invite (.ics)", "下载邀请（.ics）"],
+  "Já coloquei no Teams": ["Already in Teams", "已放到 Teams"], "Copiar convite para o DingTalk": ["Copy invite for DingTalk", "复制钉钉邀请"],
+  DINGTALK_HELP: ["In DingTalk: Calendar → New event, paste the text and add the attendees.", "在钉钉：日历 → 新建日程，粘贴文字并添加参会人。", "No DingTalk: Agenda → Novo evento, cole o texto e adicione os participantes."],
+  "Já coloquei no DingTalk": ["Already in DingTalk", "已放到钉钉"], "pendente": ["pending", "待处理"], "DingTalk": ["DingTalk", "钉钉"]
 });
 
 /* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
@@ -6130,10 +6148,11 @@ function viewReunioes(id) {
   if (id && /^MEET/.test(id)) return meetingDetail(byId("meetings", id));
   const tab = id || "solicitadas";
   const pend = S.db.meetings.filter((m) => m.status === "Pendente" || (["Solicitada", "Agendada"].includes(m.status) && m.date && m.date <= S.today)).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  const reqOpen = S.db.meetings.filter((m) => m.kind === "Solicitada" && ["Solicitada", "Agendada", "Pendente"].includes(m.status)).length;
-  const T = [["solicitadas", `${t("Solicitações")} (${reqOpen})`], ["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`],
+  const reqOpen = S.db.meetings.filter((m) => m.kind === "Solicitada" && RQ_OPEN.includes(m.status)).length;
+  const nSched = S.db.meetings.filter((m) => m.status === "Agendada").length;
+  const T = [["solicitadas", `${t("Solicitações")} (${reqOpen})`], ["agendadas", `📅 ${t("Agendadas")} (${nSched})`], ["dash", t("Dashboard")], ["calendario", t("Calendário")], ["obrigatorias", `${t("Obrigatórias")} (${S.db.mandatory.length})`],
     ["confirmar", `${t("Confirmar e registrar ata")} (${pend.length})`], ["tempo", t("Tempo em reuniões")], ["atas", t("Controle de atas")], ["todas", t("Todas as reuniões")]];
-  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, confirmar: () => meetingsConfirmView(pend), tempo: timeView, atas: atasView, todas: meetingsAllView }[tab] || requestedView;
+  const body = { dash: dashMeetingsView, calendario: calendarView, obrigatorias: mandatoryView, solicitadas: requestedView, agendadas: scheduledView, confirmar: () => meetingsConfirmView(pend), tempo: timeView, atas: atasView, todas: meetingsAllView }[tab] || requestedView;
   return `<h1>${t("Gerenciamento de reuniões")}</h1>${tabs("reunioes", T, tab)}${body()}`;
 }
 function meetingsConfirmView(pend) {
@@ -6180,11 +6199,11 @@ function applyMeetingFields(prefix, f) {
   if (f.departments?.length && $(`#${prefix}dept`)) { $(`#${prefix}dept`).value = f.departments.join(", "); syncChips(`${prefix}dept`); }
 }
 let RQ_FILTER = "abertas";
-const RQ_OPEN = ["Solicitada", "Agendada", "Pendente"];
+const RQ_OPEN = ["Solicitada", "Pendente"]; // agendadas saem desta lista e vão para a aba Agendadas
 function requestedView() {
   const projSel = `<select id="rq-proj"><option value="">—</option>${S.db.projects.map((p) => `<option value="${p.id}">${p.id} · ${esc(lc(p, "name"))}</option>`).join("")}</select>`;
   const req = S.db.meetings.filter((m) => m.kind === "Solicitada");
-  const openL = req.filter((m) => RQ_OPEN.includes(m.status)), doneL = req.filter((m) => !RQ_OPEN.includes(m.status));
+  const openL = req.filter((m) => RQ_OPEN.includes(m.status)), doneL = req.filter((m) => !RQ_OPEN.includes(m.status) && m.status !== "Agendada");
   const list = (RQ_FILTER === "realizadas" ? doneL.sort((a, b) => (b.date || "").localeCompare(a.date || "")) : openL.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999")));
   const done = RQ_FILTER === "realizadas";
   return `<div class="grid" style="grid-template-columns: minmax(320px,1fr) minmax(320px,1.6fr)">
@@ -6221,8 +6240,79 @@ function scheduleRequested(id) {
   openModal(`<h2>${t("Agendar")} · ${esc(titleOf(m))}</h2>
     <div class="row"><div>${L("Data")}<input type="date" id="sc-date" value="${esc(m.date || S.today)}"></div><div>${L("Horário")}<input type="time" id="sc-time" value="${esc(m.time || S.db.settings.work_hours.start)}"></div></div>
     <div class="toolbar"><button class="small ghost" onclick="busy(this, ()=>suggestSlot('sc-', ${+m.duration || 60}))">✨ ${t("Sugerir horário (IA)")}</button><div id="sc-slots" class="slots"></div></div>
-    <div class="actions"><button onclick="busy(this, async()=>{await api('meetings/${id}','PATCH',{date:$('#sc-date').value,time:$('#sc-time').value,status:'Agendada'}); closeModal(); toast(t('Reunião agendada')); await refresh();})">${t("Salvar")}</button></div>`);
+    <div class="actions"><button onclick="busy(this, ()=>scheduleMeeting('${id}'))">${t("Agendar e gerar convite")}</button></div>`);
 }
+async function scheduleMeeting(id) {
+  const date = $("#sc-date").value, time = $("#sc-time").value;
+  if (!date || !time) throw new Error(t("Informe a data e o horário."));
+  await api("meetings/" + id, "PATCH", { date, time, status: "Agendada", scheduled_at: nowISO() });
+  closeModal(); toast(t("Reunião agendada: foi para a aba Agendadas")); await refresh();
+  inviteModal(id);
+}
+/* Reuniões agendadas: ficam numa aba própria, com o convite para o Teams e o DingTalk. */
+function scheduledView() {
+  const list = S.db.meetings.filter((m) => m.status === "Agendada").sort((a, b) => `${a.date || "9999"} ${a.time || ""}`.localeCompare(`${b.date || "9999"} ${b.time || ""}`));
+  const miss = list.filter((m) => !m.in_teams || !m.in_dingtalk).length;
+  return `<div class="card" style="overflow:auto"><h2>📅 ${t("Reuniões agendadas")} (${list.length})</h2>
+    <p class="muted">${t("SCHEDULED_HELP")}</p>
+    ${miss ? `<div class="alert lv-media">⚠ ${t("{n} reuniões ainda não foram colocadas no Teams e no DingTalk.", { n: miss })}</div>` : ""}
+    <table class="sched-list">${th(["ID", "Reunião", "Data", "Duração", "Participantes", "Teams", "DingTalk", ""])}
+    ${list.map((m) => `<tr data-id="${m.id}" class="${m.date && m.date < S.today ? "overdue" : ""}"><td><a href="#reunioes/${m.id}">${m.id}</a></td><td>${esc(titleOf(m))}${m.requested_by ? `<br><small class="muted">${t("Solicitada por")}: ${esc(tv(m.requested_by))}</small>` : ""}</td>
+      <td class="nowrap">${esc(m.date || "—")} ${esc(m.time || "")}</td><td class="nowrap">${+m.duration || 60} min</td><td>${(m.attendees || []).map((x) => pill(x)).join("")}</td>
+      <td><label class="inline-check"><input type="checkbox" class="sc-teams" ${m.in_teams ? "checked" : ""} onchange="busy(this, ()=>markPlaced('${m.id}', 'in_teams', this.checked))"> ${m.in_teams ? "✓" : ""}</label></td>
+      <td><label class="inline-check"><input type="checkbox" class="sc-ding" ${m.in_dingtalk ? "checked" : ""} onchange="busy(this, ()=>markPlaced('${m.id}', 'in_dingtalk', this.checked))"> ${m.in_dingtalk ? "✓" : ""}</label></td>
+      <td><div class="act-cell"><button class="small sc-invite" onclick="inviteModal('${m.id}')">✉ ${t("Convite Teams / DingTalk")}</button>
+        <button class="small ghost" onclick="scheduleRequested('${m.id}')">${t("Remarcar")}</button>
+        <button class="small" onclick="busy(this, ()=>meetingDone('${m.id}'))">${t("Foi realizada")}</button>
+        <button class="small ghost danger" onclick="busy(this, ()=>meetingNotDone('${m.id}'))">${t("Não foi realizada")}</button>
+        <button class="small ghost" onclick="busy(this, ()=>cancelMeeting('${m.id}'))">${t("Cancelar")}</button></div></td></tr>`).join("")
+      || `<tr><td colspan=8 class="muted">${t("Nenhuma reunião agendada.")}</td></tr>`}</table></div>`;
+}
+async function markPlaced(id, field, value) {
+  await api("meetings/" + id, "PATCH", { [field]: value, _silent: true });
+  await refresh(); if (!$("#modal").classList.contains("hidden") && $("#inv-box")?.dataset.id === id) inviteModal(id);
+}
+/** Início e fim da reunião (horário local do computador). */
+function meetingTimes(m) {
+  const start = new Date(`${m.date}T${m.time || "09:00"}:00`), end = new Date(start.getTime() + (+m.duration || 60) * 60000);
+  return { start, end };
+}
+function inviteText(m) {
+  const { start, end } = meetingTimes(m), hh = (d) => d.toTimeString().slice(0, 5);
+  return [`${titleOf(m)}`, `📅 ${m.date} ${hh(start)}–${hh(end)} (${+m.duration || 60} min)`, (m.attendees || []).length ? `👥 ${(m.attendees || []).join(", ")}` : "",
+    m.agenda ? `📝 ${m.agenda}` : "", m.project_id ? `📁 ${m.project_id}` : "", `ID: ${m.id}`].filter(Boolean).join("\n");
+}
+function icsFor(m) {
+  const { start, end } = meetingTimes(m), z = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const e = (x) => String(x || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, (c) => "\\" + c);
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Governanca//PT", "METHOD:PUBLISH", "BEGIN:VEVENT", `UID:${m.id}-${(m.created_at || "").replace(/\D/g, "")}@governanca`,
+    `DTSTAMP:${z(new Date())}`, `DTSTART:${z(start)}`, `DTEND:${z(end)}`, `SUMMARY:${e(biFlat(titleOf(m)))}`, `DESCRIPTION:${e(biFlat(inviteText(m), "\n"))}`,
+    "BEGIN:VALARM", "TRIGGER:-PT15M", "ACTION:DISPLAY", `DESCRIPTION:${e(biFlat(titleOf(m)))}`, "END:VALARM", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+}
+function teamsLink(m) {
+  const { start, end } = meetingTimes(m), q = new URLSearchParams({ subject: biFlat(titleOf(m)), startTime: start.toISOString(), endTime: end.toISOString(), content: biFlat(inviteText(m), "\n") });
+  return "https://teams.microsoft.com/l/meeting/new?" + q.toString();
+}
+function inviteModal(id) {
+  const m = byId("meetings", id);
+  if (!m) return;
+  const ok = (v) => v ? pill("✓", "p-Baixa") : pill(t("pendente"), "p-Média");
+  openModal(`<div id="inv-box" data-id="${m.id}"><h2>✉ ${t("Convite")} · ${esc(titleOf(m))}</h2>
+    <p class="muted">${t("INVITE_HELP")}</p>
+    <pre class="inv-text">${esc(biFlat(inviteText(m), "\n"))}</pre>
+    <div class="inv-grid">
+      <div class="card"><h3>Microsoft Teams ${ok(m.in_teams)}</h3>
+        <div class="actions"><a class="btn" id="inv-teams" target="_blank" rel="noopener" href="${esc(teamsLink(m))}">${t("Abrir no Teams (já preenchido)")}</a>
+          <button class="ghost" id="inv-ics" onclick="downloadText(icsFor(byId('meetings','${m.id}')), '${m.id}.ics', 'text/calendar')">${t("Baixar convite (.ics)")}</button></div>
+        <label class="inline-check"><input type="checkbox" id="inv-done-teams" ${m.in_teams ? "checked" : ""} onchange="busy(this, ()=>markPlaced('${m.id}', 'in_teams', this.checked))"> ${t("Já coloquei no Teams")}</label></div>
+      <div class="card"><h3>DingTalk ${ok(m.in_dingtalk)}</h3>
+        <div class="actions"><button id="inv-copy" onclick="copyText(inviteText(byId('meetings','${m.id}')))">${t("Copiar convite para o DingTalk")}</button>
+          <button class="ghost" onclick="downloadText(icsFor(byId('meetings','${m.id}')), '${m.id}.ics', 'text/calendar')">${t("Baixar convite (.ics)")}</button></div>
+        <p class="muted small">${t("DINGTALK_HELP")}</p>
+        <label class="inline-check"><input type="checkbox" id="inv-done-ding" ${m.in_dingtalk ? "checked" : ""} onchange="busy(this, ()=>markPlaced('${m.id}', 'in_dingtalk', this.checked))"> ${t("Já coloquei no DingTalk")}</label></div>
+    </div></div>`);
+}
+
 async function cancelMeeting(id) {
   if (!confirm(t("Cancelar esta reunião?"))) return;
   await api(`meetings/${id}/status`, "POST", { status: "Cancelada" }); await refresh();
@@ -6234,15 +6324,18 @@ function meetingsAllView() {
     ${all.map((m) => `<tr class="click" onclick="location.hash='reunioes/${m.id}'"><td>${m.id}</td><td>${esc(titleOf(m))}</td><td>${esc(m.date)} ${esc(m.time || "")}</td><td>${m.duration ? m.duration + " min" : "—"}</td><td>${esc(tv(m.level))}</td><td>${esc(tv(m.mtype))}</td>
       <td>${esc(tv(m.scheduling))}</td><td>${(m.attendees || []).map((x) => pill(x)).join("")}</td><td>${statusPill(m.status)}</td></tr>`).join("") || `<tr><td colspan=9 class="muted">${t("Nenhuma reunião.")}</td></tr>`}</table></div>`;
 }
+let LAST_RQ = null;
 async function requestMeeting() {
   if (!$("#rq-title").value.trim() && $("#rqt-text").value.trim()) await fillMeeting("rq-");
   const title = $("#rq-title").value.trim();
   if (!title) throw new Error(t("Informe o título."));
   if (!$("#rq-agenda").value.trim() && $("#rqt-text").value.trim()) $("#rq-agenda").value = $("#rqt-text").value.trim();
-  await api("meetings", "POST", { title, date: $("#rq-date").value, time: $("#rq-time").value, requested_by: $("#rq-by").value,
+  LAST_RQ = await api("meetings", "POST", { title, date: $("#rq-date").value, time: $("#rq-time").value, requested_by: $("#rq-by").value,
     project_id: $("#rq-proj").value, agenda: $("#rq-agenda").value, status: $("#rq-date").value && $("#rq-time").value ? "Agendada" : "Solicitada", kind: "Solicitada",
     ...readMeetingFields("rq-") });
-  toast(t("Solicitação registrada")); await refresh();
+  const r = LAST_RQ; LAST_RQ = null;
+  if (r?.status === "Agendada") { toast(t("Reunião agendada: foi para a aba Agendadas")); await refresh(); inviteModal(r.id); }
+  else { toast(t("Solicitação registrada")); await refresh(); }
 }
 async function meetingDone(id) { confirmDone(id); }
 async function meetingNotDone(id) {

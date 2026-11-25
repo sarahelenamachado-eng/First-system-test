@@ -973,6 +973,20 @@ Object.assign(D, {
   "{id} registrado: {title}": ["{id} recorded: {title}", "{id}已登记：{title}"], "{id} removido": ["{id} removed", "{id}已删除"]
 });
 
+Object.assign(D, {
+  "Agendadas": ["Scheduled", "已安排"], "Reuniões agendadas": ["Scheduled meetings", "已安排的会议"],
+  SCHEDULED_HELP: ["Every scheduled meeting must be in Teams and DingTalk. Open the invite, put it in both and tick the boxes.", "每个已安排的会议都必须放到 Teams 和钉钉。打开邀请，放到两边后勾选。", "Toda reunião agendada deve estar no Teams e no DingTalk. Abra o convite, coloque nos dois e marque as caixas."],
+  "{n} reuniões ainda não foram colocadas no Teams e no DingTalk.": ["{n} meetings are not yet in Teams and DingTalk.", "{n}个会议尚未放到 Teams 和钉钉。"],
+  "Convite Teams / DingTalk": ["Teams / DingTalk invite", "Teams / 钉钉邀请"], "Remarcar": ["Reschedule", "改期"], "Nenhuma reunião agendada.": ["No scheduled meetings.", "暂无已安排的会议。"],
+  "Agendar e gerar convite": ["Schedule and create invite", "安排并生成邀请"], "Informe a data e o horário.": ["Enter the date and time.", "请填写日期和时间。"],
+  "Reunião agendada: foi para a aba Agendadas": ["Meeting scheduled: moved to the Scheduled tab", "会议已安排：已移到“已安排”标签"], "Convite": ["Invite", "邀请"],
+  INVITE_HELP: ["Put the meeting in Teams and in DingTalk, then tick the boxes. The .ics file can also be imported into Outlook/Teams and DingTalk calendars.", "请把会议放到 Teams 和钉钉，然后勾选。.ics 文件也可以导入 Outlook/Teams 和钉钉日历。", "Coloque a reunião no Teams e no DingTalk e marque as caixas. O arquivo .ics também pode ser importado no calendário do Outlook/Teams e do DingTalk."],
+  "Abrir no Teams (já preenchido)": ["Open in Teams (pre-filled)", "在 Teams 中打开（已填写）"], "Baixar convite (.ics)": ["Download invite (.ics)", "下载邀请（.ics）"],
+  "Já coloquei no Teams": ["Already in Teams", "已放到 Teams"], "Copiar convite para o DingTalk": ["Copy invite for DingTalk", "复制钉钉邀请"],
+  DINGTALK_HELP: ["In DingTalk: Calendar → New event, paste the text and add the attendees.", "在钉钉：日历 → 新建日程，粘贴文字并添加参会人。", "No DingTalk: Agenda → Novo evento, cole o texto e adicione os participantes."],
+  "Já coloquei no DingTalk": ["Already in DingTalk", "已放到钉钉"], "pendente": ["pending", "待处理"], "DingTalk": ["DingTalk", "钉钉"]
+});
+
 /* Desenha os pares bilíngues que entram na tela: inglês em cima e chinês embaixo. */
 function biRender(root) {
   if (!root) return;
